@@ -37,7 +37,10 @@ Invoke the **`writing-plans`** skill. It produces a task-by-task plan with `- [ 
 steps, saved under **`docs/plans/`** (adaptive layout): a single
 `YYYY-MM-DD-<feature>.md` for small/medium work, or a `YYYY-MM-DD-<feature>/` **folder**
 with `plan.md` + `phase-N-*.md` when the work has ~3+ phases or spans subsystems. Then
-re-read the plan against the spec with fresh eyes before handing off.
+re-read the plan against the spec with fresh eyes before handing off. For a plan you want
+genuinely stress-tested (not just re-read by its own author), run **`/challenge`** on it — an
+independent fresh-context pass that enumerates and attacks the plan's assumptions before any
+code is written. Cheaper than discovering the wrong assumption mid-execution.
 
 For a large or high-stakes spec, pass **`--review-convergence`** to run the plan through the
 bounded multi-lens review loop (`writing-plans/plan-convergence-loop.md`) before handoff — it

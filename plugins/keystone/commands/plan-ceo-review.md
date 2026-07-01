@@ -65,14 +65,15 @@ it explicitly in the verdict.
 Don't let your own first read be the only one. State the strongest argument _against_
 your recommendation — the steelman for the opposite call — in 2–3 sentences, then say
 whether it moved you. For HIGH-stakes bets (locks the roadmap, spends real budget or
-relationship capital, hard to reverse), escalate beyond self-critique: dispatch a
-fresh-context instance of whatever subagent-dispatch primitive this harness offers
-(Claude Code's Task tool, or the equivalent on another harness) with only the plan and
-the question "what's wrong with this recommendation" — no visibility into your reasoning,
-so it isn't anchored by it. Route the escalation through keystone's cost tiers: routine
-plans get a same-pass self-critique, HIGH-stakes plans earn the heavier Opus-tier
-independent second pass. If no subagent-dispatch primitive is available, the self-critique
-above is the fallback — always do at least that much. A genuine disagreement between
+relationship capital, hard to reverse), escalate beyond self-critique to an **independent
+adversarial pass**: invoke the `adversarial-review` skill (`/challenge`) — keystone's
+single home for the fresh-context, zero-authorship-memory read — carrying your product
+lens's question, "what's wrong with this recommendation," with no visibility into your
+reasoning so it isn't anchored by it. Don't hand-roll a parallel dispatch here; route
+through that skill so there's one owner of the independence mechanism. Scale by keystone's
+cost tiers: routine plans get the same-pass self-critique, HIGH-stakes bets earn the
+heavier independent pass. If neither the skill nor subagent dispatch is available, the
+self-critique above is the fallback — always do at least that much. A genuine disagreement between
 passes goes into the write-up as an explicit tension (your view vs. the second pass's,
 and why you land where you do) — never silently resolved.
 

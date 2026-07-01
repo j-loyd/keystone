@@ -40,3 +40,9 @@ well-known tools, since APIs and best practices shift between versions.
 
 Stop and get per-action approval first, or prefer a cloned/staging environment for the
 change instead of editing production directly.
+
+## [80%] when a bounded, well-specified task (a search, investigation, review, one plan-task) needs no mid-task input
+
+Dispatch a fresh subagent with a self-contained packet and use its verified result — keep
+your own context for coordination. Stay inline for a single fact/edit or anything you want
+to steer interactively. (Follow the `dispatching-parallel-agents` skill.)

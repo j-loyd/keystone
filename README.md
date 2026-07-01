@@ -18,8 +18,8 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      25 auto-invoked skills (process discipline + domain language + security + onboarding/git)
-├── commands/    25 explicit /commands (spec, planning, review, qa, simplify, security, ship, safety, learn, handoff, research)
+├── skills/      26 auto-invoked skills (process discipline + domain language + security + adversarial review + onboarding/git)
+├── commands/    26 explicit /commands (spec, planning, challenge, review, qa, simplify, security, ship, safety, learn, handoff, research)
 ├── agents/      the crew: Pat (planner) · Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
 templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (README + plan.md)
@@ -29,7 +29,7 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 
 | Group       | Commands                                                                                                                                                    |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plan        | `/spec` (spec→plan→subagent execute) · `/office-hours` · `/plan-ceo-review` · `/plan-eng-review`                                                            |
+| Plan        | `/spec` (spec→plan→subagent execute) · `/office-hours` · `/plan-ceo-review` · `/plan-eng-review` · `/challenge` (fresh-eyes assumption red-team)            |
 | Review & QA | `/review` · `/qa` · `/cso` · `/investigate` · `/simplify` (clarity pass) · `/audit` (whole-repo over-engineering scan) · `/debt` (deferred-shortcut ledger) |
 | Ship        | `/ship` (never auto-commits) · `/retro`                                                                                                                     |
 | Continuity  | `/handoff` (resume note) · `/pickup` (resume) · `/pause` (flush run-state) — the blessed `/handoff` → `/clear` → `/pickup` flow                             |
