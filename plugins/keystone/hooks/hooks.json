@@ -1,0 +1,109 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/instincts.js",
+            "timeout": 5,
+            "statusMessage": "Loading active rules..."
+          },
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/learnings.js",
+            "timeout": 5,
+            "statusMessage": "Loading repo lessons..."
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"CONTEXT WAS JUST COMPACTED. Re-orient before continuing: check task progress against the users original request. If you were mid-task, read docs/handoffs/README.md (this repo continuity index) or run /pickup to resume. Note: MEMORY.md is your PERSONAL cross-project index, not this repo task-state.\"}}'",
+            "timeout": 5,
+            "statusMessage": "Re-orienting after compaction..."
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Session started. If in-flight work exists in this repo, read docs/handoffs/README.md (the continuity index: newest handoff note plus any active run-state) or run /pickup to resume where you left off. docs/handoffs/README.md is this repo task-state; MEMORY.md is your personal cross-project index.\"}}'",
+            "timeout": 5,
+            "statusMessage": "Checking for in-flight work..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/guard.js",
+            "timeout": 5,
+            "statusMessage": "Safety guard..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read|WebFetch|Bash|Grep|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/scan.js",
+            "timeout": 5,
+            "statusMessage": "Injection scan..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in *.py) ruff format \"$f\";; *.js|*.ts|*.jsx|*.tsx|*.json|*.css|*.scss|*.html|*.md|*.yaml|*.yml) npx prettier --write \"$f\";; esac; } 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Formatting..."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay >/dev/null 2>&1 && afplay /System/Library/Sounds/Tink.aiff || true",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/notify.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay >/dev/null 2>&1 && afplay /System/Library/Sounds/Tink.aiff || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "keystone",
+  "owner": {
+    "name": "Jordan Loyd"
+  },
+  "metadata": {
+    "description": "A repo-agnostic Claude Code kit: harness (instincts + security hooks), process-discipline skills, a domain-language layer, and heavy explicit workflows.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "keystone",
+      "description": "The keystone plugin: skills (auto-invoked discipline + domain-language) + commands (explicit workflows like /review, /qa, /ship, /office-hours) + the migrated instincts/guard/scan/notify harness hooks.",
+      "source": "./plugins/keystone",
+      "strict": false
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local-only / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Parked — lean eval harness (built + self-validated, unrun). Keep local until we decide to
+# run it; see docs/plans/archive/2026-06-26-ponytail-borrows.md.
+benchmarks/lean/
+
+# Internal onboard-codebase map — dev-orientation scaffolding, not product docs. The CONCERNS
+# risk register in particular is a weakness/security-gap catalog that must never ship publicly.
+# Regenerate locally with onboard-codebase; keep it out of this public repo.
+docs/codebase/

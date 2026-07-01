@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: tests + config lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # node:test auto-discovers every *.test.js under the repo (skips node_modules).
+      # Covers the hook unit tests plus the hooks-config / plugin-config schema lints.
+      - name: Run test suite
+        run: node --test
