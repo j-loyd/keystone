@@ -62,13 +62,15 @@ averaging it away.
 State the strongest case _against_ your own recommendation — what would make the
 alternative, or "rethink," the right call — in 2–3 sentences, then say whether it moved
 you. For HIGH-stakes plans (touches auth/money/data-deletion, a one-way-door migration, or
-a new external dependency), escalate beyond self-critique: dispatch a second, independent
-`planner` pass (Task tool, or the equivalent subagent-dispatch primitive on another
-harness — fresh context, no visibility into your first pass) with the single question
-"what's the strongest reason this approach is wrong." Route the escalation through
-keystone's cost tiers: routine plans get a same-tier self-critique, HIGH-stakes plans earn
-the heavier Opus-tier second pass. If subagent dispatch isn't available in this harness,
-the self-critique is the fallback — always do at least that much. A genuine disagreement
+a new external dependency), escalate beyond self-critique to an **independent adversarial
+pass**: invoke the `adversarial-review` skill (`/challenge`) — keystone's single home for
+the fresh-context, zero-authorship-memory adversarial read — carrying your engineering
+lens's question, "what's the strongest reason this approach is wrong." Don't hand-roll a
+parallel `planner` dispatch here; route through that skill so there's one owner of the
+independence mechanism. Scale by keystone's cost tiers: routine plans get the same-tier
+self-critique, HIGH-stakes plans earn the heavier independent pass. If neither the skill
+nor subagent dispatch is available in this harness, the self-critique is the fallback —
+always do at least that much. A genuine disagreement
 between passes goes into the write-up as an explicit tension, not a silently resolved
 footnote.
 

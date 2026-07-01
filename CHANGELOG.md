@@ -2,6 +2,32 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.2.0] — 2026-07-01
+
+### Added
+
+- **`/challenge` + the `adversarial-review` skill** — an independent, fresh-context adversarial pass
+  over any finished doc (spec / plan / PRD / ADR). A reviewer with zero authorship memory builds a
+  typed **Assumption Ledger** (implicit assumptions included, ranked by blast radius), red-teams it
+  against the real codebase (composing `grill-with-docs`), and challenges the **approach** itself —
+  simplest? already-built? most-scalable? better alternative? — before ending with a
+  **survivability score** and folding accepted findings back into the doc (disagreements kept as
+  explicit tensions). Thin command → rich skill, mirroring `/investigate` → `systematic-debugging`.
+
+### Changed
+
+- **One owner for the independent adversarial pass.** `/plan-eng-review`, `/plan-ceo-review`, and
+  `writing-plans` no longer hand-roll their own high-stakes second-pass dispatch — they escalate
+  into `adversarial-review` (`/challenge`) carrying their own lens's question, with self-critique as
+  the always-available fallback.
+- **Template seed** — `templates/INSTINCTS.md` gains an example instinct that dispatches bounded,
+  well-specified, no-mid-task-input work to a fresh subagent (gated so interactive work stays inline).
+
+### Next
+
+- **The Learning Loop** (spec: [`docs/plans/2026-06-30-learning-loop.md`](docs/plans/2026-06-30-learning-loop.md))
+  — adversarially reviewed 2026-07-01 and re-sequenced (capture-first). Targeted for v0.3.
+
 ## [0.1.0] — 2026-06-30 — Initial public release
 
 The first public release of keystone — a repo-agnostic Claude Code kit that travels to every

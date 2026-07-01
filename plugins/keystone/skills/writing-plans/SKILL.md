@@ -290,7 +290,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-For a large or high-stakes plan, follow the self-check with an independent reviewer subagent using the template in `./plan-document-reviewer-prompt.md`. Or, for the heaviest plans, run the **bounded convergence loop** in `./plan-convergence-loop.md` — it dispatches that reviewer across goal / buildability / security lenses and replans until no HIGH concern remains (capped at ~3 cycles, with stall detection). Optional; skip it for small or mechanical plans.
+For a large or high-stakes plan, follow the self-check with an independent reviewer subagent using the template in `./plan-document-reviewer-prompt.md`. To attack the plan's _assumptions_ specifically — what it treats as true, and whether its approach is the simplest/least-reinventing one — run the `adversarial-review` skill (`/challenge`) on it; that's keystone's single home for the fresh-context, zero-authorship-memory adversarial pass. Or, for the heaviest plans, run the **bounded convergence loop** in `./plan-convergence-loop.md` — it dispatches that reviewer across goal / buildability / security lenses and replans until no HIGH concern remains (capped at ~3 cycles, with stall detection). Optional; skip it for small or mechanical plans.
 
 ## Execution Handoff
 
