@@ -84,11 +84,7 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 ## Install
 
 ```bash
-# from a local clone
-/plugin marketplace add ~/Code\ Projects/keystone
-/plugin install keystone
-
-# or from GitHub once pushed
+# from GitHub
 /plugin marketplace add j-loyd/keystone
 /plugin install keystone
 ```
