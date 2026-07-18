@@ -26,9 +26,8 @@ All notable changes to keystone are recorded here.
   chain threat (poisoned tool metadata), permission laundering (relayed approval is never
   consent), orchestrator accountability diffusion (independent safety checkpoints per agent),
   and compliance-as-vulnerability for workers consuming untrusted upstream output.
-- **Learning Loop — Phase 1: the loop closes** (spec: `docs/plans/2026-06-30-learning-loop.md`,
-  survived a `/challenge` pass 2026-07-01; claims re-verified against live `learnings.js` before
-  shipping). SDD task completion is now the loop's automatic capture point — **fatigue-gated**:
+- **Learning Loop — Phase 1: the loop closes** (internal spec; survived a `/challenge`
+  adversarial pass; claims re-verified against live `learnings.js` before shipping). SDD task completion is now the loop's automatic capture point — **fatigue-gated**:
   a one-tap `/learn` draft is offered only when a gate actually caught something, never on a
   clean pass. SDD handoff packets (and the implementer template) gain a **matching repo
   lessons** slot, closing the structural gap where session-start-surfaced lessons never reached

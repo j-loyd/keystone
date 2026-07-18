@@ -20,6 +20,11 @@ CLAUDE.local.md
 # run it; see docs/plans/archive/2026-06-26-ponytail-borrows.md.
 benchmarks/lean/
 
+# Internal planning / session-derived docs — written by /spec, writing-plans, and audit
+# sessions. They stay local: session docs are where private context leaks into a public
+# repo, and the sanitize sweep shouldn't be the only line of defense.
+docs/plans/
+
 # Internal onboard-codebase map — dev-orientation scaffolding, not product docs. The CONCERNS
 # risk register in particular is a weakness/security-gap catalog that must never ship publicly.
 # Regenerate locally with onboard-codebase; keep it out of this public repo.

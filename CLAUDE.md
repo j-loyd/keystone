@@ -22,9 +22,10 @@ concrete file list for this repo.
 
 - **PUBLIC REPO — sanitize before ship.** This repo is public. Before any commit/PR, run the
   pre-ship sanitize sweep in `CLAUDE.local.md` (git-ignored; it holds the private denylist and
-  the grep). If that file is missing on this machine, do not ship session-derived docs
-  (`docs/plans/`, `docs/handoffs/`) without a manual read for client/personal identifiers.
-  Write such docs anonymized at authoring time — the sweep is the net, not the practice.
+  the grep). `docs/plans/` is git-ignored entirely (session-derived docs stay local); if a doc
+  under `docs/handoffs/` or anywhere else derives from a work session, read it end to end for
+  client/personal identifiers before shipping. Write such docs anonymized at authoring time —
+  the sweep is the net, not the practice.
 - **No auto-commits** — stage freely; commit/push only when explicitly asked.
 - **Releases ship via squashed PRs** to `main` (the `gh pr create … && gh pr merge --squash`
   flow), not direct pushes.
@@ -35,3 +36,4 @@ concrete file list for this repo.
 - **Skill/command budgets** — `SKILL.md` files stay under ~500 lines; push depth into sibling
   reference files. Keep `description:` frontmatter lean (it's always-loaded).
 - Completed plans move to `docs/plans/archive/`; keep `docs/plans/README.md` accurate.
+  (`docs/plans/` is git-ignored — plans are working docs local to this machine, not shipped.)
