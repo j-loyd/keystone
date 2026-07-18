@@ -27,7 +27,8 @@ own plan just rationalizes it.
 
 - **Default** — one fresh-reviewer pass (Assumption Ledger → red-team → approach lenses →
   reconcile → survivability score). Right for most docs.
-- **Higher stakes** — run a second independent pass (a different lens or heavier model tier), or
+- **Higher stakes** — run a second independent pass (a different lens, or a heavier model tier —
+  the tier above the session model, where the harness takes a per-dispatch model override), or
   escalate to `/plan-eng-review` for deep architecture. No bespoke panel — reuse what exists.
 
 Honor the no-commit rule — the pass updates the doc, not the code, and never commits. A challenged-

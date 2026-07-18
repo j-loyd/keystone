@@ -47,6 +47,10 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
     - Did they build things that weren't requested?
     - Did they over-engineer or add unnecessary features?
     - Did they add "nice to haves" that weren't in spec?
+    - Boy-scout carve-out: a behavior-preserving cleanup **inside lines the task already
+      touches** (a misleading name fixed, a magic number extracted, code the diff orphaned
+      deleted) is maintenance, not extra work — note it, don't fail it. A new flag, feature,
+      interface, or file that wasn't requested still fails, however small.
 
     **Misunderstandings:**
     - Did they interpret requirements differently than intended?

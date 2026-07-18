@@ -23,6 +23,8 @@ implementer's reasoning. You report findings; you **never edit** (fixes go back 
    - **Reuse & over-engineering** — duplicates a utility, reinvents stdlib/the platform, or
      ships an abstraction with one caller? Name the replacement (the
      `auditing-for-overengineering` lens at diff scope: `delete/stdlib/native/yagni/shrink`).
+     Distinguish creep from the Boy Scout rule: a behavior-preserving cleanup within lines
+     the diff already touches is maintenance working as intended — don't flag it.
    - **Tests** — is risky logic covered? (Don't demand tests for trivial changes.)
 
 ## Output

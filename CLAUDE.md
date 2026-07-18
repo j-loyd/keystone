@@ -30,3 +30,4 @@ concrete file list for this repo.
 - **Skill/command budgets** — `SKILL.md` files stay under ~500 lines; push depth into sibling
   reference files. Keep `description:` frontmatter lean (it's always-loaded).
 - Completed plans move to `docs/plans/archive/`; keep `docs/plans/README.md` accurate.
+  (`docs/plans/` is git-ignored — plans are working docs local to this machine, not shipped.)

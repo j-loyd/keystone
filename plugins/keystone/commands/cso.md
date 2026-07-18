@@ -17,9 +17,13 @@ Security Top 10 (2023), and the LLM Top 10 (2025). This is the deep, deliberate 
 category lists, and `scan.js` (PostToolUse hook) is the always-on injection tripwire. This
 command ties them together into an audit.
 
-> Prefer dispatching the **`security-reviewer`** agent (Task tool) to run the audit in a
-> dedicated context — it traces untrusted→sink and adversarially verifies. For a large
-> scope, fan out one `security-reviewer` per phase below and merge the findings.
+> Prefer dispatching the **`security-reviewer`** agent (via this harness's subagent-dispatch
+> primitive — Claude Code's Task tool, or the equivalent elsewhere; run the audit inline if
+> none exists) so it runs in a dedicated context — it traces untrusted→sink and adversarially
+> verifies. For a large scope, fan out one `security-reviewer` per phase below and merge the
+> findings. Frame each dispatch as what it is — an authorized defensive audit of code the user
+> owns — and apply `security-review`'s model-refusal handling: a declined pass is re-framed or
+> re-run a tier down, and reported as NOT RUN rather than "no findings."
 
 ## Audit phases (infrastructure-first)
 

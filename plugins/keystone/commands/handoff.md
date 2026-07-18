@@ -49,7 +49,9 @@ Write only what you actually know — don't pad. If a field is empty, say so.
    mkdir -p docs/handoffs
    ```
 2. Write the four sections. Lead with the branch and `git status -s` reality so the next
-   session trusts it.
+   session trusts it. Any **gotcha** you just wrote that will outlive this task is a lesson —
+   offer a one-tap `/learn` for each (evidence = what happened this session), so it survives
+   beyond the handoff note.
 3. **Update the continuity index** `docs/handoffs/README.md` — the file `/pickup` reads first.
    Seed it from `plugins/keystone/templates/handoffs/README.md` if it does not exist yet, then
    append (or update) this note's row in the **Handoff notes** table, newest first:

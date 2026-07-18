@@ -6,13 +6,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/instincts.js",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/instincts.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/instincts.js\" ]; then node \"$R/hooks/instincts.js\"; else echo '{\"systemMessage\":\"keystone: instincts.js not found under the plugin root (plugin updated mid-session?) - restart this session to restore keystone hooks.\"}'; fi",
             "timeout": 5,
             "statusMessage": "Loading active rules..."
           },
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/learnings.js",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/learnings.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/learnings.js\" ]; then node \"$R/hooks/learnings.js\"; else echo '{\"systemMessage\":\"keystone: learnings.js not found under the plugin root (plugin updated mid-session?) - restart this session to restore keystone hooks.\"}'; fi",
             "timeout": 5,
             "statusMessage": "Loading repo lessons..."
           }
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/guard.js",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/guard.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/guard.js\" ]; then node \"$R/hooks/guard.js\"; else echo '{\"systemMessage\":\"keystone: guard.js not found under the plugin root (plugin updated mid-session?) - the safety guard is INACTIVE; restart this session to restore keystone hooks.\"}'; fi",
             "timeout": 5,
             "statusMessage": "Safety guard..."
           }
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/scan.js",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/scan.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/scan.js\" ]; then node \"$R/hooks/scan.js\"; else echo '{\"systemMessage\":\"keystone: scan.js not found under the plugin root (plugin updated mid-session?) - the injection scanner is INACTIVE; restart this session to restore keystone hooks.\"}'; fi",
             "timeout": 5,
             "statusMessage": "Injection scan..."
           }
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in *.py) ruff format \"$f\";; *.js|*.ts|*.jsx|*.tsx|*.json|*.css|*.scss|*.html|*.md|*.yaml|*.yml) npx prettier --write \"$f\";; esac; } 2>/dev/null || true",
+            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in *.py) command -v ruff >/dev/null 2>&1 && ruff format \"$f\";; *.js|*.ts|*.jsx|*.tsx|*.json|*.css|*.scss|*.html|*.md|*.yaml|*.yml) if [ -x node_modules/.bin/prettier ]; then node_modules/.bin/prettier --write \"$f\"; elif command -v prettier >/dev/null 2>&1; then prettier --write \"$f\"; fi;; esac; } 2>/dev/null || true",
             "timeout": 30,
             "statusMessage": "Formatting..."
           }
@@ -88,7 +88,7 @@
           },
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/notify.js",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/notify.js\" ] || R=\"${PLUGIN_ROOT}\"; [ -f \"$R/hooks/notify.js\" ] && node \"$R/hooks/notify.js\" || true",
             "timeout": 5
           }
         ]

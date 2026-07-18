@@ -55,6 +55,8 @@ The user has asked for an isolated workspace (Step 0 consent). Do you already ha
 
 Native tools handle directory placement, branch creation, and cleanup automatically. Using `git worktree add` when you have a native tool creates phantom state your harness can't see or manage.
 
+Some harnesses also take an isolation option **on the subagent dispatch itself** (e.g. a worktree-isolation parameter on Claude Code's Agent tool). When the isolated work IS a subagent's task — parallel implementers, an isolated experiment — prefer dispatching it straight into its own worktree over creating one by hand: same isolation, and the harness cleans up an unchanged worktree automatically.
+
 Only proceed to Step 1b if you have no native worktree tool available.
 
 ### 1b. Git Worktree Fallback

@@ -35,8 +35,11 @@ for f in ~/.claude/CLAUDE.md ./CLAUDE.md ./.claude/CLAUDE.md ~/.claude/settings.
 done
 ```
 
-**MCP tool schemas (usually the biggest lever)** — every tool of every _connected_ server
-loads its full JSON schema always. Count servers and tools across the config files, then
+**MCP tool schemas (often the biggest lever)** — on a harness **without deferred tool
+loading**, every tool of every _connected_ server loads its full JSON schema on every turn.
+Harnesses are converging on deferral (tools advertised by name only, schemas fetched on
+demand via a tool-search step) — check whether yours defers before assuming the worst case;
+a deferred tool costs roughly a name+description line, not a full schema. Count servers and tools across the config files, then
 estimate **~400–600 tokens per tool schema**:
 
 ```bash
@@ -100,25 +103,30 @@ done
 
 Produce a footprint table, sorted by estimated cost (biggest first):
 
-| Bucket                       | Est tokens | ~% of 200k window | Flagged offenders     |
-| ---------------------------- | ---------: | ----------------: | --------------------- |
-| MCP tool schemas             |          … |                 … | servers/tools to drop |
-| CLAUDE.md (global + project) |          … |                 … | —                     |
-| Agent descriptions           |          … |                 … | the long ones         |
-| Skill / command descriptions |          … |                 … | the long ones         |
-| Oversized skill bodies       |          … |                 … | files over 500 lines  |
-| settings / hooks             |          … |                 … | —                     |
+| Bucket                       | Est tokens | ~% of window | Flagged offenders     |
+| ---------------------------- | ---------: | -----------: | --------------------- |
+| MCP tool schemas             |          … |            … | servers/tools to drop |
+| CLAUDE.md (global + project) |          … |            … | —                     |
+| Agent descriptions           |          … |            … | the long ones         |
+| Skill / command descriptions |          … |            … | the long ones         |
+| Oversized skill bodies       |          … |            … | files over 500 lines  |
+| settings / hooks             |          … |            … | —                     |
 
-`% of window = est tokens ÷ 200000`. Under each row, name the specific offenders the bash
-blocks surfaced. The point is the ranking, not the decimals.
+`% of window = est tokens ÷ the session model's context window` — state which window you used
+in the table caption. Use 200k unless you know the session runs a 1M-context model; on a
+1M window the percentages shrink 5x but the
+_ranking_ — and the always-loaded-vs-lazy-loaded distinction — matters exactly the same, since
+every always-on token is still paid on every single turn. Under each row, name the specific
+offenders the bash blocks surfaced. The point is the ranking, not the decimals.
 
 ## Recommendations
 
 Highest-yield first:
 
-1. **Disconnect unused MCP servers.** Each connected server loads its _whole_ toolset every
-   turn — this is almost always the largest single lever. If you're not using a server this
-   session, drop it; reconnect on demand.
+1. **Defer, then disconnect.** Where the harness supports deferred tool loading, prefer it —
+   schemas stay out of context until needed (an order-of-magnitude cut on big catalogs, and
+   selection accuracy _improves_ past a few dozen tools). Whatever can't be deferred and isn't
+   in use this session, disconnect; reconnect on demand.
 2. **Tighten long agent / skill / command descriptions.** A description exists to let the
    orchestrator _choose_ — one lean sentence with a clear trigger. Trim anything padded.
    (Keystone keeps descriptions lean as a convention; treat that as the instance, not a law.)
@@ -126,6 +134,10 @@ Highest-yield first:
    push reference detail into linked files the skill loads only when needed.
 4. **Move rarely-used skills behind on-demand triggers** instead of eager load, so their body
    isn't paid for on turns that don't use them.
+
+The invariant behind all four: **advertise cheap, load on demand.** The same
+progressive-disclosure principle now spans skill bodies, MCP schemas, and tool definitions —
+always-on tokens are the ones worth fighting over.
 
 ## Honest limits
 

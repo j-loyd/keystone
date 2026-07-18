@@ -27,6 +27,13 @@ Security bugs live where **untrusted input reaches a dangerous sink**. Trace it:
 4. **Verify exploitability** before calling it confirmed. Note severity (critical/high/
    medium/low), the concrete attack, and the fix.
 
+**Model refusals on security work.** Top-tier models ship safety classifiers that can
+false-positive on benign security work — exactly the exploit-shaped reasoning this skill asks
+for. When dispatching this review to a subagent, state the authorization context in the packet
+(defensive audit of code the user owns/operates); if a pass is declined anyway, re-frame or
+re-run it one model tier down — and never let a declined pass masquerade as "no findings":
+report it as NOT RUN.
+
 ## OWASP Top 10 : 2025 — what to check
 
 > Examples below are illustrative (TypeScript, sometimes Supabase) — the **principle** is

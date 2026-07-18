@@ -7,8 +7,10 @@ mechanical plans — rigor scales to risk, and a single fresh-eyes pass is enoug
 ## The lenses (diversity without external tools)
 
 Diversity here comes from **different lenses on the same model**, not from different model
-binaries — nothing external is required. Each lens is a variant of `./plan-document-reviewer-prompt.md`
-dispatched as its own reviewer pass over the **same** plan:
+binaries — nothing external is required. (Where the dispatch primitive takes a per-dispatch model
+override, you can additionally run one lens a tier above the session model for extra
+decorrelation — optional icing, never a prerequisite.) Each lens is a variant of
+`./plan-document-reviewer-prompt.md` dispatched as its own reviewer pass over the **same** plan:
 
 - **Goal lens** (Riley / `code-reviewer`) — does the plan cover every spec requirement? Any
   silent scope drop ("v1 just does X", "wire up later")?

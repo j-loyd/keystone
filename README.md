@@ -18,7 +18,7 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      26 auto-invoked skills (process discipline + domain language + security + adversarial review + onboarding/git)
+├── skills/      28 auto-invoked skills (process discipline + agent/loop design + domain language + security + adversarial review + onboarding/git)
 ├── commands/    26 explicit /commands (spec, planning, challenge, review, qa, simplify, security, ship, safety, learn, handoff, research)
 ├── agents/      the crew: Pat (planner) · Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
@@ -41,7 +41,17 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 
 - **No auto-commits** — `/ship` prepares everything and stops for an explicit go-ahead.
 - **Linear Backlog** — `/to-issues` never creates in Triage.
-- **Cost tiers** — `/review`, `/qa`, `/cso` scale Haiku → Sonnet → Opus.
+- **Cost tiers** — `/review` scales cheap → mid → high tiers, with the top tier reserved
+  for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
+  how to resolve current IDs/prices at build time live in `cost-aware-llm-pipeline`.
+- **The loop closes** — SDD task completion harvests what the gates caught into per-repo
+  lessons (fatigue-gated, one-tap, never silent), and each task packet carries the matching
+  lessons back in — so runs compound instead of re-paying for known mistakes.
+- **Agent & loop design (first-class)** — `designing-agent-systems` (the design rubric +
+  note before any agent code), `long-running-agents` (loop modes, iteration contract, stuck
+  detection, budget enforcement), and `dispatching-parallel-agents` (read/write asymmetry,
+  fan-out economics, orchestration pattern vocabulary) — all harness-neutral and
+  model-agnostic.
 - **Chrome MCP** — `/qa` drives `chrome-devtools` / `claude-in-chrome`, no browse daemon.
 - **Security (first-class)** — three skills: `security-review` (OWASP 2025, source→sink
   methodology), `api-security` (full OWASP API Top 10:2023 — REST/GraphQL/webhooks), and
@@ -141,6 +151,13 @@ off-domain (smart contracts, C/C++, firmware, crypto) — skip them.
 
 Edit skills/commands in place and bump `VERSION` + `CHANGELOG.md`. The skills here are
 intentionally curated — change them directly rather than re-syncing from anywhere.
+
+**Restart open sessions after a plugin update.** Harnesses resolve the plugin root at session
+start; an update that swaps the installed version directory leaves already-open sessions
+pointing at a deleted path. The bundled hooks degrade to a visible one-line notice (instead of
+failing) when that happens — the fix is always to start a fresh session. On harnesses with
+per-hook trust (e.g. Codex), a release that changes hook _commands_ also requires re-approving
+the hooks before they run again.
 
 ## Credits
 

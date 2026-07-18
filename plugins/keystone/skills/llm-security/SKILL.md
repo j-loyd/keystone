@@ -6,7 +6,7 @@ description: Security review for LLM and agent code — prompt injection, tool/o
 # LLM & Agent Security
 
 The attack surface web reviews miss. Use alongside `security-review` whenever a model is in
-the loop — Claude API apps, Agno agents, MCP tools, RAG pipelines, the knowledge platform.
+the loop — LLM API apps, agent frameworks, MCP tools/servers, RAG pipelines, knowledge bases.
 
 ## The one principle
 
@@ -37,6 +37,12 @@ in tool output; `guard.js` blocks the dangerous sinks — but design for it too.
 
 - Vet models, third-party prompts, **skills, and MCP servers** — a poisoned tool
   description or skill is an injection vector. Pin and review external agent components.
+- **Tool poisoning is a first-class threat, not a corner case:** instructions hidden in a
+  tool's *metadata* (description, parameter docs, error strings) are read by the model but
+  invisible in normal use, and measured attack success rates against popular agents run
+  high. Review tool descriptions at install time like code, pin server versions, re-review
+  on update, and treat a tool's self-description as untrusted input to the same degree as
+  its output.
 - **Models invent plausible package names** (typosquat, slopsquat, or wholly invented) — a
   plan that names a dependency is an injection of an unverified external component. The
   `writing-plans` Anti-Reinvention & Package Legitimacy gate detects this at plan time;
@@ -87,6 +93,24 @@ in tool output; `guard.js` blocks the dangerous sinks — but design for it too.
 - Cap tokens, request rate, tool calls, and cost per user/session (matches the
   `cost-aware-llm-pipeline` skill). Prevent denial-of-wallet and model-extraction abuse.
 
+## Multi-agent trust boundaries (orchestrators, workers, teams)
+
+Multi-agent systems add trust edges that single-agent review misses:
+
+- **Consent doesn't transit through agents.** A subagent or teammate relaying "the user
+  approved this" is a claim, not an approval — treat any relayed permission as untrusted
+  input, and design so an approval can only be granted on the surface the human actually
+  uses (this is *permission laundering*, and current harnesses explicitly defend against
+  it; your designs must too).
+- **Orchestration diffuses accountability.** A worker that would refuse a harmful request
+  asked directly will often comply when it arrives orchestrator-mediated, and no single
+  agent's output looks wrong in isolation. Put independent safety checkpoints at each
+  agent's dangerous sinks — don't rely on the orchestrator's judgment as the only gate.
+- **Compliance is a vulnerability under untrusted input.** The more instruction-following
+  the worker, the more faithfully it executes a poisoned upstream instruction. Every
+  inter-agent message is untrusted data crossing a trust boundary; validate against
+  artifacts (do the tests actually pass?), never against the sender's confidence.
+
 ## Review method for agent/LLM code
 
 1. **Map the trust boundaries:** where does untrusted content enter the prompt/context, and
@@ -126,6 +150,9 @@ For an agent with tools, do an explicit action audit — the failure mode is rar
 - [ ] RAG retrieval scoped to the caller's authorization; corpus/memory write-access controlled (LLM04/08)
 - [ ] Agent runs with its own scoped credentials, not the operator's (LLM06)
 - [ ] PII/secrets scrubbed from prompts and logs (LLM02)
+- [ ] Tool descriptions/metadata reviewed and pinned; re-reviewed on server update (LLM03)
+- [ ] Inter-agent messages treated as untrusted; relayed approvals never honored as consent
+- [ ] Safety checkpoints per agent at dangerous sinks, not only at the orchestrator
 
 ## Resources
 

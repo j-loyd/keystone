@@ -21,6 +21,9 @@ decisions made earlier in the session, drifts from the codebase's style, ignores
 now buried deep in the history, and starts inventing file or function names that don't exist.
 The longer a single context runs, the worse it silently gets. So each task goes to a subagent
 that starts clean, receives exactly its packet, and terminates — its rot dies with it.
+(Rot is one of three independent reasons this pattern wins: shared-context orchestration also
+measurably loses steering accuracy as unrelated agent traffic accumulates, and per-task
+isolation is what keeps each dispatch's cost linear instead of compounding.)
 
 This protects the **subagents**. Protect your **own** orchestrator window too:
 
@@ -83,7 +86,13 @@ crew members (registered agents) and route their results. Subagents can't talk t
 never have to go hunting (this is the single biggest quality lever): **acceptance criteria**,
 **files to touch**, **dev notes** (patterns/utilities to reuse), the **verified-behavior** of
 load-bearing touchpoints (with `[Source: file:line]` citations from the plan), the **testing
-standard**, and **references**. Build it from the plan; pass it in the dispatch prompt, not as
+standard**, **references**, and the **matching repo lessons**. For that last slot: at run
+start, read this repo's banked lessons once (`node "$CLAUDE_PLUGIN_ROOT/hooks/learnings.js"
+--path` prints the file; harness-neutral fallback: `~/.claude/keystone/learnings/<repo-slug>.md`)
+and give each packet only the few entries whose subject or `**Triggers:**` line matches that
+task's files/domain. This is how banked lessons actually reach the crew — session-start
+surfacing does not follow a dispatch, so a packet without them re-pays for known mistakes.
+Build it from the plan; pass it in the dispatch prompt, not as
 "go read the plan file." The packet is a **hard ceiling, not a starting point** — a subagent
 that has to read the plan file or wander the tree to orient is a packet you under-built. If it's
 missing a fact, fix the packet, don't tell the subagent to go find it.
@@ -186,6 +195,15 @@ Use the least powerful model that can handle each role to conserve cost and incr
 - Touches multiple files with integration concerns → standard model
 - Requires design judgment or broad codebase understanding → most capable model
 
+**Declare the tier on the dispatch, where the harness supports it.** If the dispatch primitive
+takes a per-dispatch model or reasoning-effort override (e.g. Claude Code's Agent tool), set it
+explicitly from the Risk table below rather than leaving tier choice implicit in prompt wording;
+on a harness without overrides, this section stays advisory prose. Keystone deliberately does
+**not** pin a model in the agent definitions — the same reviewer sees trivial and critical diffs,
+so tier is a per-task call, not a per-agent one. The tier ladder — and how to resolve current model
+IDs and prices at build time (never hardcoded in prose or code) — lives in
+`cost-aware-llm-pipeline`, including the top adjudication tier above the everyday ladder.
+
 ## Rigor Scales to Risk
 
 Model Selection scales _which model_ runs each task; this scales _which gates_ run. Match
@@ -250,7 +268,8 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 asserts it — **RED→GREEN evidence** (the failing-then-passing commands and output, when TDD was
 required) and an explicitly **pristine run** (clean output, no unexpected warnings/errors/skips).
 A DONE that only claims "tests pass" with no RED/GREEN and no pristine statement is unverified —
-send it back for the evidence before it enters the gate. Then proceed to spec compliance review.
+send it back for the evidence before it enters the gate (this is the *victory declaration*
+failure mode: agents mark done without verifying unless the harness demands the evidence). Then proceed to spec compliance review.
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 
@@ -274,12 +293,32 @@ context the reviewer lacks. Confirm the requirement yourself; if you find a real
 a failed review — loop it back to Mason (verbatim) and re-review. **Never let a ⚠️ pass silently
 into "complete"** — an unresolved "cannot verify" is an open question, not an approval.
 
+## Harvest the lesson (the loop's automatic capture point)
+
+Task completion is where lessons get captured without anyone remembering to run a command —
+the learning loop stands or falls here. **Fatigue guard: offer capture only when a gate
+caught something** — Quinn/Riley/Sage returned FAIL (or CONCERNS you acted on), a ⚠️ turned
+out to be a real gap, a BLOCKED exposed a wrong plan assumption, or reality contradicted the
+packet's verified-behavior. On a clean pass, offer nothing: a reflexive prompt trains a
+reflexive "no."
+
+When there is signal, draft the entry in `/learn`'s format — type, 1–3 lines, **evidence =
+the finding itself**, `**Triggers:**` tags from the controlled vocabulary — and offer it
+one-tap. The human approves; never silently write. Then append the durable finding to the
+run-state block as usual (the run-state records what happened this run; the lesson is what
+must survive into the next one).
+
 ## Review Loop Control
 
 The reviewer → fix → re-review cycle must be bounded, or it can ping-pong forever (or, worse, converge on the reviewer and implementer agreeing while the real issue persists).
 
 - **Pass feedback verbatim.** When you re-dispatch the implementer to fix issues, hand it the reviewer's findings **word-for-word**. Don't paraphrase or summarize — your compression is where requirements get lost. Quote the reviewer.
 - **Fixes carry the re-run contract.** A review-driven fix isn't done when the edit lands — it's done when the tests covering it are green _on the code as it now stands_. When you loop a task back to Mason, name the covering tests in the handback (so Mason re-runs those, not the whole suite) and require the fresh result in the return: RED→GREEN for a test-first fix, or the covering tests green after the change. **Never mark a task complete on test evidence from before the fix** — a green run from the prior round is stale.
+- **Keep re-reviews adversarial, not confirmatory.** "Is it fixed now?" invites agreement —
+  same-model reviewer/implementer pairs drift toward mutual approval across rounds (the
+  convergence failure above). Frame every re-review as "find what's still wrong." For
+  HIGH-risk tasks, where the harness takes per-dispatch overrides, put the reviewer on a
+  different tier — or model family — than the implementer to decorrelate their blind spots.
 - **Cap iterations.** Give a review→fix loop ~3 rounds. If it isn't resolved by then, stop looping and escalate to the human — more rounds rarely converge.
 - **Detect stalls.** Track the open-issue count across rounds. If it isn't _decreasing_ (same count, or new issues replacing fixed ones each round), the loop is stuck — stop and escalate rather than spinning. A reviewer that keeps finding new issues on each pass is a signal the task or plan is wrong, not that one more round will do it.
 - **Verify until closure (bounded).** The same loop governs the QA gate, not just code review. A **FAIL** from Quinn (or a **CONCERNS** the orchestrator decides not to accept) doesn't end at a one-shot handback: loop it back to Mason with Quinn's findings **verbatim**, then **re-verify** — repeat until the gate returns **PASS or WAIVED**. Bound it with the **same ~3-round cap and stall detection** above (don't invent a new limit): if the open-issue count isn't decreasing, escalate to the human instead of spinning. Quinn stays **advisory** — this only makes "iterate until the gap actually closes" explicit; it does **not** turn the gate into a hard blocker. The orchestrator still owns the ship decision and may accept CONCERNS or WAIVE with a stated reason.

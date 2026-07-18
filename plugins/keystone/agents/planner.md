@@ -26,8 +26,8 @@ crew works from, so make it self-contained.
 
 - Prefer normalized, per-concern tables over monolithic JSON blobs, matching whatever
   stack the codebase already uses rather than assuming one.
-- For LLM/agent work, apply cost-aware model routing (Haiku→Sonnet→Opus), not the biggest
-  model by default.
+- For LLM/agent work, apply cost-aware model routing (cheap→mid→high tiers, with the top
+  tier reserved for adjudication/adversarial seats), not the biggest model by default.
 
 ## Output
 

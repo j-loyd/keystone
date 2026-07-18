@@ -45,7 +45,7 @@ Plans meet reality. When you hit something the plan didn't anticipate, don't sil
 
 - **YES → fix it now.** Real bugs, missing validation on something you're touching, and blockers that stop the task are in-scope. Fix, verify, note it in your report.
 - **MAYBE / it's a judgment call → ask.** Anything with a blast radius beyond the task: a new DB table or migration, swapping or adding a dependency, changing a shared interface, or expanding scope. Surface the choice; don't decide unilaterally.
-- **NO → note and defer.** Tangential improvements, "while I'm here" refactors, unrelated debt. Record them (a `/learn` candidate) and move on. Resist the "while I'm here" reflex — it's how scope creep and unrelated breakage get in.
+- **NO → note and defer.** Tangential improvements, "while I'm here" refactors, unrelated debt. Record them (a `/learn` candidate) and move on. Resist the "while I'm here" reflex — it's how scope creep and unrelated breakage get in. One carve-out: a **boy-scout cleanup** in lines you're already editing (a misleading name, a magic number, code your diff orphaned — seconds of work, zero blast radius) is part of doing the task well; do it and mention it in the report (`coding-standards` has the three-part boundary).
 
 This replaces the old binary of "execute or stop": most deviations are a fix or a deferral, and only the genuinely consequential ones need to interrupt you.
 
