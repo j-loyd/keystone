@@ -16,6 +16,9 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
 
     [Scene-setting: where this fits, dependencies, architectural context]
 
+    [Repo lessons: the few banked lessons whose triggers match this task — apply them;
+    they are prior sessions' paid-for mistakes. Omit the section if none match.]
+
     ## You Have What You Need
 
     This packet is self-contained — it holds the full task text, the context, and the

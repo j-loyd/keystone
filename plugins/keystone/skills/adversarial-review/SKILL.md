@@ -33,9 +33,14 @@ Run the pass in a **fresh context with zero authorship memory** — dispatch a s
 harness's subagent-dispatch primitive (Claude Code's Task tool, or the equivalent elsewhere) that
 never saw the doc get written. It receives **only the doc + the codebase**, never this session's
 reasoning, so it isn't anchored by it. Where the harness allows, run the reviewer on a
-**different model tier** than the author to decorrelate the biases. If no subagent primitive
-exists, the fallback is to re-open the doc cold in a new session and run the same moves — always
-do at least that much.
+**different model tier** than the author to decorrelate the biases — concretely, where the
+dispatch primitive takes a per-dispatch model override (e.g. Claude Code's Agent tool), set the
+reviewer one tier **above** the session model (the tier ladder lives in
+`cost-aware-llm-pipeline`); a top-tier adjudication seat is exactly the spend that skill reserves
+top-tier models for. A different tier decorrelates less than a different **family** —
+same-family models share training-shaped blind spots, which is why the cross-provider hop
+below exists. If no subagent primitive exists, the fallback is to re-open the doc cold in
+a new session and run the same moves — always do at least that much.
 
 > The true cross-model version (paste a self-contained packet into a different provider — the
 > Claude→Codex→Claude hop by hand) is a documented **fast-follow**; the fresh subagent is the
@@ -99,6 +104,9 @@ skill's rigor, don't hand-wave:
   (`improve-codebase-architecture`.)
 - **Is there a materially better alternative?** State one genuinely different approach and why the
   doc's is better — or isn't. One is enough; if none exists, say so. (From `/plan-eng-review`.)
+  For a **one-way-door** choice, escalate from critique to **tournament**: commission the
+  competing approach as its own worked alternative and judge between them, rather than only
+  stress-testing the incumbent.
 
 A "yes, this is simplest/best" with no alternative named is not an answer — it's an unexamined
 assumption, back to the ledger.
@@ -143,7 +151,10 @@ criticism starts **repeating**: a looping critique is the done signal, not a rea
 - **Higher stakes — add independent seats, reuse what exists.** For a HIGH-stakes doc
   (auth/money/data-deletion, a one-way-door migration, a new external dependency, or a
   survivability dimension already at 1–2), don't build a bespoke panel — run the pass **again as a
-  second independent seat** (a different lens, or a heavier model tier). For a bounded
+  second independent seat** (a different lens, or a heavier model tier — where the harness takes a
+  per-dispatch model override, the tier above the session model — and prefer a genuinely
+  different lens or model family over a same-family re-run: correlated seats mostly re-vote
+  the same biases, and a second vote is signal to check against the doc, not proof). For a bounded
   replan-until-converged loop, hand off to `writing-plans/plan-convergence-loop.md` (owned by
   writing-plans — don't re-implement it here). This skill **is** the independent-pass mechanism
   that `/plan-eng-review` and `/plan-ceo-review` escalate into, so there's no deeper independence

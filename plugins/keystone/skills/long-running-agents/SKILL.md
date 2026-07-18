@@ -1,0 +1,121 @@
+---
+name: long-running-agents
+description: Use when designing or reviewing agent work that outlives one context window or one sitting — overnight/autonomous runs, recurring or scheduled agents, "keep going until it's done" loops, or any run needing budget ceilings and stuck-loop detection. Trigger on continuous loops, cron/scheduled agents, self-pacing runs, or multi-session builds.
+---
+
+# Long-Running Agents — loop engineering
+
+Design the loop, not just the prompt. An agent is a model plus a harness, and on long-horizon
+work the harness — what state persists, when the loop stops, what counts as done — decides the
+outcome more than prompt wording does. Generation is cheap now; **verification and continuity
+are the bottlenecks**, and this skill owns both for runs that outlive a single context window.
+
+**Start with the simplest loop that works.** Most tasks need no loop machinery at all — a
+single session with a plan beats a scaffold. Reach for this skill when the work genuinely
+exceeds one sitting or one window; every mechanism below must earn its place (the deletion
+test applies to loop scaffolding exactly as it does to code).
+
+## Pick the loop mode deliberately
+
+| Mode                    | Shape                                                       | Right when                                                                  |
+| ----------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Single long session** | one context, compaction/handoffs as needed                  | work fits a day and one window (with resets); the default                   |
+| **Fixed-interval poll** | re-run every N minutes                                      | watching external state that changes on a known cadence (CI, deploy, queue) |
+| **Self-paced**          | agent chooses its own cadence AND its own termination       | open-ended "keep working until done" with a verifiable done condition       |
+| **Scheduled wake**      | agent ends a run by writing its own next-wake time to state | recurring work with irregular, agent-judged timing                          |
+| **Queue consumer**      | agents produce/consume messages under a schema contract     | multi-stage pipelines; crash-resume via acknowledgement comes free          |
+
+Name the harness instance, don't hardcode it: Claude Code has native loop/scheduling
+primitives (a `/loop` command, wake scheduling, scheduled cloud agents, Stop hooks); other
+harnesses have resume/continue plus external cron. The degraded fallback — a shell loop
+re-invoking the agent against a spec file — still works, but it is the _fallback_: it has no
+native stuck-detection or budget enforcement, so you must add both yourself (below).
+
+**Cold-start rule (applies to every mode):** a scheduled or restarted run wakes with zero
+conversational memory. Never wake context-blind — every iteration starts by reading persisted
+state (below). If a wake has no state to read, that's a design bug, not a prompt problem.
+
+## The iteration contract
+
+Each iteration of any loop follows the same contract:
+
+1. **Orient from state, not memory.** Read the progress file, the failure log, and the repo's
+   own record (e.g. `git log`), then run the baseline checks (tests/build) to learn the _true_
+   current state — never trust the previous iteration's claims over what the checks say now.
+2. **One task per iteration.** Pick the single next unfinished item. One-shotting the whole
+   backlog in one pass is a named failure mode (over-ambition); it produces half-done
+   everything and an unresumable mess.
+3. **Do the work, verify end-to-end.** "Done" means the feature demonstrably works — run it,
+   not just its unit tests. Marking done without verification is the other named failure mode
+   (premature completion / victory declaration), and it compounds: every later iteration
+   builds on the lie.
+4. **End by writing state.** Update the progress file (what's done, what's next, blockers) and
+   append anything that _didn't_ work to the failure log. The iteration's value survives only
+   in what it wrote down.
+
+## Memory lives outside the window
+
+- **Progress file** — the running state: item checklist, current status, next action,
+  blockers. The continuity primitive is a **structured handoff file, not a conversation
+  summary** — summaries decay and bloat; a state file stays exact. (keystone's
+  `/handoff` → `/pickup` flow and `subagent-driven-development`'s run-state file are this
+  pattern; reuse them, don't invent a third format.)
+- **Failure log** — a persistent "what didn't work and why" file every iteration reads before
+  acting. Without it, iteration N cheerfully retries what iteration N-3 already proved
+  broken. Highest-value lines: the exact command/approach that failed and the observed error.
+- **Initializer session** — for a genuinely multi-session build, spend the first session
+  setting up the track to run on: the item checklist, the progress file, a working
+  init/baseline script, and a **green baseline** (tests passing before any agent works).
+  Worker sessions then start from a known-good floor. Don't build this for a two-session
+  task — scale the scaffolding to the run.
+
+## Stopping: budgets, stuck detection, and done
+
+A loop needs three independent exits, or it has none:
+
+- **Done** — a machine-verifiable completion condition (all checklist items pass their
+  checks). If success can't be checked mechanically, the task is a poor fit for an
+  autonomous loop — keep a human in the loop instead of laundering judgment through one.
+- **Stuck ("gutter") detection** — the signature is _motion without progress_: the same
+  command failing repeatedly, files edited back and forth, token burn with no state change.
+  On detection: write the failure log, stop or re-plan; never just keep spinning. Cap
+  iterations as a backstop (a bounded loop that halts beats an unbounded one that has to be
+  killed).
+- **Budget enforcement, not budget alerts** — a hard spend/token ceiling that stops the run,
+  paired with the velocity check above (a runaway loop outruns a cumulative cap long before
+  anyone reads an alert). The money-side mechanics live in `cost-aware-llm-pipeline`
+  (velocity circuit breaker, task-level budgets the model can see); wire them in, don't
+  re-derive them.
+
+## Context across a long run
+
+- **Prefer reset over degradation.** Quality decays as a window fills — and models can rush
+  or cut corners near the perceived end of a window. For long runs, a deliberate context
+  reset from the handoff file beats pushing a tired window further. Resets are cheap when
+  (and only when) the state files are good — which is the real reason to keep them good.
+- **Compact at semantic boundaries, not byte thresholds.** A finished item is a safe
+  compaction point; mid-derivation is not. Threshold-triggered auto-compaction that fires
+  mid-task is how runs lose the thread.
+- **Don't re-absorb verbosity.** Carry results (status, files, findings) forward, not
+  transcripts — the same rule `subagent-driven-development` applies to subagent returns.
+
+## When NOT to loop
+
+- **No machine-verifiable done condition** — subjective or aesthetic targets drift forever.
+- **The task needs deep, evolving judgment of one codebase** — a loop's per-iteration
+  cold-start re-pays the orientation cost every cycle; a single long session with resets
+  does better.
+- **A plan already exists with independent tasks** — that's `subagent-driven-development`
+  (orchestrated, gated), not an autonomous loop. Loops are for work you _can't_ fully plan
+  up front or that must run unattended.
+- **The loop exists to avoid writing a spec.** A loop amplifies its spec's quality in both
+  directions; garbage spec, confidently iterated garbage.
+
+## Cross-references
+
+- `subagent-driven-development` — run-state format, orchestrator discipline, review gates.
+- `/handoff` + `/pickup` — the session-boundary handoff this skill's progress file feeds.
+- `cost-aware-llm-pipeline` — budget ceilings, velocity circuit breakers, cache economics of
+  loops.
+- `dispatching-parallel-agents` — when one loop should fan work out instead of iterating.
+- `verification-before-completion` — the done-means-verified bar each iteration must clear.

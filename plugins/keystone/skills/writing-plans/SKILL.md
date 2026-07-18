@@ -275,6 +275,11 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **1c. Context budget:** Count tasks and distinct files in this plan. 2–3 tasks is the target; 5+ tasks or 15+ files means split the plan, or justify in one line why it is one indivisible unit.
 
+**1d. Lean process:** for each gate, checkpoint, artifact, or review step the plan itself
+adds — what concretely breaks without it? Cut any with no answer: ceremony is debt every
+task in the run pays, and a review gate that never fails anything is theater, not rigor.
+(`/plan-eng-review` scores this same question from outside as its "lean process" row.)
+
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them. Also scan for scope-shrinking language ("v1 just does X", "wire this up later") that drops agreed scope — if a requirement is genuinely deferred, make it an explicit later SPIDR slice, not an aside.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.

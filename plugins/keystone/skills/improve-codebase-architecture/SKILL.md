@@ -58,7 +58,7 @@ None of these replace exploration — they narrow where you look first.
 
 Read the project's domain glossary, `docs/codebase/CONCERNS.md` if it exists, and any ADRs in the area you're touching first.
 
-Then use the Agent tool with `subagent_type=Explore` to walk the codebase. Don't follow rigid heuristics — explore organically and note where you experience friction:
+Then walk the codebase with a read-only explorer subagent via this harness's subagent-dispatch primitive (e.g. Claude Code's Agent tool with an explore-type agent, or the equivalent elsewhere; no subagent dispatch → walk it yourself in a clean pass). Don't follow rigid heuristics — explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?
 - Where are modules **shallow** — interface nearly as complex as the implementation?

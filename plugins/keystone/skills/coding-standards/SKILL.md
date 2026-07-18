@@ -20,6 +20,26 @@ endpoint/API security and authz → `api-security`; framework idioms → that fr
 - **DRY** — a correctness-critical value or rule derived in two places will drift. Centralize
   it. (This is the highest-value thing to catch in review.)
 - **YAGNI** — build for the requirement in front of you, not an imagined one.
+- **The deletion test** — before adding any abstraction, layer, gate, or config knob, ask
+  what concretely breaks without it; "nothing yet" means don't add it. AI-assisted code
+  drifts over-engineered by default — write like someone who knows `/audit` will read it.
+
+## The Boy Scout rule — leave it better than you found it (within your footprint)
+
+Leave the code you touch a little better than you found it: while you're in a function
+anyway, extract the magic number, fix the misleading name, delete the line your diff just
+orphaned. Small improvements compound — and without them, entropy compounds instead.
+
+The boundary that keeps this from becoming scope creep — a boy-scout cleanup is all three of:
+
+1. **inside code your change already touches** (same functions/lines, not "same repo"),
+2. **seconds-to-minutes** of work,
+3. **zero blast radius** — behavior-preserving, no interface or contract change.
+
+Anything bigger — refactoring an untouched module, swapping a dependency, "while I'm here"
+restructuring — is not boy-scouting: record it (`/learn`, or a `keystone:` marker for
+`/debt`) and stay on task. It cuts both ways in review: don't flag a genuine boy-scout
+cleanup as out-of-scope noise — that's the maintenance culture working as intended.
 
 ## Naming
 

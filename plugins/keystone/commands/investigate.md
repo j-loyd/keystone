@@ -25,3 +25,9 @@ actual cause → only then fix → then verify the fix and add a regression guar
 
 Once the cause is confirmed and you're moving to a fix, the `test-driven-development` and
 `verification-before-completion` skills carry it home.
+
+## Bank the root cause
+
+A confirmed root cause is a paid-for lesson. Before moving to the fix, draft it in
+`/learn`'s format — usually type **Surprise** or **Lesson**, evidence = the reproduction —
+and offer to bank it one-tap. The next session shouldn't have to re-discover this.

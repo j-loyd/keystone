@@ -1,6 +1,12 @@
 # Spec: The Learning Loop — spec-driven development that compounds
 
-**Status:** DRAFT for review · **Date:** 2026-06-30 · **Target:** keystone v0.3 (v0.2 shipped `/challenge`)
+**Status:** Phase 1 SHIPPED 2026-07-18 (in the staged v0.3.0) · Phases 2–3 open · **Date:** 2026-06-30 · **Target:** keystone v0.3 (v0.2 shipped `/challenge`)
+
+**Phase 1 as shipped:** SDD task-done capture (fatigue-gated, one-tap `/learn` draft) +
+matching-lessons slot in the SDD handoff packet and implementer template; `/investigate`
+banks confirmed root causes; `/handoff` offers capture for outliving gotchas; `/learn`
+entries gain a plain-text `**Triggers:**` line from a controlled vocabulary. Spec claims
+re-verified against live `learnings.js` before shipping (MAX cap, `## `-parser — unchanged).
 
 ## Problem
 
@@ -179,7 +185,10 @@ verdict **patch-and-proceed with a mandatory re-sequence**. Applied:
 - **F5:** added a **migration** requirement (the new `---` frontmatter breaks the current
   `## `-parser) and a **reversibility flag** on the schema.
 
-**Explicit tension (unresolved — needs the author's call):** F4 says _defer the schema_ (its payoff
-is deferred and migration cost grows with volume); the counter is _get the format right before
-volume_ (re-tagging 50 lessons later is worse than migrating 5 now). The phasing above takes F4's
-side (defer). Flip Phase 1↔2's schema timing if you'd rather pay the format cost up front.
+**Explicit tension — RESOLVED 2026-07-18:** took F4's side (defer the schema) **with a hedge
+that dissolves most of the counter-argument's cost**: `/learn` writes a plain-text
+`**Triggers:**` line (controlled vocabulary + path globs) inside the current `## ` format from
+day one. The `## `-parser is untouched (no migration now), but every lesson is born tagged — so
+Phase 2's typed-schema migration becomes a mechanical reformat of already-tagged entries, not a
+re-tag-50-lessons slog. The counter's real fear (retroactive tagging at volume) no longer
+applies; what remains deferred is only the frontmatter *shape*, which is cheap to convert.

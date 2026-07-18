@@ -10,7 +10,9 @@ Parallel dispatch is allowed **ONLY when BOTH hold**:
 
 - **(a) Independent:** the plan marks the tasks independent (no ordering/data dependency).
 - **(b) Isolated:** EITHER **disjoint file sets** (no two tasks touch the same file) OR
-  **each task runs in its own worktree** (see `using-git-worktrees`).
+  **each task runs in its own worktree** (see `using-git-worktrees`; where the dispatch
+  primitive itself takes a worktree-isolation option, dispatching each task into its own
+  worktree is the cheapest way to satisfy this).
 
 If isolation **cannot be proven, run sequentially.** No exceptions — the conflict risk is
 real and silent. When in doubt, sequential.

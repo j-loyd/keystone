@@ -53,6 +53,7 @@ Score each 1–5 (5 = strong) — findings, not vibes:
 | Risk coverage — top risks named with real (not hand-wavy) mitigations  | _/5   |     |
 | Testability — the failure modes named in step 2 are actually checkable | _/5   |     |
 | Effort confidence — assumptions stated, ballooning parts named         | _/5   |     |
+| Lean process — every gate, artifact, and step the plan adds earns its pain; no ceremony | _/5   |     |
 
 Any dimension at 1–2 blocks a plain "proceed" verdict — say so explicitly rather than
 averaging it away.
@@ -78,8 +79,8 @@ footnote.
 
 - Prefer normalized, per-concern tables over monolithic JSON blobs, matching whatever
   stack the codebase already uses rather than assuming one.
-- For any LLM/agent work, apply the `cost-aware-llm-pipeline` skill (Haiku→Sonnet→Opus
-  routing, budgets, small-shot testing) rather than reaching for the biggest model.
+- For any LLM/agent work, apply the `cost-aware-llm-pipeline` skill (cheap→mid→high→top
+  tier routing, budgets, small-shot testing) rather than reaching for the biggest model.
 
 End with a clear verdict: **proceed / proceed-with-changes / rethink**, the scored
 rubric, and the next step.

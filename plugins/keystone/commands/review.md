@@ -97,9 +97,11 @@ same `[severity] (confidence: N/10) file:line — finding → fix` shape as step
 results: a finding that lands on the same `file:line` from more than one lens is
 **confirmed by N specialists** — bump its confidence and surface it first.
 
-This is the cost-tier fan-out pattern in practice: route the per-lens passes at
-**Haiku/Sonnet**, and reserve **Opus** for adjudicating a specialist disagreement or a
-finding you can't confidently confirm or dismiss.
+This is the cost-tier fan-out pattern in practice: route the per-lens passes at the
+**cheap/mid tiers**, reserve the **high tier** for a finding you can't confidently confirm
+or dismiss, and save the **top tier** (where available) for adjudicating a genuine
+specialist disagreement — the one seat where the extra judgment is worth the premium.
+(The tier ladder and how to resolve current models/prices live in `cost-aware-llm-pipeline`.)
 
 ### 4. Adversarial second pass (HIGH-risk diffs, or on request)
 
@@ -117,9 +119,10 @@ that's a real result, not a skipped step.
 ### 5. Cost-tiered depth
 
 Scale effort to the diff. Small/mechanical diff → review inline yourself. Large or
-high-risk diff → fan out per-file with **Haiku** to flag candidates, escalate only the
-flagged spots to **Sonnet**, and reserve **Opus** for genuinely ambiguous calls. Don't
-burn the big model on boilerplate.
+high-risk diff → fan out per-file at the **cheap tier** to flag candidates, escalate only
+the flagged spots to the **mid tier**, and reserve the **high tier** for genuinely
+ambiguous calls — with the **top tier** held for adjudication seats only, per
+`cost-aware-llm-pipeline`. Don't burn the big model on boilerplate.
 
 ### 6. Verdict
 

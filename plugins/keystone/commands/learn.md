@@ -48,7 +48,16 @@ not a learning — don't bank it.
 
    <The lesson, imperative where it's a rule. 1–3 lines.>
    **Evidence:** <what happened that taught this — a file, error, or decision.>
+   **Triggers:** <1–3 tags from the controlled list below, plus optional path globs>
    ```
+
+   **Triggers — tag now, retrieve later.** Pick the closest anchors from this controlled
+   vocabulary (don't invent new ones — free-form tags are what make later lookup silently
+   miss): `auth` · `migrations` · `money` · `llm-prompt` · `api` · `db` · `caching` ·
+   `testing` · `build-deploy` · `config` · `security` · `perf` · `ui` · `deps` · `process` —
+   plus optional path globs (`*.tsx`, `migrations/*`). Today the tags help the orchestrator
+   pick which lessons ride along in a task packet; they also make the planned typed-schema
+   migration mechanical instead of a re-tagging slog.
 
    Write it with an Edit/append, or:
 
@@ -58,6 +67,7 @@ not a learning — don't bank it.
    ## <date> — [<type>] <title>
    <lesson>
    **Evidence:** <evidence>
+   **Triggers:** <tags>
    ENTRY
    ```
 

@@ -20,6 +20,11 @@ concrete file list for this repo.
 
 ## Conventions
 
+- **PUBLIC REPO — sanitize before ship.** This repo is public. Before any commit/PR, run the
+  pre-ship sanitize sweep in `CLAUDE.local.md` (git-ignored; it holds the private denylist and
+  the grep). If that file is missing on this machine, do not ship session-derived docs
+  (`docs/plans/`, `docs/handoffs/`) without a manual read for client/personal identifiers.
+  Write such docs anonymized at authoring time — the sweep is the net, not the practice.
 - **No auto-commits** — stage freely; commit/push only when explicitly asked.
 - **Releases ship via squashed PRs** to `main` (the `gh pr create … && gh pr merge --squash`
   flow), not direct pushes.

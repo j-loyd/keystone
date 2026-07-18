@@ -145,8 +145,7 @@ test("permissionDecision is only emitted on events that honor it", () => {
 
 test("every referenced bundled hook script exists", () => {
   for (const { command } of eachHook()) {
-    const refs =
-      command.match(/\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/[\w.-]+\.js/g) || [];
+    const refs = command.match(/\/hooks\/[\w.-]+\.js/g) || [];
     for (const ref of refs) {
       const file = ref.split("/").pop();
       assert.ok(
@@ -157,14 +156,25 @@ test("every referenced bundled hook script exists", () => {
   }
 });
 
-test("node hook commands resolve via ${CLAUDE_PLUGIN_ROOT}, not a bare path", () => {
+// Bundled node hooks must resolve the plugin root via ${CLAUDE_PLUGIN_ROOT} (inline-substituted
+// by Claude Code at parse time) with a ${PLUGIN_ROOT} fallback (exported by Codex-style
+// harnesses), and must degrade to exit 0 when the script is missing — a plugin update that
+// replaces the version directory mid-session otherwise turns every hook into exit-1 spam.
+test("node hook commands carry the root-fallback chain and a missing-script degrade path", () => {
   for (const { command } of eachHook()) {
-    if (/^node\s/.test(command) && command.includes("/hooks/")) {
-      assert.ok(
-        command.includes("${CLAUDE_PLUGIN_ROOT}"),
-        `node hook command should reference \${CLAUDE_PLUGIN_ROOT}: ${command}`,
-      );
-    }
+    if (!command.includes("/hooks/") || !command.includes(".js")) continue;
+    assert.ok(
+      command.includes("${CLAUDE_PLUGIN_ROOT}"),
+      `node hook command should reference \${CLAUDE_PLUGIN_ROOT}: ${command}`,
+    );
+    assert.ok(
+      command.includes("${PLUGIN_ROOT}"),
+      `node hook command should fall back to \${PLUGIN_ROOT}: ${command}`,
+    );
+    assert.ok(
+      command.includes("systemMessage") || command.includes("|| true"),
+      `node hook command must not exit nonzero when its script is missing: ${command}`,
+    );
   }
 });
 
