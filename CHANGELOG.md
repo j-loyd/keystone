@@ -142,7 +142,7 @@ All notable changes to keystone are recorded here.
 
 ### Next
 
-- **The Learning Loop** (spec: [`docs/plans/2026-06-30-learning-loop.md`](docs/plans/2026-06-30-learning-loop.md))
+- **The Learning Loop** (internal spec, kept local)
   — adversarially reviewed 2026-07-01 and re-sequenced (capture-first). Targeted for v0.3.
 
 ## [0.1.0] — 2026-06-30 — Initial public release
@@ -184,5 +184,5 @@ for adapted upstream work is recorded in [`ATTRIBUTION.md`](ATTRIBUTION.md).
 
 ### Next
 
-- **The Learning Loop** (spec: [`docs/plans/2026-06-30-learning-loop.md`](docs/plans/2026-06-30-learning-loop.md))
+- **The Learning Loop** (internal spec, kept local)
   — a compounding spec→plan→execute→learn cycle with relevance-based lesson retrieval. Targeted for v0.2.
