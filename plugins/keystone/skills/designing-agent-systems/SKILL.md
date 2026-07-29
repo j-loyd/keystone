@@ -1,11 +1,9 @@
 ---
 name: designing-agent-systems
-description: Use before designing, extending, or reviewing anything agent-shaped — LLM tool loops, subagent dispatch, multi-agent orchestration, HITL gates, agent tool design, or effort/budget decisions. Trigger on "should I use an agent", "one agent or many", "add a subagent", "orchestrator", or when agent code is about to be written without a design note. Load early — before code, before plans.
+description: Decide the shape of anything agent-shaped before building it — LLM tool loops, subagent dispatch, orchestration topology, HITL gates, effort and budget. Use when the user says "should I use an agent", "one agent or many", or "orchestrator", or when agent code is about to be written with no design note. Harness-neutral doctrine — load it early, before code and before plans.
 ---
 
 # Designing Agent Systems
-
-**Announce at start:** "Using designing-agent-systems — running the design rubric before code."
 
 An agent is a **model plus a harness** — and on anything longer than a few turns, the harness
 (what enters context, what verifies, when it stops, what persists) moves the outcome more than

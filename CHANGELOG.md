@@ -2,6 +2,119 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.4.0] — 2026-07-28
+
+### Added
+
+- **`resolving-merge-conflicts`** — the kit had zero coverage for the most destructive routine
+  git operation. Resolve by **intent traced to each side's primary source**, not by picking the
+  tidier hunk; a table for what `--ours`/`--theirs` mean per operation (rebase inverts the
+  intuition, and getting it backwards resolves every hunk exactly wrong); the semantic conflicts
+  git *cannot* flag (renames, signature changes, duplicate migration versions) and the
+  grep-the-tree sweep that catches them; finishing the operation rather than leaving a broken
+  tree; and when `--abort` is genuinely right versus an escape from tedium.
+- **`writing-skills`** — this kit's own authoring skill, so the conventions live somewhere an
+  agent reads rather than only in this changelog. Covers the two distinct failure modes (never
+  fires = description; fires and hurts = calibration), the description shape, freedom calibrated
+  to fragility, progressive-disclosure structure, the **conflict sweep** that catches two good
+  instructions contradicting each other across files never read together, fence-aware structural
+  checks, the house rules (harness-neutral, no hardcoded models or prices, no auto-commit, record
+  provenance), and gap-first verification. `/retro` now routes accepted skill pitches here rather
+  than to the external `skill-creator`, which cannot know these conventions.
+- **A prototype branch in `brainstorming`** — `test-driven-development` exempted "throwaway
+  prototypes" and `writing-plans` said "spike it", but nothing defined either. Now: when a
+  question is about behavior rather than preference, build the throwaway (runnable script for
+  state/logic, radically different variations for interaction), timeboxed and explicitly
+  disposable — prototype code that quietly becomes production code is the expensive outcome.
+
+### Changed
+
+- **Retrieval pass over every skill `description:`.** Descriptions now quote the literal phrases
+  a user actually types rather than describing a precondition Claude has to infer it is in
+  ("Use when implementing any feature" → `"write a test"`, `"TDD this"`, `"add coverage"`).
+  Sixteen skills rewritten. Six that compete with a built-in or another plugin
+  (`security-review`, `simplifying-code`, `auditing-for-overengineering`,
+  `designing-agent-systems`, `onboard-codebase`, `dispatching-parallel-agents`) now state their
+  scope boundary explicitly, so the overlap resolves instead of splitting the vote.
+- **De-escalated the three "Iron Law" skills** (`test-driven-development`,
+  `systematic-debugging`, `verification-before-completion`) from anti-loophole prose to
+  judgment-first guidance. The rules are unchanged and still stated firmly; what's gone is the
+  scaffolding built to stop an older model generation from lawyering its way out — "violating
+  the letter is violating the spirit", the rationalization-rebuttal tables, `MANDATORY`,
+  "that's rationalization", and a fabricated-metrics section. 993 → 748 lines, substance intact.
+- **Progressive disclosure applied to the five largest skills.** `cost-aware-llm-pipeline`,
+  `receiving-code-review`, `finishing-a-development-branch`, `dispatching-parallel-agents`, and
+  `subagent-driven-development` each pushed depth into sibling files behind a "Going deeper"
+  index. Every `SKILL.md` is now back inside the repo's own ~500-line budget.
+- **`writing-plans` — reference in the highest-fidelity form available.** New section: attach the
+  mockup, schema, fixture, failing test, or `path:line` exemplar rather than prose describing it.
+- **Conformance pass against the official Agent Skills authoring checklist.** Tables of contents
+  added to the ten multi-section reference files over 100 lines (skipped on single-template files,
+  where a TOC is noise and risks being copied into a dispatched prompt). `improve-codebase-architecture`
+  gained a Reference files index and its sibling-to-sibling links were demoted to plain mentions,
+  so every reference is now one level from its `SKILL.md` — previously `INTERFACE-DESIGN.md` and
+  `HTML-REPORT.md` pointed at `LANGUAGE.md`/`DEEPENING.md`, the nesting that makes Claude preview
+  files with `head` instead of reading them.
+- **Trigger synonyms pruned to one per branch.** The retrieval rewrite above traded tokens for
+  recall; this trims the phrasings that routed to the *same* branch while keeping those that route
+  to different ones (e.g. `finishing-a-development-branch` keeps merge / PR / cleanup as three real
+  endings; `receiving-code-review` keeps "is this feedback right" as the pushback branch, distinct
+  from "address the review"). Recovers ~173 tokens of the ~430 the rewrite cost.
+- **`verification-before-completion` re-tightened.** The de-escalation pass above went half a step
+  too far here. Per the degrees-of-freedom principle — match specificity to the task's fragility —
+  a completion claim is a narrow bridge, not an open field: the gate is now an explicit fixed
+  sequence, names the two steps that actually get skipped (fresh run, whole output), and states
+  that it covers every phrasing of completion rather than the literal word "done". The
+  anti-rationalization scaffolding stays gone; the rigidity comes back as specificity.
+
+### Fixed
+
+- **Normalized the inherited "your human partner" phrasing to "the user"** across 6 files — a
+  superpowers-era address that no longer matched the rest of the kit after the de-escalation pass.
+- **`.gitignore` now covers `.ruff_cache/` and `__pycache__/`.** The formatter hook shells out to
+  ruff, which drops a cache directory in whatever it runs from; one landed inside `skills/` and
+  `plugin-config.test.js` correctly failed it as a skill with no `SKILL.md`. Ignoring it stops a
+  tool artifact from ever being committed as a fake skill.
+- **Four genuine instruction conflicts** where a skill told an agent to commit while twelve other
+  files told it not to: `brainstorming` step 5 ("save the design doc **and commit**"), the
+  `writing-plans` task template ("Step 5: Commit" with a `git commit -m` block, handed straight
+  to an implementer whose own agent definition forbids committing), and `writing-plans`' overview
+  and self-review checklist, both of which listed "frequent commits" as a plan-quality criterion.
+  All four now stage and stop.
+- **Dropped the `**Announce at start:**` preamble** from five skills and the handoff line in
+  `no-subagent-fallback.md`. The harness already shows which skill fired; a scripted sentence
+  restating it is ceremony the model pays for on every load.
+- Removed a byte-identical "why subagents" paragraph duplicated between
+  `dispatching-parallel-agents` and `subagent-driven-development`; dispatch mechanics now have
+  one owner and SDD points at it.
+
+### Removed
+
+- **`requesting-code-review`** — superseded by `/review`, the `code-reviewer` agent, and SDD's
+  own review loop. Its one load-bearing asset, the reviewer prompt template, moved to
+  `subagent-driven-development/code-reviewer-prompt.md`.
+- **`executing-plans`** — folded into `subagent-driven-development` as
+  `no-subagent-fallback.md` (the harness-without-dispatch path). Its two unique contributions,
+  the deviation triage (auto-fix / ask / defer) and the don't-offload-what-you-can-do-yourself
+  rule, were hoisted into the main skill where both execution paths get them.
+- Net across the release: started at 28 skills, merged 2 away (→ 26), added 2 net-new
+  (→ 28). Same count, different composition — two skills that duplicated existing surface
+  traded for two that cover ground the kit had none of.
+
+## [0.3.1] — 2026-07-18
+
+### Added
+
+- **Learning Loop — meta-inbox (the self-healing channel).** Lessons about keystone
+  _itself_ — a skill that didn't fire, wrong guidance, a noisy gate — now route from any
+  repo to a single global inbox (`<learnings-dir>/_keystone-meta.md`, repo-agnostic by
+  construction; the leading underscore can't collide with a generated repo slug). Entries
+  are written **generalized at capture** (the inbox feeds this public repo, so anonymization
+  happens at the source). `/retro` gains a standing "did keystone help or hinder?" question
+  everywhere, and — inside the keystone repo — drains the inbox by clustering recurring
+  themes into proposed skill/command diffs. Promotion machinery stays deliberately manual
+  until the inbox proves volume (lean-process rule applied to ourselves).
+
 ## [0.3.0] — 2026-07-17
 
 ### Added

@@ -51,3 +51,9 @@ Rules:
 
 Branch per unit of shippable work (mirrors how `/to-issues` slices). Long-lived or risky
 work → use a worktree (`using-git-worktrees`) so it's isolated from the current workspace.
+
+## Conflicts
+
+When a merge or rebase stops with conflicts, use `resolving-merge-conflicts` — resolving by
+intent rather than by picking a side, and finishing the operation rather than leaving the
+repo mid-merge.

@@ -2,6 +2,22 @@
 
 **Load this reference when:** writing or changing tests, adding mocks, or tempted to add test-only methods to production code.
 
+## Contents
+
+- Overview
+- The core rules
+- Anti-Pattern 1: Testing Mock Behavior
+- Anti-Pattern 2: Test-Only Methods in Production
+- Anti-Pattern 3: Mocking Without Understanding
+- Anti-Pattern 4: Incomplete Mocks
+- Anti-Pattern 5: Integration Tests as Afterthought
+- Anti-Pattern 6: Snapshotting Non-Deterministic Output
+- When Mocks Become Too Complex
+- TDD Prevents These Anti-Patterns
+- Quick Reference
+- Red Flags
+- The Bottom Line
+
 ## Overview
 
 Tests must verify real behavior, not mock behavior. Mocks are a means to isolate, not the thing being tested.
@@ -10,7 +26,7 @@ Tests must verify real behavior, not mock behavior. Mocks are a means to isolate
 
 **Following strict TDD prevents these anti-patterns.**
 
-## The Iron Laws
+## The core rules
 
 ```
 1. NEVER test mock behavior
@@ -36,7 +52,7 @@ test('renders sidebar', () => {
 - Test passes when mock is present, fails when it's not
 - Tells you nothing about real behavior
 
-**your human partner's correction:** "Are we testing the behavior of a mock?"
+**The question that catches it:** "Are we testing the behavior of a mock?"
 
 **The fix:**
 
@@ -326,7 +342,7 @@ BEFORE pasting a model's real output into an `expect(...).toBe(...)`:
 - Mocks missing methods real components have
 - Test breaks when mock changes
 
-**your human partner's question:** "Do we need to be using a mock here?"
+**The question that catches it:** "Do we need to be using a mock here?"
 
 **Consider:** Integration tests with real components often simpler than complex mocks
 

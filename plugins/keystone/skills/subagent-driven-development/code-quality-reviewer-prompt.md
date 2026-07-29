@@ -8,7 +8,7 @@ Use this template when dispatching a code quality reviewer subagent.
 
 ```
 Task tool (agent type: code-reviewer, or general-purpose if your harness has no registered agents):
-  Use template at requesting-code-review/code-reviewer.md
+  Use template at ./code-reviewer-prompt.md
 
   DESCRIPTION: [task summary, from implementer's report]
   PLAN_OR_REQUIREMENTS: Task N from [plan-file]

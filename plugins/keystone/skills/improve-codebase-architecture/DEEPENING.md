@@ -1,10 +1,10 @@
 # Deepening
 
-How to deepen a cluster of shallow modules safely, given its dependencies. Assumes the vocabulary in [LANGUAGE.md](LANGUAGE.md) — **module**, **interface**, **seam**, **adapter**.
+How to deepen a cluster of shallow modules safely, given its dependencies. Assumes the vocabulary in `LANGUAGE.md` — **module**, **interface**, **seam**, **adapter**.
 
 ## Detecting shallow, concretely
 
-"Interface nearly as complex as the implementation" ([LANGUAGE.md](LANGUAGE.md)) is a judgment
+"Interface nearly as complex as the implementation" (`LANGUAGE.md`) is a judgment
 call — these signals make it checkable instead of a vibe:
 
 - **Caller duplication.** Two or more call sites repeat the same multi-step dance around the
@@ -19,7 +19,7 @@ call — these signals make it checkable instead of a vibe:
   in a single test, applied here to a whole module's suite.
 
 Any one signal is a lead, not a verdict. Confirm with the **deletion test**
-([LANGUAGE.md](LANGUAGE.md)) before proposing the deepening — see also
+(`LANGUAGE.md`) before proposing the deepening — see also
 [SKILL.md](SKILL.md#reconciling-with-audit-the-call-thats-easy-to-get-wrong) for the case where
 the deletion test points the other way, toward `/audit` instead.
 

@@ -29,3 +29,7 @@ docs/plans/
 # risk register in particular is a weakness/security-gap catalog that must never ship publicly.
 # Regenerate locally with onboard-codebase; keep it out of this public repo.
 docs/codebase/
+
+# Python tooling detritus (formatter hook runs ruff)
+.ruff_cache/
+__pycache__/

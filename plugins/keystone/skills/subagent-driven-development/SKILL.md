@@ -1,17 +1,22 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Execute a written plan task-by-task, each in a fresh subagent, with review between tasks. Use when a plan file already exists and the user says "execute the plan" or "work through the tasks", or right after a plan is written. Dispatches the crew — implementer, then QA, code review, and security gates.
 ---
 
 # Subagent-Driven Development
 
 Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
-
 **Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
 
-**Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are: BLOCKED status you cannot resolve, ambiguity that genuinely prevents progress, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
+For how to construct a dispatch — what goes in a self-contained context packet, when delegation
+beats working inline, and the cross-harness fallbacks — see the `dispatching-parallel-agents`
+skill. This skill covers the execution loop that sits on top of it.
+
+**Continuous execution:** Don't stop between tasks to ask whether to keep going. The user asked
+you to execute the plan; execute it. Stop only for a BLOCKED status you can't resolve, ambiguity
+that genuinely prevents progress, or completion. Interim "should I continue?" prompts and
+progress summaries cost the user a turn and tell them nothing they didn't already expect.
 
 ## Why fresh context — context rot
 
@@ -113,7 +118,7 @@ digraph when_to_use {
     "Tasks mostly independent?" [shape=diamond];
     "Stay in this session?" [shape=diamond];
     "subagent-driven-development" [shape=box];
-    "executing-plans" [shape=box];
+    "inline fallback" [shape=box];
     "Manual execution or brainstorm first" [shape=box];
 
     "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
@@ -121,7 +126,7 @@ digraph when_to_use {
     "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
     "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
     "Stay in this session?" -> "subagent-driven-development" [label="yes"];
-    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+    "Stay in this session?" -> "inline fallback" [label="no - parallel session"];
 }
 ```
 
@@ -260,6 +265,35 @@ sequential**; gates still run per task at their Risk tier (waves skip nothing). 
 allowed **ONLY** when tasks are both **independent** AND **isolated** — disjoint file sets, or
 each task in its own worktree. If isolation can't be proven, run sequentially.
 
+## Handling deviations (auto-fix vs ask vs defer)
+
+Plans meet reality. When a task hits something the plan didn't anticipate, don't silently expand
+scope and don't stop dead — triage with one question: **does this affect correctness, security,
+or the ability to finish the task?**
+
+- **Yes → fix it now.** Real bugs, missing validation on something being touched, blockers that
+  stop the task. Fix, verify, note it in the report.
+- **Judgment call → ask.** Anything with blast radius beyond the task: a new table or migration,
+  adding or swapping a dependency, changing a shared interface, expanding scope. Surface the
+  choice rather than deciding unilaterally.
+- **No → note and defer.** Tangential improvements, "while I'm here" refactors, unrelated debt.
+  Record them (a `/learn` candidate or a `keystone:` marker) and move on. One carve-out: a
+  **boy-scout cleanup** inside lines the task already edits — a misleading name, a magic number,
+  code the diff orphaned — is part of doing the task well. `coding-standards` has the
+  three-part boundary.
+
+Most deviations are a fix or a deferral; only the genuinely consequential ones should interrupt.
+
+## Don't offload what you can do yourself
+
+Before asking the user to run a command, edit a file, or fetch a value, check whether you can do
+it with the tools you have. "Stop and ask" is for genuine blockers and judgment calls — missing
+context, ambiguous intent, consequential decisions — not for handing back automatable mechanics.
+Asking someone to be your terminal is friction, not diligence.
+
+The exception is a step that genuinely requires them — an interactive login, a secret you don't
+hold, a physical or account action. Name those explicitly when you hit them.
+
 ## Handling Implementer Status
 
 Implementer subagents report one of four statuses. Handle each appropriately:
@@ -335,153 +369,12 @@ passing the template as the task prompt plus the handoff packet:
   (`code-reviewer`) for spec-compliance then code-quality. (Sage / `security-reviewer` joins
   when there's a security surface.)
 
-## Example Workflow
+## Going deeper
 
-```
-You: I'm using Subagent-Driven Development to execute this plan.
-
-[Read plan file once: docs/plans/feature-plan.md]
-[Extract all 5 tasks with full text and context]
-[Create TodoWrite with all tasks]
-
-Task 1: Hook installation script
-
-[Get Task 1 text and context (already extracted)]
-[Dispatch implementation subagent with full task text + context]
-
-Implementer: "Before I begin - should the hook be installed at user or system level?"
-
-You: "User level (~/.claude/hooks/)"
-
-Implementer: "Got it. Implementing now..."
-[Later] Implementer:
-  - Implemented install-hook command
-  - TDD: RED (test_install fails, no command yet) → GREEN, 5/5 passing, output pristine
-  - Self-review: Found I missed --force flag, added it
-  - Committed
-
-[Dispatch spec compliance reviewer]
-Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
-
-[Get git SHAs, dispatch code quality reviewer]
-Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
-
-[Mark Task 1 complete]
-
-Task 2: Recovery modes
-
-[Get Task 2 text and context (already extracted)]
-[Dispatch implementation subagent with full task text + context]
-
-Implementer: [No questions, proceeds]
-Implementer:
-  - Added verify/repair modes
-  - TDD: RED → GREEN, 8/8 passing, output pristine
-  - Self-review: All good
-  - Committed
-
-[Dispatch spec compliance reviewer]
-Spec reviewer: ❌ Issues:
-  - Missing: Progress reporting (spec says "report every 100 items")
-  - Extra: Added --json flag (not requested)
-
-[Implementer fixes issues]
-Implementer: Removed --json flag, added progress reporting; re-ran covering tests, 9/9 green
-
-[Spec reviewer reviews again]
-Spec reviewer: ✅ Spec compliant now
-
-[Dispatch code quality reviewer]
-Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
-
-[Implementer fixes]
-Implementer: Extracted PROGRESS_INTERVAL constant
-
-[Code reviewer reviews again]
-Code reviewer: ✅ Approved
-
-[Mark Task 2 complete]
-
-...
-
-[After all tasks]
-[Dispatch final code-reviewer]
-Final reviewer: All requirements met, ready to merge
-
-Done!
-```
-
-## Advantages
-
-**vs. Manual execution:**
-
-- Subagents follow TDD naturally
-- Fresh context per task (no confusion)
-- Context-isolated (each subagent gets a clean window; no cross-task confusion)
-- Subagent can ask questions (before AND during work)
-
-**vs. Executing Plans:**
-
-- Same session (no handoff)
-- Continuous progress (no waiting)
-- Review checkpoints automatic
-
-**Efficiency gains:**
-
-- No file reading overhead (controller provides full text)
-- Controller curates exactly what context is needed
-- Subagent gets complete information upfront
-- Questions surfaced before work begins (not after)
-
-**Quality gates:**
-
-- Self-review catches issues before handoff
-- Two-stage review: spec compliance, then code quality
-- Review loops ensure fixes actually work
-- Spec compliance prevents over/under-building
-- Code quality ensures implementation is well-built
-
-**Cost:**
-
-- More subagent invocations (implementer + 2 reviewers per task)
-- Controller does more prep work (extracting all tasks upfront)
-- Review loops add iterations
-- But catches issues early (cheaper than debugging later)
-
-## Red Flags
-
-**Never:**
-
-- Start implementation on main/master branch without explicit user consent
-- Skip a gate the task's **Risk tier requires** (see Rigor Scales to Risk — LOW skips Riley by design; MED/HIGH do not)
-- Proceed with unfixed issues
-- Dispatch multiple implementation subagents in parallel **on shared files / without isolation** (conflicts) — parallel **waves** are allowed only when tasks are independent AND isolated; see ./parallel-waves.md
-- Make subagent read plan file (provide full text instead)
-- Skip scene-setting context (subagent needs to understand where task fits)
-- Ignore subagent questions (answer before letting them proceed)
-- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
-- Skip review loops (reviewer found issues = implementer fixes = review again)
-- Let implementer self-review replace actual review (both are needed)
-- **Start code quality review before spec compliance is ✅** (wrong order)
-- Move to next task while either review has open issues
-
-**If subagent asks questions:**
-
-- Answer clearly and completely
-- Provide additional context if needed
-- Don't rush them into implementation
-
-**If reviewer finds issues:**
-
-- Implementer (same subagent) fixes them
-- Reviewer reviews again
-- Repeat until approved
-- Don't skip the re-review
-
-**If subagent fails task:**
-
-- Dispatch fix subagent with specific instructions
-- Don't try to fix manually (context pollution)
+- [`worked-example.md`](worked-example.md) — a full run end to end, why the pattern wins, and
+  the red flags that mean you have drifted out of it.
+- [`no-subagent-fallback.md`](no-subagent-fallback.md) — the same loop collapsed into one
+  window, for harnesses without per-task dispatch.
 
 ## Integration
 
@@ -489,7 +382,7 @@ Done!
 
 - **using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **writing-plans** - Creates the plan this skill executes
-- **requesting-code-review** - Code review template for reviewer subagents
+- **`./code-reviewer-prompt.md`** - Reviewer dispatch template (also used by `/review`)
 - **finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**
@@ -498,4 +391,4 @@ Done!
 
 **Alternative workflow:**
 
-- **executing-plans** - Use for parallel session instead of same-session execution
+- **`./no-subagent-fallback.md`** - Use for parallel session instead of same-session execution

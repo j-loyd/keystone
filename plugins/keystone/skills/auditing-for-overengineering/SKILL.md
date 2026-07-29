@@ -1,6 +1,6 @@
 ---
 name: auditing-for-overengineering
-description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded dependencies, abstractions with one caller, dead flexibility. Use when the user says "audit this codebase", "audit for over-engineering", "what can I delete", "find bloat", "is this over-engineered", or "/audit". Whole-repo by default; the same lens runs diff-scoped inside /review. One-shot report — lists findings, applies nothing.
+description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded dependencies, abstractions with one caller, dead flexibility. Use when the user says "audit this codebase", "what can I delete", or "/audit". Scope boundary — code architecture and dependencies, whole-repo; not UI, accessibility, or design quality. One-shot report that applies nothing.
 ---
 
 # Auditing for Over-Engineering

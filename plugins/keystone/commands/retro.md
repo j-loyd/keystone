@@ -37,6 +37,14 @@ Answer, concretely and with evidence:
 2. **What worked** — practices/decisions worth repeating.
 3. **What hurt** — friction, rework, surprises, near-misses. Root cause, not symptom.
 4. **What we learned** — non-obvious facts about the system or the domain.
+5. **Did keystone help or hinder?** — a skill that should have fired and didn't, guidance
+   that was wrong, a gate that was noise, a step that earned its pain vs. pure ceremony.
+   Route these to the global meta-inbox (`/learn`'s "about keystone itself" path), written
+   generalized — they're candidate improvements to the tool. When running _inside the
+   keystone repo_: also read the inbox
+   (`${KEYSTONE_LEARNINGS_DIR:-$HOME/.claude/keystone/learnings}/_keystone-meta.md`),
+   cluster recurring themes, and propose concrete skill/command diffs for the ones with
+   multiple sightings — human-gated, shipped through the normal PR flow.
 5. **What changes next** — 1–3 specific, actionable adjustments (process, code, or docs).
 
 ## Capture
@@ -54,7 +62,7 @@ the retro questions above map onto these directly (worked → Pattern, hurt/lear
 ### Evolve — propose a skill from what recurred
 
 When a lesson has recurred enough to be worth codifying, propose a **new skill** (never write
-one automatically — hand a brief to the `skill-creator` skill and stop):
+one automatically — hand a brief to `writing-skills` and stop):
 
 1. **Read what's accumulated.** Cluster the repo's recent learnings:
    `node "$CLAUDE_PLUGIN_ROOT/hooks/learnings.js" --cluster` (returns `[{key, entries}]`). Also
@@ -66,7 +74,7 @@ one automatically — hand a brief to the `skill-creator` skill and stop):
 3. **Pitch only when both fire.** Only when a cluster has ≥2 source learnings **and** a matched
    file-pair with `N ≥ 2`, draft a one-paragraph pitch: _"You've learned [X] across [dates] and
    [files A, B] changed together in [N] commits — propose a skill to capture this?"_ Cite the
-   co-change count and the source learnings by date. Route acceptance to `skill-creator`.
+   co-change count and the source learnings by date. Route acceptance to `writing-skills`, which carries this kit's authoring conventions.
 4. **Scope from the evidence.** Broad co-change across the repo → lean toward a global instinct;
    narrow/domain-specific → a repo skill.
 

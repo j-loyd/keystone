@@ -1,197 +1,109 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: Run the check and read its output before claiming anything works. Use before saying done, fixed, passing, or "should work", before opening a PR, and when the user asks "did you actually run it" or "are you sure". Evidence first — a completion claim with no command behind it is a guess.
 ---
 
 # Verification Before Completion
 
-## Overview
+A completion claim is a factual assertion about the state of the world. Most of this kit is
+heuristics you apply with judgment. This one is not — it is a narrow bridge, because a false
+completion claim silently corrupts every decision made downstream of it, and the corruption is
+invisible until something breaks in production.
 
-Claiming work is complete without verification is dishonesty, not efficiency.
+So treat the gate below as a fixed sequence, not a checklist to adapt.
 
-**Core principle:** Evidence before claims, always.
+## The gate
 
-**Violating the letter of this rule is violating the spirit of this rule.**
+**Run this in order before stating any completion status. Do not reorder or skip steps.**
 
-## The Iron Law
+1. **Identify** — name the exact command that would prove this specific claim.
+2. **Run** it — in full, in this turn. A run from earlier in the session does not count; the
+   code has changed since.
+3. **Read** the whole output — exit code, failure count, skip count. Not just the last line.
+4. **Compare** — does that output establish *this* claim, or a neighboring one?
+5. **State** it with the evidence attached, or state the real status instead.
 
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
+The two steps that actually get skipped are 2 and 3 — a remembered run substituted for a fresh
+one, and a glance at the tail of the output instead of the whole thing. If you are about to
+claim something is done, check those two specifically.
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+**Scope:** the gate applies to every phrasing of completion, not just the word "done" —
+"fixed", "passing", "working", "ready", "that should do it", and any expression of satisfaction
+that implies the work is finished.
 
-## The Gate Function
+## What each claim actually requires
 
-```
-BEFORE claiming any status or expressing satisfaction:
-
-1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
-4. VERIFY: Does output confirm the claim?
-   - If NO: State actual status with evidence
-   - If YES: State claim WITH evidence
-5. ONLY THEN: Make the claim
-
-Skip any step = lying, not verifying
-```
-
-## Common Failures
-
-| Claim                 | Requires                        | Not Sufficient                 |
+| Claim                 | Requires                        | Not sufficient                 |
 | --------------------- | ------------------------------- | ------------------------------ |
-| Tests pass            | Test command output: 0 failures | Previous run, "should pass"    |
-| Linter clean          | Linter output: 0 errors         | Partial check, extrapolation   |
-| Build succeeds        | Build command: exit 0           | Linter passing, logs look good |
-| Bug fixed             | Test original symptom: passes   | Code changed, assumed fixed    |
+| Tests pass            | Test command output, 0 failures | A previous run, "should pass"  |
+| Linter clean          | Linter output, 0 errors         | Partial check, extrapolation   |
+| Build succeeds        | Build command, exit 0           | Linter passing, logs look fine |
+| Bug fixed             | Original symptom retested       | Code changed, assumed fixed    |
 | Regression test works | Red-green cycle verified        | Test passes once               |
-| Agent completed       | VCS diff shows changes          | Agent reports "success"        |
+| Agent completed       | VCS diff shows the changes      | The agent reported success     |
 | Requirements met      | Line-by-line checklist          | Tests passing                  |
 
-## Red Flags - STOP
+The recurring shape: each right-hand column is evidence for a *neighboring* claim, not the one
+being made. A linter says nothing about compilation; a passing test says nothing about whether
+the code is reachable in production.
 
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-- Thinking "just this once"
-- Tired and wanting work over
-- **ANY wording implying success without having run verification**
+**Delegated work is the sharpest case** — a subagent's "done" is a claim, not a result. Check
+the diff yourself before repeating it.
 
-## Rationalization Prevention
+## Passing ≠ real
 
-| Excuse                                  | Reality                |
-| --------------------------------------- | ---------------------- |
-| "Should work now"                       | RUN the verification   |
-| "I'm confident"                         | Confidence ≠ evidence  |
-| "Just this once"                        | No exceptions          |
-| "Linter passed"                         | Linter ≠ compiler      |
-| "Agent said success"                    | Verify independently   |
-| "I'm tired"                             | Exhaustion ≠ excuse    |
-| "Partial check is enough"               | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter     |
+A green suite proves the commands ran, not that the work is real. Two failure modes survive a
+passing run.
 
-## Key Patterns
+### Is the code actually wired?
 
-**Tests:**
-
-```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
-❌ "Should pass now" / "Looks correct"
-```
-
-**Regression tests (TDD Red-Green):**
-
-```
-✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
-❌ "I've written a regression test" (without red-green verification)
-```
-
-**Build:**
-
-```
-✅ [Run build] [See: exit 0] "Build passes"
-❌ "Linter passed" (linter doesn't check compilation)
-```
-
-**Requirements:**
-
-```
-✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
-❌ "Tests pass, phase complete"
-```
-
-**Agent delegation:**
-
-```
-✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
-❌ Trust agent report
-```
-
-## Passing ≠ Real
-
-A green suite and a clean exit code prove the commands ran — not that the work is real. Two
-failure modes survive a passing run; check both before claiming done.
-
-### Is the code actually wired? (Existence → Substantive → Wired → Functional)
-
-Walk the ladder for the thing you just built. A claim fails at the first rung it can't clear:
+Walk the ladder for the thing you just built. A claim fails at the first rung it cannot clear:
 
 1. **Exists** — the file/function/route is present.
-2. **Substantive** — it's not a stub: no lone `TODO`/`FIXME`, no empty/`return null`/`pass`
-   body, no `lorem ipsum`, no hardcoded value standing in for real logic.
-3. **Wired** — it's actually reached: imported AND called from a real path (not just defined).
-   New code that nothing calls is a dead export; grep for the caller before claiming it works.
-4. **Functional** — it runs and produces the right output for a real input.
+2. **Substantive** — not a stub: no lone `TODO`/`FIXME`, no empty or `return null`/`pass` body,
+   no hardcoded value standing in for real logic.
+3. **Wired** — imported AND called from a real path, not merely defined. New code nothing calls
+   is a dead export; grep for the caller before claiming it works.
+4. **Functional** — runs and produces the right output for a real input.
 
-"The tests pass" usually proves rung 4 for the _tested_ path only. Confirm the new thing is
-wired into the _real_ path, not just exercised by a test that imports it directly.
+"The tests pass" usually proves rung 4 for the *tested* path only. Confirm the new thing is
+wired into the *real* path, not just exercised by a test that imports it directly.
 
-### Are the tests worth anything? (test-quality audit)
+### Are the tests worth anything?
 
 A passing test that asserts nothing is theater. Before trusting a suite:
 
-- **Circular test** — does the test assert the implementation back at itself (e.g. recomputing
-  the expected value with the same code under test, or snapshotting whatever the function
-  currently returns)? It will pass for any behavior. Rewrite to an independently-derived expected
-  value.
+- **Circular test** — does it assert the implementation back at itself (recomputing the expected
+  value with the code under test, or snapshotting whatever the function currently returns)? It
+  will pass for any behavior. Rewrite against an independently-derived expected value.
 - **Assertion strength** — rank each assertion: existence (`toBeDefined`) < type < status/no-throw
   < exact value < behavioral (observable effect). A suite stuck at the weak end proves little;
   push the important ones up the ladder.
 - **Disabled tests** — scan for `.skip`/`.only`/`xit`/commented-out tests. A suite is only as
   honest as the tests that actually run.
-- **Expected-value provenance** — for each key assertion, can you say _where the expected value
-  came from_ (spec, hand-calculation)? "It's what the code returned" is not provenance.
+- **Expected-value provenance** — for each key assertion, can you say where the expected value
+  came from (spec, hand-calculation)? "It's what the code returned" is not provenance.
 
-Don't invent tests where they don't belong: pure-infrastructure/config changes may have no
-meaningful unit test — say so and verify behaviorally instead of fabricating a green check.
+Don't invent tests where they don't belong — pure infrastructure or config changes may have no
+meaningful unit test. Say so and verify behaviorally rather than fabricating a green check.
 
-### Acceptance Criteria Traceability
+### Acceptance criteria traceability
 
-List **every** acceptance criterion from the plan. For each, name the one or more tests that
-prove it, with `[Source: path:line]`. If none exists, write `[UNCOVERED] — gap` — do not omit
-the row. Example:
+List **every** acceptance criterion from the plan. For each, name the test(s) that prove it with
+`[Source: path:line]`. If none exists, write `[UNCOVERED] — gap` rather than omitting the row.
 
 - `AC1 (user can edit name) → test_edit_name [Source: tests/profile.spec:42]`
 - `AC3 (invalid email shows error) → [UNCOVERED] — gap`
 
-**Row count must equal the AC count** — an AC with no row is a hidden gap; a row with no AC is
-scope creep. An `[UNCOVERED]` row blocks a completion claim exactly the way a failing test does.
+Row count must equal the AC count — an AC with no row is a hidden gap, a row with no AC is scope
+creep. An `[UNCOVERED]` row blocks a completion claim the same way a failing test does.
 
-## Why This Matters
+## Reporting honestly
 
-From 24 failure memories:
+When verification fails or was not possible, say so plainly and specifically — which command,
+what output, what remains unknown. A partial result reported accurately is useful; a complete
+result reported on faith is not.
 
-- your human partner said "I don't believe you" - trust broken
-- Undefined functions shipped - would crash
-- Missing requirements shipped - incomplete features
-- Time wasted on false completion → redirect → rework
-- Violates: "Honesty is a core value. If you lie, you'll be replaced."
-
-## When To Apply
-
-**ALWAYS before:**
-
-- ANY variation of success/completion claims
-- ANY expression of satisfaction
-- ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
-- Delegating to agents
-
-**Rule applies to:**
-
-- Exact phrases
-- Paraphrases and synonyms
-- Implications of success
-- ANY communication suggesting completion/correctness
-
-## The Bottom Line
-
-**No shortcuts for verification.**
-
-Run the command. Read the output. THEN claim the result.
-
-This is non-negotiable.
+Hedging language ("should work", "seems to", "probably passing") is appropriate *only* when you
+are explicitly flagging something as unverified. Used to soften an untested claim into sounding
+finished, it is the failure this skill exists to prevent.

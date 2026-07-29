@@ -1,6 +1,6 @@
 ---
 name: simplifying-code
-description: Refine recently-written or modified code for clarity and maintainability WITHOUT changing behavior. Use after implementing a feature, fixing a bug, or finishing a logical chunk of code — and whenever the user asks to simplify, clean up, tidy, refactor for readability, reduce nesting, or "make this clearer." Proposes when self-triggered; the /simplify command applies.
+description: Refine recently-written code for clarity WITHOUT changing behavior — flatten nesting, drop redundancy, name for intent. Use after finishing a chunk of work, and when the user says "simplify this", "clean this up", or "/simplify". Stack-agnostic — derives conventions from the surrounding repo rather than assuming a framework. Proposes when self-triggered; /simplify applies.
 ---
 
 # Simplifying Code

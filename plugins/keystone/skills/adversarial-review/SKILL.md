@@ -5,8 +5,6 @@ description: Use to stress-test a finished doc — a spec, plan, PRD, or ADR —
 
 # Adversarial Review
 
-**Announce at start:** "I'm using the adversarial-review skill to challenge this doc's assumptions and approach."
-
 Take a fresh, hostile pass over a finished doc whose only job is to find what it **assumes** and
 whether the **approach it chose** is right — before any code encodes the mistake. Two axes, both
 required:

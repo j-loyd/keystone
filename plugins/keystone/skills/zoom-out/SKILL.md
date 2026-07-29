@@ -1,6 +1,6 @@
 ---
 name: zoom-out
-description: Step back from tunnel vision — orient in unfamiliar code, or pause mid-task to check a change's blast radius before going further. Use when you don't recognize the code you're in, a diff keeps growing past its original scope, a change reaches a widely-shared module/config, or before a hard-to-undo step. Reports only — complements /audit (subtractive) and improve-codebase-architecture (additive) without duplicating either.
+description: Step back from tunnel vision — orient in code you do not recognize, or check a change's blast radius before going further. Use when the user says "are we off track" or "what else uses this", or when a diff keeps growing past its original scope or reaches a shared module or config. Reports only — no edits.
 ---
 
 # Zoom Out

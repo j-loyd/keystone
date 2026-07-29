@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: Explore intent, requirements, and design before implementing — including building a throwaway prototype when a question is about behavior rather than preference. Use at the start of net-new or ambiguous work, and when the user says "should we build", "help me figure out", "let me just try something", or "/office-hours". Surfaces the real requirement before any code gets written.
 ---
 
 # Brainstorming Ideas Into Designs
@@ -9,23 +9,24 @@ Help turn ideas into fully formed designs and specs through natural collaborativ
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
 
-<HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
-</HARD-GATE>
+**The gate:** present a design and get approval before writing code, scaffolding, or invoking
+an implementation skill. This is the one firm rule here — the value of the skill is entirely in
+the conversation happening *before* the build, and starting to build ends that conversation.
 
-## Anti-Pattern: "This Is Too Simple To Need A Design"
-
-Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+Scale the design to the work, not the other way around. A single-function utility may need
+three sentences; a new subsystem needs sections. But "this is too simple to need a design" is
+usually wrong for a specific reason — simple-looking asks are where unexamined assumptions
+survive longest, because nobody thought to check them.
 
 ## Checklist
 
-You MUST create a task for each of these items and complete them in order:
+Work these in order:
 
 1. **Explore project context** — check files, docs, recent commits
 2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
 4. **Present design** — in sections scaled to their complexity, get user approval after each section
-5. **Write design doc** — save to `docs/specs/YYYY-MM-DD-<topic>-design.md` and commit
+5. **Write design doc** — save to `docs/specs/YYYY-MM-DD-<topic>-design.md` (leave it uncommitted — the no-auto-commit rule applies here too)
 6. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 7. **User reviews written spec** — ask user to review the spec file before proceeding
 8. **Transition to implementation** — invoke writing-plans skill to create implementation plan. If the spec implies crypto/auth/date-tz/money/parsing or a new dependency, flag it so the plan's anti-reinvention gate picks it up.
@@ -124,7 +125,7 @@ For a deeper, independent pass on a large or high-stakes spec, dispatch a review
 **User Review Gate:**
 After the spec review loop passes, ask the user to review the written spec before proceeding:
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+> "Spec written to `<path>` (uncommitted). Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 
@@ -132,6 +133,40 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 - Invoke the writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. writing-plans is the next step.
+
+## When talking it out isn't enough — build a throwaway
+
+Some design questions don't resolve in conversation. You can argue about whether a state machine
+handles the edge case, or you can run it for thirty seconds and find out. When a question is
+about *behavior* rather than *preference*, the prototype is faster than the discussion.
+
+Reach for one when:
+
+- The disagreement is about how something will actually behave, not which option is nicer.
+- Nobody can describe the interaction without hand-waving ("it'd feel weird if…").
+- The approaches are hard to compare in the abstract because they differ structurally.
+
+Two shapes cover most cases:
+
+- **State and logic questions** → a runnable script or terminal app that exercises the real
+  transitions. No UI, no persistence, no error handling. Print the states and step through them.
+- **Interaction and layout questions** → several *radically different* variations reachable from
+  one entry point, so they can be compared side by side. Variations that differ by a shade of
+  padding teach nothing; make them genuinely different bets.
+
+Three rules that keep this from becoming the implementation:
+
+1. **Timebox it and say the number out loud** before starting.
+2. **It is throwaway.** Say so explicitly. Prototype code that quietly becomes production code
+   is the most expensive outcome here — it arrives untested, unreviewed, and load-bearing.
+   (`test-driven-development` exempts throwaway prototypes for exactly this reason; the exemption
+   only holds while the code stays throwaway.)
+3. **Answer the question, then delete it.** Carry the *finding* into the design, not the code.
+   If something in it turns out to be worth keeping, rebuild that part properly.
+
+This is the same instinct as `writing-plans`' spike — carve out the unknown so the rest can be
+planned with confidence. A spike resolves an unknown inside a plannable scope; a prototype
+answers a design question before there is a plan at all.
 
 ## Key Principles
 

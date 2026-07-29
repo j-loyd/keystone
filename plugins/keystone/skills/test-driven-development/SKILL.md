@@ -1,51 +1,36 @@
 ---
 name: test-driven-development
-description: Use when implementing any feature or bugfix, before writing implementation code
+description: Write the test first, watch it fail, then implement. Use when starting any feature or bugfix, when the user says "write a test" or "TDD this", or when a test passes without the feature existing. Covers the RED-GREEN-REFACTOR loop and the test-quality anti-patterns that make suites lie.
 ---
 
 # Test-Driven Development (TDD)
 
 ## Overview
 
-Write the test first. Watch it fail. Write minimal code to pass.
+Write the test first. Watch it fail. Write the minimal code that passes.
 
-**Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
+**The whole point is the failure you observe.** A test you never saw fail proves only that it
+passes now — not that it would catch the bug it was written for. Test-after produces suites
+that are green from birth and blind by construction.
 
-**Violating the letter of the rules is violating the spirit of the rules.**
+## When it applies
 
-## When to Use
+The default for new features, bug fixes, and behavior changes. Bug fixes especially — the
+failing test *is* the reproduction, and it's the only thing that proves the fix fixed anything.
 
-**Always:**
+Reasonable to skip for throwaway prototypes, generated code, and pure configuration. If you're
+skipping for a different reason, say so out loud rather than quietly — "I'm writing this
+untested because X" is a fine thing to say and a bad thing to leave implicit.
 
-- New features
-- Bug fixes
-- Refactoring
-- Behavior changes
+## Test-first, and what to do when you slip
 
-**Exceptions (ask your human partner):**
+Write the test before the production code. When you've already written the code — which happens
+— don't try to reverse-engineer a test around it. Set the implementation aside, write the test
+from the requirement, watch it fail, then implement against it.
 
-- Throwaway prototypes
-- Generated code
-- Configuration files
-
-Thinking "skip TDD just this once"? Stop. That's rationalization.
-
-## The Iron Law
-
-```
-NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
-```
-
-Write code before the test? Delete it. Start over.
-
-**No exceptions:**
-
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Don't look at it
-- Delete means delete
-
-Implement fresh from tests. Period.
+Writing the test while looking at the implementation is how you end up asserting what the code
+does instead of what it should do. That's the failure mode this rule exists to prevent, and
+it's why "adapt it while writing tests" doesn't work.
 
 ## Red-Green-Refactor
 
@@ -123,17 +108,18 @@ Vague name, tests mock not code
 
 ### Verify RED - Watch It Fail
 
-**MANDATORY. Never skip.**
+This is the step that makes the rest worth doing — skip it and you're writing tests, not doing
+TDD. Run it:
 
 ```bash
 npm test path/to/test.test.ts
 ```
 
-Confirm:
+Confirm all three:
 
-- Test fails (not errors)
-- Failure message is expected
-- Fails because feature missing (not typos)
+- It **fails** rather than errors
+- The failure message is the one you expected
+- It fails because the feature is missing — not from a typo or an import mistake
 
 **Test passes?** You're testing existing behavior. Fix test.
 
@@ -184,8 +170,6 @@ Over-engineered
 Don't add features, refactor other code, or "improve" beyond the test.
 
 ### Verify GREEN - Watch It Pass
-
-**MANDATORY.**
 
 ```bash
 npm test path/to/test.test.ts
@@ -245,93 +229,27 @@ Can't say yes to all four? You don't have a RED yet — you have a red screen.
 | **Clear**        | Name describes behavior             | `test('test1')`                                     |
 | **Shows intent** | Demonstrates desired API            | Obscures what code should do                        |
 
-## Why Order Matters
+## Why the order matters
 
-**"I'll write tests after to verify it works"**
+Tests written after the code pass on the first run. That tells you nothing — you never saw the
+test catch anything, so you don't know it can. It might be asserting the wrong thing, testing
+the implementation rather than the behavior, or quietly missing the case you forgot.
 
-Tests written after code pass immediately. Passing immediately proves nothing:
+The deeper issue is bias. Tests-after answer *"what does this do?"* — you write assertions by
+reading your own implementation, so the test inherits every misunderstanding baked into the
+code. Tests-first answer *"what should this do?"*, which is the question the requirement
+actually asked. This is why writing a test while looking at the implementation doesn't recover
+the benefit, and why exploration code is better thrown away than retrofitted.
 
-- Might test wrong thing
-- Might test implementation, not behavior
-- Might miss edge cases you forgot
-- You never saw it catch the bug
+Manual verification has the same gap plus one more: no record, and no way to re-run it when the
+code changes next month.
 
-Test-first forces you to see the test fail, proving it actually tests something.
+Two related signals worth listening to:
 
-**"I already manually tested all the edge cases"**
-
-Manual testing is ad-hoc. You think you tested everything but:
-
-- No record of what you tested
-- Can't re-run when code changes
-- Easy to forget cases under pressure
-- "It worked when I tried it" ≠ comprehensive
-
-Automated tests are systematic. They run the same way every time.
-
-**"Deleting X hours of work is wasteful"**
-
-Sunk cost fallacy. The time is already gone. Your choice now:
-
-- Delete and rewrite with TDD (X more hours, high confidence)
-- Keep it and add tests after (30 min, low confidence, likely bugs)
-
-The "waste" is keeping code you can't trust. Working code without real tests is technical debt.
-
-**"TDD is dogmatic, being pragmatic means adapting"**
-
-TDD IS pragmatic:
-
-- Finds bugs before commit (faster than debugging after)
-- Prevents regressions (tests catch breaks immediately)
-- Documents behavior (tests show how to use code)
-- Enables refactoring (change freely, tests catch breaks)
-
-"Pragmatic" shortcuts = debugging in production = slower.
-
-**"Tests after achieve the same goals - it's spirit not ritual"**
-
-No. Tests-after answer "What does this do?" Tests-first answer "What should this do?"
-
-Tests-after are biased by your implementation. You test what you built, not what's required. You verify remembered edge cases, not discovered ones.
-
-Tests-first force edge case discovery before implementing. Tests-after verify you remembered everything (you didn't).
-
-30 minutes of tests after ≠ TDD. You get coverage, lose proof tests work.
-
-## Common Rationalizations
-
-| Excuse                                 | Reality                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| "Too simple to test"                   | Simple code breaks. Test takes 30 seconds.                              |
-| "I'll test after"                      | Tests passing immediately prove nothing.                                |
-| "Tests after achieve same goals"       | Tests-after = "what does this do?" Tests-first = "what should this do?" |
-| "Already manually tested"              | Ad-hoc ≠ systematic. No record, can't re-run.                           |
-| "Deleting X hours is wasteful"         | Sunk cost fallacy. Keeping unverified code is technical debt.           |
-| "Keep as reference, write tests first" | You'll adapt it. That's testing after. Delete means delete.             |
-| "Need to explore first"                | Fine. Throw away exploration, start with TDD.                           |
-| "Test hard = design unclear"           | Listen to test. Hard to test = hard to use.                             |
-| "TDD will slow me down"                | TDD faster than debugging. Pragmatic = test-first.                      |
-| "Manual test faster"                   | Manual doesn't prove edge cases. You'll re-test every change.           |
-| "Existing code has no tests"           | You're improving it. Add tests for existing code.                       |
-
-## Red Flags - STOP and Start Over
-
-- Code before test
-- Test after implementation
-- Test passes immediately
-- Can't explain why test failed
-- Tests added "later"
-- Rationalizing "just this once"
-- "I already manually tested it"
-- "Tests after achieve the same purpose"
-- "It's about spirit not ritual"
-- "Keep as reference" or "adapt existing code"
-- "Already spent X hours, deleting is wasteful"
-- "TDD is dogmatic, I'm being pragmatic"
-- "This is different because..."
-
-**All of these mean: Delete code. Start over with TDD.**
+- **A test that's hard to write is telling you the design is hard to use.** Fix the design, not
+  the test.
+- **Already sunk hours into untested code?** That time is spent either way. The only question
+  is whether you now want code you can change safely.
 
 ## Example: Bug Fix
 
@@ -415,7 +333,7 @@ next crew member acts on.
 
 | Problem                | Solution                                                             |
 | ---------------------- | -------------------------------------------------------------------- |
-| Don't know how to test | Write wished-for API. Write assertion first. Ask your human partner. |
+| Don't know how to test | Write the API you wish existed, then the assertion. Ask if still stuck. |
 | Test too complicated   | Design too complicated. Simplify interface.                          |
 | Must mock everything   | Code too coupled. Use dependency injection.                          |
 | Test setup huge        | Extract helpers. Still complex? Simplify design.                     |
@@ -457,8 +375,8 @@ For the model-call layer, RED/GREEN still applies — the assertion just changes
   actually touch prompt/behavior. State which tier a change was verified against — stubbed
   shell tests aren't evidence for a prompt-behavior claim.
 
-This doesn't relax the Iron Law — it says what "the test" and "watch it fail" mean when the
-thing under test doesn't return the same value twice. None of this depends on a specific model
+This doesn't loosen the discipline — it translates "the test" and "watch it fail" for a
+subject that doesn't return the same value twice. None of this depends on a specific model
 provider, eval framework, or harness; substitute your stack's equivalents.
 
 ## Testing Anti-Patterns
@@ -469,11 +387,7 @@ When adding mocks or test utilities, read [testing-anti-patterns.md](testing-ant
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
 
-## Final Rule
+## The short version
 
-```
-Production code → test exists and failed first
-Otherwise → not TDD
-```
-
-No exceptions without your human partner's permission.
+Production code should have a test that existed first and failed first. When it doesn't, that's
+a deliberate call worth stating out loud rather than a detail to leave unmentioned.

@@ -1,54 +1,27 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+description: Find the root cause before proposing a fix. Use when a test fails, a bug is reported, or behavior surprises you — and when the user says "why is this happening", "the test is flaky", "it works locally", or "/investigate". Phase-gated — reproduce and predict before changing any code.
 ---
 
 # Systematic Debugging
 
-## Overview
+## Why this order
 
-Random fixes waste time and create new bugs. Quick patches mask underlying issues.
+A fix applied before the cause is understood is a guess wearing a fix's clothing. It sometimes
+works, and when it does you learn nothing and inherit a change you can't explain. When it
+doesn't, you've added a variable to a system you were already confused by.
 
-**Core principle:** ALWAYS find root cause before attempting fixes. Symptom fixes are failure.
+**The one rule worth holding firm:** understand the cause before changing code. Everything else
+below is technique, applied with judgment.
 
-**Violating the letter of this process is violating the spirit of debugging.**
+The pull toward guessing is strongest exactly where it's most expensive — under time pressure,
+on a production fire, when the fix "looks obvious," and after two failed attempts have made you
+want the problem gone. Those are the moments to slow down, not speed up.
 
-## The Iron Law
+## The four phases
 
-```
-NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
-```
-
-If you haven't completed Phase 1, you cannot propose fixes.
-
-## When to Use
-
-Use for ANY technical issue:
-
-- Test failures
-- Bugs in production
-- Unexpected behavior
-- Performance problems
-- Build failures
-- Integration issues
-
-**Use this ESPECIALLY when:**
-
-- Under time pressure (emergencies make guessing tempting)
-- "Just one quick fix" seems obvious
-- You've already tried multiple fixes
-- Previous fix didn't work
-- You don't fully understand the issue
-
-**Don't skip when:**
-
-- Issue seems simple (simple bugs have root causes too)
-- You're in a hurry (rushing guarantees rework)
-- Manager wants it fixed NOW (systematic is faster than thrashing)
-
-## The Four Phases
-
-You MUST complete each phase before proceeding to the next.
+Work them in order. Later phases assume the earlier ones produced something real — a hypothesis
+without a reproduction is a hunch, and Phase 3 will happily "confirm" it.
 
 ### Phase 1: Root Cause Investigation
 
@@ -205,12 +178,11 @@ You MUST complete each phase before proceeding to the next.
    - No other tests broken?
    - Issue actually resolved?
 
-4. **If Fix Doesn't Work**
-   - STOP
-   - Count: How many fixes have you tried?
-   - If < 3: Return to Phase 1, re-analyze with new information
-   - **If ≥ 3: STOP and question the architecture (step 5 below)**
-   - DON'T attempt Fix #4 without architectural discussion
+4. **If the fix doesn't work**
+   - Count the attempts. Under three: return to Phase 1 and re-analyze with what the failure
+     just taught you.
+   - **At three or more, stop fixing and question the architecture** (step 5). A fourth attempt
+     at the same layer is rarely where the answer is — the failure count is itself evidence.
 
 5. **If 3+ Fixes Failed: Question Architecture**
 
@@ -224,54 +196,22 @@ You MUST complete each phase before proceeding to the next.
    - Are we "sticking with it through sheer inertia"?
    - Should we refactor architecture vs. continue fixing symptoms?
 
-   **Discuss with your human partner before attempting more fixes**
+   **Raise it with the user before attempting more fixes** — this is a design decision, not
+   a debugging one.
 
    This is NOT a failed hypothesis - this is a wrong architecture.
 
-## Red Flags - STOP and Follow Process
+## Signals you've drifted back to guessing
 
-If you catch yourself thinking:
+The tell is always the same: a proposed change that doesn't trace to observed evidence. It shows
+up as "it's probably X, let me fix that," as several changes bundled into one run so you can't
+tell which mattered, as a list of fixes offered before any data flow was traced, or as adapting
+a reference pattern you only skimmed.
 
-- "Quick fix for now, investigate later"
-- "Just try changing X and see if it works"
-- "Add multiple changes, run tests"
-- "Skip the test, I'll manually verify"
-- "It's probably X, let me fix that"
-- "I don't fully understand but this might work"
-- "Pattern says X but I'll adapt it differently"
-- "Here are the main problems: [lists fixes without investigation]"
-- Proposing solutions before tracing data flow
-- **"One more fix attempt" (when already tried 2+)**
-- **Each fix reveals new problem in different place**
+The user has tells too. "Stop guessing," "is that not happening?", "will it show us...?", and a
+frustrated "we're stuck?" all mean the same thing — go back and get evidence.
 
-**ALL of these mean: STOP. Return to Phase 1.**
-
-**If 3+ fixes failed:** Question the architecture (see Phase 4.5)
-
-## your human partner's Signals You're Doing It Wrong
-
-**Watch for these redirections:**
-
-- "Is that not happening?" - You assumed without verifying
-- "Will it show us...?" - You should have added evidence gathering
-- "Stop guessing" - You're proposing fixes without understanding
-- "Ultrathink this" - Question fundamentals, not just symptoms
-- "We're stuck?" (frustrated) - Your approach isn't working
-
-**When you see these:** STOP. Return to Phase 1.
-
-## Common Rationalizations
-
-| Excuse                                       | Reality                                                                 |
-| -------------------------------------------- | ----------------------------------------------------------------------- |
-| "Issue is simple, don't need process"        | Simple issues have root causes too. Process is fast for simple bugs.    |
-| "Emergency, no time for process"             | Systematic debugging is FASTER than guess-and-check thrashing.          |
-| "Just try this first, then investigate"      | First fix sets the pattern. Do it right from the start.                 |
-| "I'll write test after confirming fix works" | Untested fixes don't stick. Test first proves it.                       |
-| "Multiple fixes at once saves time"          | Can't isolate what worked. Causes new bugs.                             |
-| "Reference too long, I'll adapt the pattern" | Partial understanding guarantees bugs. Read it completely.              |
-| "I see the problem, let me fix it"           | Seeing symptoms ≠ understanding root cause.                             |
-| "One more fix attempt" (after 2+ failures)   | 3+ failures = architectural problem. Question pattern, don't fix again. |
+Either way the move is the same: return to Phase 1 and find what you skipped.
 
 ## Quick Reference
 
@@ -291,7 +231,8 @@ If systematic investigation reveals issue is truly environmental, timing-depende
 3. Implement appropriate handling (retry, timeout, error message)
 4. Add monitoring/logging for future investigation
 
-**But:** 95% of "no root cause" cases are incomplete investigation.
+**But:** treat "no root cause" as the rare verdict it is. Most of the time it means the
+investigation stopped early, not that the system is genuinely nondeterministic.
 
 ## Supporting Techniques
 
@@ -307,11 +248,8 @@ These techniques are part of systematic debugging and available in this director
 - **test-driven-development** - For creating failing test case (Phase 4, Step 1)
 - **verification-before-completion** - Verify fix worked before claiming success
 
-## Real-World Impact
+## Why it's worth the patience
 
-From debugging sessions:
-
-- Systematic approach: 15-30 minutes to fix
-- Random fixes approach: 2-3 hours of thrashing
-- First-time fix rate: 95% vs 40%
-- New bugs introduced: Near zero vs common
+The cost of this process is front-loaded and visible; the cost of skipping it is back-loaded and
+diffuse — rework, a fix nobody can explain, a second bug introduced by the first patch. That
+asymmetry is why the discipline feels slower in the moment and lands faster over the session.
