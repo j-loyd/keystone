@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Review code for security vulnerabilities and enforce secure patterns. Use when adding auth, handling user input or file uploads, creating API endpoints, working with secrets, payments, or any sensitive/irreversible operation. Anchored to OWASP Top 10 (2025) + API Security Top 10 (2023). For LLM/agent code, ALSO use the llm-security skill.
+description: Review code you wrote for exploitable vulnerabilities by tracing untrusted input to dangerous sinks. Use when adding auth, handling user input or file uploads, creating endpoints, working with secrets or payments, and when the user says "is this secure", "security review this", or "/cso". Anchored to OWASP Top 10 (2025). Scope boundary — this reviews source code; use the Aikido tools for dependency and CVE scanning, api-security for endpoint authz depth, and llm-security for anything agent- or model-facing.
 ---
 
 # Security Review

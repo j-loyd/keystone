@@ -1,5 +1,14 @@
 # Defense-in-Depth Validation
 
+## Contents
+
+- Overview
+- Why Multiple Layers
+- The Four Layers
+- Applying the Pattern
+- Example from Session
+- Key Insight
+
 ## Overview
 
 When you fix a bug caused by invalid data, adding validation at one place feels sufficient. But that single check can be bypassed by different code paths, refactoring, or mocks.

@@ -4,6 +4,19 @@ The durable map `onboard-codebase` writes to `docs/codebase/` in the target repo
 each one focused file. The map records **facts about the code as it is** — not opinions, not a
 plan, not domain vocabulary (that's `CONTEXT.md`) and not decisions (those are ADRs).
 
+## Contents
+
+- Rules for every doc
+- The seven docs
+  - `STACK.md`
+  - `ARCHITECTURE.md`
+  - `STRUCTURE.md`
+  - `CONVENTIONS.md`
+  - `INTEGRATIONS.md`
+  - `TESTING.md`
+  - `CONCERNS.md`
+  - `INDEX.md`
+
 ## Rules for every doc
 
 - **Cite real paths.** Every claim points at actual code with a backticked path —

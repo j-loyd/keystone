@@ -1,6 +1,6 @@
 ---
 name: onboard-codebase
-description: Orient in a codebase on first contact — detect whether it's greenfield (empty/new) or brownfield (existing), build a durable structured map, and seed the domain docs. Use when starting work in an unfamiliar repo, onboarding to a project, or kicking off a new one.
+description: Orient in a codebase on first contact and leave a durable map behind. Use when starting work in an unfamiliar repo and when the user says "what is this codebase" or "map this repo". Detects greenfield vs. brownfield and writes a committed docs/codebase/ map plus seeded domain docs — more than a one-file summary.
 ---
 
 # Onboard to a codebase

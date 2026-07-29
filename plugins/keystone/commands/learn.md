@@ -73,6 +73,23 @@ not a learning — don't bank it.
 
 3. Confirm to the user what was banked and where.
 
+## Lessons about keystone itself → the meta-inbox
+
+If the lesson is about the **tool, not this repo** — a skill that should have fired and
+didn't, guidance that was wrong in practice, a gate that was noise, a capability keystone
+lacks — don't bury it in this repo's file. Route it to the global meta-inbox instead (same
+entry format; fixed path, agnostic to whatever repo you're in):
+
+```bash
+META="${KEYSTONE_LEARNINGS_DIR:-$HOME/.claude/keystone/learnings}/_keystone-meta.md"
+```
+
+**Write it generalized at capture** — no client, repo, or project names ("a high-volume
+classification pipeline", not the client): the inbox feeds keystone's public repo, so
+anonymization happens at the source, never as a later cleanup. Tag `process` plus the
+domain anchor. Inside the keystone repo, `/retro` drains this inbox into proposed
+skill/command improvements.
+
 ## Promote when it generalizes
 
 If a lesson isn't repo-specific — it's a confirmed preference about how you should always

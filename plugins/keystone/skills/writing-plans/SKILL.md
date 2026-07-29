@@ -1,17 +1,15 @@
 ---
 name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: Turn a spec or feature request into a written implementation plan on disk. Use before touching code on multi-step work, and when the user says "write a plan", "break this down", or "/spec". Produces sized, risk-tagged tasks a fresh-context agent can execute without re-deriving context.
 ---
 
 # Writing Plans
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Small, self-contained tasks (staged, not committed — see the no-auto-commit rule).
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
-
-**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
 **Context:** If working in an isolated worktree, it should have been created via the `using-git-worktrees` skill at execution time.
 
@@ -106,7 +104,7 @@ the observed-level rubric, and the delta-callback policy; do not restate them he
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Use subagent-driven-development to implement this plan task-by-task (its `no-subagent-fallback.md` covers harnesses without dispatch). Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Level:** [light | medium | heavy — see plan-levels.md; default medium]
 
@@ -239,13 +237,36 @@ def function(input):
 Run: `pytest tests/path/test.py::test_name -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Leave the work staged**
 
 ```bash
 git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
 ```
+
+_(Staging only — committing is the user's call. See the no-auto-commit rule.)_
 ````
+
+## Reference in the highest-fidelity form available
+
+A plan is read by someone with no memory of the conversation that produced it. Prose describing
+an artifact is lossy; the artifact is not. Wherever a task depends on a shape — an interface, a
+layout, a payload, a behavior — attach the real thing rather than a description of it:
+
+| Instead of prose describing…    | Attach                                                     |
+| ------------------------------- | ---------------------------------------------------------- |
+| what the UI should look like    | an HTML/JSX mockup, or the existing component to match      |
+| the shape of an API or payload  | a type definition, schema, or a real captured response      |
+| how the thing should behave     | the failing test, or a golden-file fixture                  |
+| the pattern to follow           | `path/to/exemplar.ts:40-88` — point at code that exists     |
+| the data you're transforming    | 3–5 real rows, not an invented example                      |
+
+Two rules of thumb. **Point at real code before writing new prose** — an exemplar in the repo
+carries the conventions, error handling, and idioms that a description silently drops. And when
+you must describe something in prose, ask whether a fixture or test would say it unambiguously;
+if so, write that instead and reference it.
+
+This matters most for the tasks you expect to hand to a fresh-context agent, which is all of
+them.
 
 ## No Placeholders
 
@@ -263,7 +284,7 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Exact file paths always
 - Complete code in every step — if a step changes code, show the code
 - Exact commands with expected output
-- DRY, YAGNI, TDD, frequent commits
+- DRY, YAGNI, TDD, small self-contained tasks (staged, not committed)
 
 ## Self-Review
 
@@ -305,7 +326,7 @@ After saving the plan, offer execution choice:
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+**2. Inline Execution** - Execute tasks in this session via subagent-driven-development's `no-subagent-fallback.md`, batch execution with checkpoints
 
 **Which approach?"**
 
@@ -316,5 +337,5 @@ After saving the plan, offer execution choice:
 
 **If Inline Execution chosen:**
 
-- **REQUIRED SUB-SKILL:** Use executing-plans
+- Use subagent-driven-development (see its `no-subagent-fallback.md` when subagents are unavailable)
 - Batch execution with checkpoints for review

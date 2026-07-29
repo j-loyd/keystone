@@ -1,5 +1,16 @@
 # CONTEXT.md Format
 
+## Contents
+
+- Structure
+- Language
+- Rules
+- Anti-patterns
+- Sharpening an existing entry
+- Single vs multi-context repos
+- Contexts
+- Relationships
+
 ## Structure
 
 ```md

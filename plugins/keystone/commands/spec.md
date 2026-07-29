@@ -55,7 +55,7 @@ Offer the two execution modes from `writing-plans`'s handoff:
   subagent per task in an isolated context** that never inherits this planning session's
   history; two-stage review after each task (spec-compliance, then code-quality). This is the
   "execute in a new context window" handoff. Your context stays free for coordination.
-- **Separate-session / inline** — `executing-plans` for batch execution with review
+- **Separate-session / inline** — subagent-driven-development's `no-subagent-fallback.md` for batch execution with review
   checkpoints when subagents aren't available.
 
 For risky or parallel work, pair with `using-git-worktrees` so execution is isolated from the

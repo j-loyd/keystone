@@ -104,6 +104,19 @@ Side effects happen inline as decisions crystallize:
 - **User rejects the candidate with a load-bearing reason?** Offer an ADR, framed as: _"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ Only offer when the reason would actually be needed by a future explorer to avoid re-suggesting the same thing — skip ephemeral reasons ("not worth it right now") and self-evident ones. See [ADR-FORMAT.md](../grill-with-docs/ADR-FORMAT.md).
 - **Want to explore alternative interfaces for the deepened module?** See [INTERFACE-DESIGN.md](INTERFACE-DESIGN.md) for the parallel design process and the scoring rubric it uses to recommend one.
 
+## Reference files
+
+All of these load directly from here — read the one the task needs, not the set:
+
+- [LANGUAGE.md](LANGUAGE.md) — the architecture glossary (module, interface, seam, adapter,
+  leverage) and the deletion test. Read first; everything else assumes this vocabulary.
+- [DEEPENING.md](DEEPENING.md) — how to deepen a cluster of shallow modules safely, and the
+  dependency categories that decide what an adapter is worth.
+- [INTERFACE-DESIGN.md](INTERFACE-DESIGN.md) — the parallel interface-design process and its
+  scoring rubric, for when a candidate is chosen and needs a shape.
+- [HTML-REPORT.md](HTML-REPORT.md) — the HTML scaffold, diagram patterns, and styling for the
+  candidate report.
+
 ## Reconciling with /audit (the call that's easy to get wrong)
 
 `auditing-for-overengineering` will sometimes flag the very thing this skill wants to deepen —

@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews a diff for production-readiness — correctness, safety boundaries (SQL, secrets, LLM trust), and reuse. Dispatched by /review and the requesting-code-review skill so review runs in its own context.
+description: Reviews a diff for production-readiness — correctness, safety boundaries (SQL, secrets, LLM trust), and reuse. Dispatched by /review and by subagent-driven-development so review runs in its own context.
 tools: Read, Grep, Glob, Bash
 ---
 
