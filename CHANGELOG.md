@@ -2,6 +2,17 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.4.1] — 2026-07-29
+
+### Fixed
+
+- **`finishing-a-development-branch` shipped 0.4.0 with its pre-rewrite description.** While
+  fixing a splitter bug in that file, `git checkout HEAD -- <file>` restored it from the last
+  *commit* (v0.3.0) rather than the staging area, silently reverting the retrieval rewrite and
+  synonym prune along with the bad split. The re-split was redone; the description was not.
+  Verified the loss was confined to that one line — the split and announcement removal survived,
+  and no other file was affected. Re-audited all 28 descriptions.
+
 ## [0.4.0] — 2026-07-28
 
 ### Added
