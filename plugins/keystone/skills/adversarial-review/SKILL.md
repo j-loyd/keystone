@@ -29,9 +29,13 @@ the independence**, not in re-reading harder.
 
 Run the pass in a **fresh context with zero authorship memory** — dispatch a subagent via this
 harness's subagent-dispatch primitive (Claude Code's Task tool, or the equivalent elsewhere) that
-never saw the doc get written. It receives **only the doc + the codebase**, never this session's
-reasoning, so it isn't anchored by it. Where the harness allows, run the reviewer on a
-**different model tier** than the author to decorrelate the biases — concretely, where the
+never saw the doc get written. It receives **only the doc, the contract it has to satisfy (its
+acceptance criteria), and the codebase** — never this session's reasoning, so it isn't anchored
+by it, and **never your own conclusion about the doc**. Handing the reviewer your verdict biases
+it toward agreement: it starts grading your answer instead of independently deciding whether the
+doc satisfies its contract. Withhold the conclusion even when you're sure of it — especially
+then, since that's when you most want the confirmation. Where the harness allows, run the reviewer
+on a **different model tier** than the author to decorrelate the biases — concretely, where the
 dispatch primitive takes a per-dispatch model override (e.g. Claude Code's Agent tool), set the
 reviewer one tier **above** the session model (the tier ladder lives in
 `cost-aware-llm-pipeline`); a top-tier adjudication seat is exactly the spend that skill reserves
@@ -42,7 +46,9 @@ a new session and run the same moves — always do at least that much.
 
 > The true cross-model version (paste a self-contained packet into a different provider — the
 > Claude→Codex→Claude hop by hand) is a documented **fast-follow**; the fresh subagent is the
-> always-available baseline.
+> always-available baseline. Run that hop read-only and feed the packet on stdin, never as a
+> shell-quoted argument — the doc is untrusted input to whatever CLI you hand it to (`/challenge`
+> carries the rule).
 
 ## Opening frame (set before attacking)
 
@@ -111,12 +117,23 @@ assumption, back to the ledger.
 
 ### 3. Reconcile
 
+Sort every finding into one of four classes, in this order — **first match wins**:
+
+- **Contract misread → fix the packet, not the doc.** The reviewer flagged it because the contract
+  you handed over was ambiguous or incomplete: its _input_ was wrong, so the doc isn't what needs
+  changing. Repair the packet and re-run that finding rather than encoding the misunderstanding.
+  The discriminator against noise: here the finding is _right_ about the contract as handed over —
+  the contract itself was the defect.
 - **Accepted findings → update the doc, not the code.** A gap the implementer would otherwise fill
   with a silent guess belongs back in the spec. Rewrite the affected section; promote each fixed
   `UNEXAMINED` row to `bounded`/`validated`/`accepted` in the ledger.
-- **Genuine disagreement → an explicit tension,** never silently resolved: record the reviewer's
-  objection, your call, and why — the same convention the eng/ceo reviews use. The next reader
-  inherits the debate, not just the winner.
+- **Genuine disagreement, or a real cost you're choosing to accept → an explicit tension,** never
+  silently resolved: record the reviewer's objection, your call, and why — the same convention the
+  eng/ceo reviews use. The next reader inherits the debate, not just the winner.
+- **Noise → discard.** The contract was right; the reviewer lacked codebase or constraint context
+  it was never handed, so the finding is wrong on the facts. Discard it — but count them:
+  **three or more noise findings in one pass is a verdict on your packet**, not on the reviewer.
+  Add the missing context before spending another seat.
 
 When the reviewer is a **dispatched, edit-restricted subagent**, it can't rewrite the doc — it
 **emits each edit as a proposal** (section + change), and the orchestrator reconciles and applies
@@ -141,6 +158,14 @@ away.
 Only surface a finding that points to a **concrete failure mode likely in _this_ codebase, this
 release, under these constraints** — plausible is not the same as important. Stop when the
 criticism starts **repeating**: a looping critique is the done signal, not a reason to dig deeper.
+
+**The opposite failure — review theater (a checkable signal).** Across two or more passes where
+the reviewer surfaced substantive findings, **zero** were classified actionable. That isn't a
+clean doc; it's a review that can't fail. Repeating critique means done — repeating _dismissal_
+means the loop is decorative, and running it again just buys another rubber stamp. Stop and change
+something structural: the reviewer's independence (a different model family, not one more
+same-family seat), the packet (a high noise count already told you), or the stakes the reviewer is
+told the doc carries.
 
 ## Depth: one pass by default; escalate by re-running, not new machinery
 

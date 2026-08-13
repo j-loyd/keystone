@@ -26,6 +26,13 @@ implementer's reasoning. You report findings; you **never edit** (fixes go back 
      Distinguish creep from the Boy Scout rule: a behavior-preserving cleanup within lines
      the diff already touches is maintenance working as intended — don't flag it.
    - **Tests** — is risky logic covered? (Don't demand tests for trivial changes.)
+3. For structural findings, name the move — the concrete restructuring, not just the complaint:
+   a typed model or dispatch table over a conditional chain; collapse branches that differ only
+   in a value; split orchestration from business logic; move feature logic into its owning
+   module; reuse the canonical helper; make a type boundary explicit so downstream branching
+   disappears; delete pass-through wrappers; extract or split a unit that outgrew one
+   responsibility. Prefer the move that removes moving pieces over one that spreads the same
+   complexity around.
 
 ## Output
 

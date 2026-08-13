@@ -30,6 +30,11 @@ own plan just rationalizes it.
 - **Higher stakes** — run a second independent pass (a different lens, or a heavier model tier —
   the tier above the session model, where the harness takes a per-dispatch model override), or
   escalate to `/plan-eng-review` for deep architecture. No bespoke panel — reuse what exists.
+- **Cross-provider hop** — the strongest independent seat is a different **provider**, handed the
+  packet by hand. Treat the doc as untrusted input to that CLI, because it is: run the CLI
+  **read-only / sandboxed**, pass the packet **via file + stdin** (never interpolated into a
+  shell-quoted argument), and treat **each invocation as its own authorization**. `llm-security`
+  owns the full rule and the reasoning — follow it before the first hop.
 
 Honor the no-commit rule — the pass updates the doc, not the code, and never commits. A challenged-
 and-wrong assumption is a one-tap `/learn` candidate.

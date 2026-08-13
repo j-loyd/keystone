@@ -35,6 +35,14 @@ data migration or deletion. (Mirrors the security-reviewer's risk-classify-by-fi
 
 Run the suite and read the output — evidence, not assumption.
 
+Tag every number you report with where it came from: `measured-now` (you ran it this pass),
+`read-from-artifact` (a coverage report, a CI run, a benchmark file), or `estimated`. Reading
+source cannot yield a runtime figure — latency, throughput, error rates, and coverage % are
+measurements or they are nothing. Where you have none, write `not measured` and name the command
+that would produce one; where a concern comes from static reading alone, call it **potential
+impact**, not impact. A plausible invented number is worse than an admitted gap — it gets quoted
+downstream as fact.
+
 ## Output: the gate
 
 End with a graded verdict and the reasoning:

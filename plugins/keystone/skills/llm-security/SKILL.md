@@ -110,6 +110,15 @@ Multi-agent systems add trust edges that single-agent review misses:
   the worker, the more faithfully it executes a poisoned upstream instruction. Every
   inter-agent message is untrusted data crossing a trust boundary; validate against
   artifacts (do the tests actually pass?), never against the sender's confidence.
+- **Handing an artifact to an external model CLI is a trust-boundary crossing, not a tool
+  call.** Whatever you pass out — a diff, a spec, a log, a scraped page — is untrusted input
+  to a CLI that runs with your filesystem and your credentials. Three rules: run it
+  **read-only / sandboxed** (`codex exec --sandbox read-only` is one such invocation), so an
+  instruction embedded in the artifact can't act on your workspace; **never interpolate the
+  artifact into a shell-quoted argument** — backticks and `$(…)` inside it are live shell, so
+  write it to a file and pipe it on stdin; and treat **each invocation as its own
+  authorization**, because the artifact, the prompt, and the flags all change between runs and
+  a prior yes doesn't cover them.
 
 ## Review method for agent/LLM code
 
@@ -153,6 +162,7 @@ For an agent with tools, do an explicit action audit — the failure mode is rar
 - [ ] Tool descriptions/metadata reviewed and pinned; re-reviewed on server update (LLM03)
 - [ ] Inter-agent messages treated as untrusted; relayed approvals never honored as consent
 - [ ] Safety checkpoints per agent at dangerous sinks, not only at the orchestrator
+- [ ] External model CLIs run read-only/sandboxed, fed on stdin, authorized per invocation
 
 ## Resources
 

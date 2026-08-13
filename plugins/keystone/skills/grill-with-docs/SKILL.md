@@ -7,6 +7,8 @@ description: Grilling session that challenges your plan against the existing dom
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
 
+Before the first question, state your read of the plan in one sentence with a confidence number — and below ~70%, name the missing pieces on the same line (`CONFIDENCE: ~40% — missing: which context owns this, what "settlement" means here`). Update the number as answers land; it's there to keep you honest about how settled the understanding actually is.
+
 Ask the questions one at a time, waiting for feedback on each question before continuing.
 
 If a question can be answered by exploring the codebase, explore the codebase instead.
@@ -119,5 +121,11 @@ missing, skip the ADR; don't write one just to be thorough. When you do write on
 whether the target repo already has an ADR convention (`docs/adr/0000-template.md`, a
 `template.md`, a handful of existing ADRs with a consistent shape) and match it —
 [ADR-FORMAT.md](./ADR-FORMAT.md) is the fallback shape for repos that don't have one yet.
+
+### Knowing when the understanding is shared
+
+Make the endpoint checkable: you're there when you can predict the user's answer to the next three questions you'd ask. Several rounds without that means something foundational is missing — say so and step back rather than grinding through more branches.
+
+Then confirm it explicitly. "Whatever you think is best" is delegation, not agreement — re-ask it as a choice between two concrete options. "Sounds good" and silence aren't agreement either. Restate what you now believe the plan is, in the project's own terms, and loop until you get an explicit yes.
 
 </supporting-info>

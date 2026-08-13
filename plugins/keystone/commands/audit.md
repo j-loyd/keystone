@@ -34,6 +34,12 @@ short version:
    `<tag> <what to cut>. <replacement>. [path:line]`. End with
    `net: -<N> lines, -<M> deps possible.` Nothing to cut → `Lean already. Ship.`
 
+   Lines you counted, you can state. Runtime numbers you cannot: reading source tells you
+   nothing about latency, error rates, or what a change costs in production. Tag any figure
+   with its source (`measured-now` / `read-from-artifact` / `estimated`), write `not measured`
+   where you have none, and frame static findings as **potential impact** — "removes ~40 lines;
+   runtime effect not measured." A fabricated-but-plausible number is worse than an absent one.
+
 5. **Stay in lane.** Over-engineering only. Park correctness for `/review`, security for `/cso`,
    and never flag tests as bloat. To act on a finding, point the user at `/simplify` (for the
    clarity-safe cuts) or an implementer (for the structural ones).

@@ -2,6 +2,67 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.5.0] — 2026-08-10
+
+Borrow pass over [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (MIT —
+see `ATTRIBUTION.md`): three new skills and technique folds across fourteen existing files.
+Ideas are upstream's where noted; all prose written for keystone.
+
+### Added
+
+- **`performance-optimization`** — measure → identify → fix → verify → guard, with the
+  discipline most perf work skips: **neutral is a revert, not a keep** (a keep/revert decision
+  table; the win threshold is chosen *before* looking at the result), beat the noise not the
+  mean, one change at a time, correctness gates the metric, and an **attempt ledger** so
+  reverted ideas leave a trace git history won't keep. Sudden slowdowns route to
+  `systematic-debugging` first.
+- **`observability`** — instrumentation starts from the 2–4 literal questions on-call will ask,
+  not from signals. Metrics = *that*, traces = *where*, logs = *why*; percentiles never
+  averages; **cardinality as the failure mode** (explicit never-a-label list); mandatory
+  correlation IDs; two alert severities only, each with a runbook; and a **verify-the-telemetry
+  gate** — an induced staging failure must be locatable via telemetry alone.
+- **`deprecation-and-migration`** — Hyrum's Law makes deprecation an active migration, not an
+  announcement; the Churn Rule (the owner migrates the users); a worked **expand/contract**
+  schema change (additive first, destructive last *and alone*, tested down path, throttled
+  backfill) generalized to any interface where two versions run live; zombie-code signals with
+  a binary verdict, routing remove-vs-keep through `auditing-for-overengineering`'s deletion
+  test.
+### Changed
+
+- **`adversarial-review`** — three moves from upstream's `doubt-driven-development`: **blind
+  dispatch** (the reviewer gets the doc + its contract, never your conclusion — handing over
+  your verdict turns review into grading), a **first-match-wins reconcile precedence**
+  (contract misread → fix the packet / accepted → fix the doc / disagreement → explicit
+  tension / noise → discard, and 3+ noise findings indict the packet), and a **review-theater
+  tripwire** (repeated substantive findings with zero accepted = a loop that can't fail).
+- **`/challenge` + `llm-security`** — handing an artifact to an external model CLI is a
+  trust-boundary crossing: run it read-only/sandboxed, feed the artifact on stdin (never a
+  shell-quoted argument — backticks and `$()` in a doc are live shell in a terminal), one
+  authorization per invocation. Hardens the cross-provider hop before the packet round-trip
+  fast-follow gets built.
+- **`brainstorming`** (+ thin echoes in `grill-with-docs`, `office-hours`) — four interview
+  moves from upstream's `interview-me`: a stated **hypothesis with a confidence number and the
+  gaps named** before the first question; a **want-vs-should-want detector** with the unlock
+  probe ("if you didn't have to justify this to anyone, what would you actually want?"); a
+  checkable stop test (predict the next three answers); and **what doesn't count as approval**
+  ("whatever you think is best" is delegation; "sounds good" isn't a yes). `grill-with-docs`
+  keeps ownership of one-question-at-a-time-with-a-recommendation — that move predated this
+  and was not duplicated.
+- **`test-driven-development`** — find the real test command before RED: checked-in wrappers
+  over global tools, focused-run vs full-suite, and read CI because it names what actually
+  gates merges.
+- **`/review` + `code-reviewer`** — a **structural remedies** list (eight named moves) so the
+  reviewer proposes the restructuring, not just the complaint; prefer the remedy that removes
+  moving pieces. Sits alongside the existing over-engineering tags, same taxonomy.
+- **`/ship`** — a rollout-thresholds table (green / yellow / red bands per signal) handed to
+  whoever deploys, framed as per-service defaults. `/ship` still stops before committing.
+- **`/qa`, `/audit`, `qa` agent — metric honesty** — never present an estimated figure as a
+  measurement: tag every number `measured-now` / `read-from-artifact` / `estimated`, write
+  `not measured` where nothing measured it. A plausible invented figure is worse than an
+  absent one.
+- **SDD implementer prompt** — reports now include `Things I didn't touch (intentionally)`,
+  as scope-discipline evidence and `/debt` input.
+
 ## [0.4.1] — 2026-07-29
 
 ### Fixed
