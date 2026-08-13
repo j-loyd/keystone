@@ -142,6 +142,12 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
       carries noise you cannot remove, name it and say why it is benign.
     - Files changed
     - Self-review findings (if any)
+    - **Things I didn't touch (intentionally):** adjacent problems you noticed and
+      deliberately left alone — the tangled file next door, a duplicated helper, a
+      missing test on a neighboring path. One line each with the path. This is
+      evidence of scope discipline, not a to-do list you owe: it tells the controller
+      what's real but out of scope, and feeds `/debt` or a follow-up task. Noticed
+      nothing? Say so.
     - Any issues or concerns
 
     Your one-line test summary should read like "14/14 passing, output

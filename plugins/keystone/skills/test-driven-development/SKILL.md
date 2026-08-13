@@ -56,6 +56,20 @@ digraph tdd_cycle {
 }
 ```
 
+### Before RED - Find the Real Test Command
+
+You can't watch a test fail with a command that doesn't run. Before the first test:
+
+- **Find the build system** from the root manifest, and prefer a checked-in wrapper
+  (`./gradlew`, `./mvnw`, `make test`, a repo script) over a globally installed tool — the
+  wrapper pins the version the project actually builds with.
+- **Learn both commands**: the focused single-test run (your tight loop) and the full-suite
+  run (the pre-commit gate). They're rarely the same invocation.
+- **Read the CI workflow** — it names the commands that actually gate merges, including the
+  lint/typecheck steps a green local suite won't mention.
+
+Don't assume a default. The `npm test` lines below are illustrative — substitute what you found.
+
 ### RED - Write Failing Test
 
 Write one minimal test showing what should happen.

@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Find the root cause before proposing a fix. Use when a test fails, a bug is reported, or behavior surprises you — and when the user says "why is this happening", "the test is flaky", "it works locally", or "/investigate". Phase-gated — reproduce and predict before changing any code.
+description: Find the root cause before proposing a fix. Use when a test fails, a bug is reported, a working feature is suddenly slower or broken, or behavior surprises you — and when the user says "why is this happening", "the test is flaky", "it works locally", or "/investigate". Phase-gated — reproduce and predict before changing any code.
 ---
 
 # Systematic Debugging

@@ -18,7 +18,7 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      28 auto-invoked skills (process discipline + agent/loop design + domain language + security + adversarial review + onboarding/git)
+├── skills/      31 auto-invoked skills (process discipline + agent/loop design + domain language + security + adversarial review + perf/observability/migration + onboarding/git)
 ├── commands/    26 explicit /commands (spec, planning, challenge, review, qa, simplify, security, ship, safety, learn, handoff, research)
 ├── agents/      the crew: Pat (planner) · Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
@@ -164,7 +164,8 @@ the hooks before they run again.
 keystone stands on the shoulders of several MIT-licensed open-source projects — most notably
 **[superpowers](https://github.com/obra/superpowers)** (Jesse Vincent), **[Matt Pocock's
 skills](https://github.com/mattpocock/skills)**, **[gstack](https://github.com/garrytan/gstack)**
-(Garry Tan), and **[ECC](https://github.com/affaan-m/ECC)** (Affaan Mustafa) — plus methodology
+(Garry Tan), **[ECC](https://github.com/affaan-m/ECC)** (Affaan Mustafa), and
+**[agent-skills](https://github.com/addyosmani/agent-skills)** (Addy Osmani) — plus methodology
 inspiration from Trail of Bits and others. Per-component provenance and the upstream license
 notices are in [`ATTRIBUTION.md`](ATTRIBUTION.md).
 

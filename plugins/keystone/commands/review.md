@@ -70,6 +70,25 @@ Format: `[severity] (confidence: N/10) file:line — finding`.
 - **Attacker view** — for HIGH-risk changes, model the concrete scenario: who could reach
   this, with what input, to what effect? A finding without a plausible attack path is a nit.
 
+### 2c. Name the move, not just the mess
+
+A structural finding that describes the problem and stops there hands the thinking back to
+the author. Say what shape to leave behind — the common moves:
+
+- Replace a conditional chain with a typed model or a dispatch table.
+- Collapse duplicate branches that differ only in a value.
+- Separate orchestration from business logic where one function does both.
+- Move feature logic into the module that owns the feature.
+- Reuse the canonical helper instead of the local re-implementation.
+- Make a type boundary explicit so the downstream branching disappears.
+- Delete pass-through wrappers that only forward their arguments.
+- Extract or split a unit that has outgrown one responsibility.
+
+These run alongside the `delete/stdlib/native/yagni/shrink` tags from step 2's reuse item, not instead of
+them: the tags say what to cut, the moves say what to build in its place. When two remedies
+compete, prefer the one that removes moving pieces over the one that spreads the same
+complexity across more of them.
+
 ### 3. Specialist fan-out (MEDIUM/LARGE or HIGH-risk diffs)
 
 A single pass over the whole diff misses domain-specific issues a focused pass would

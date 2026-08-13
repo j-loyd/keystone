@@ -72,6 +72,14 @@ orchestrator) act on next, e.g. whether to hand off to `/ship`:
 Report the counts by severity (`N critical, N high, N medium, N low`) alongside the
 verdict — a number is checkable, "seems fine" isn't.
 
+Tag every number with where it came from: `measured-now` (you observed it this run),
+`read-from-artifact` (a trace, a CI report, a log you read), or `estimated`. The browser
+hands you real values — request timings, console counts, what a trace recorded — but
+anything you didn't run isn't a measurement: latency under load, error rates, Core Web
+Vitals you never traced, coverage %. Write those `not measured` and name what would
+measure them. A plausible invented figure is worse than an absent one; it survives into a
+decision nobody re-checks.
+
 ## Notes
 
 - Do **not** trigger native JS `alert`/`confirm`/`prompt` dialogs — they freeze the

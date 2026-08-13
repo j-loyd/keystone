@@ -38,6 +38,12 @@ recommended answer with each.
 5. **What are we explicitly NOT doing** in this version?
 6. **What does this make harder later?** (The cost nobody mentions.)
 
+While the answers come back, listen for what the user thinks they *should* want rather than
+what they want: best-practice talk with no specifics ("scalable", "clean architecture"),
+deference to convention, "I should probably…", a buzzword standing in for an outcome. The
+`brainstorming` skill carries the full detector and the sycophancy caveat; the probe that
+unlocks it is *"if you didn't have to justify this to anyone, what would you actually want?"*
+
 Then, once the shape is clear, go domain-deep: when the feature touches auth, data, payments, realtime, search, file upload, LLM/agent, etc., pull targeted follow-ups from the `brainstorming` skill's `domain-probes.md` cheatsheet — the expert-level questions that surface design-determining decisions.
 
 ### 3. Landscape scan

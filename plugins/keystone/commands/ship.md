@@ -69,4 +69,21 @@ Prepare the current work to ship: **$ARGUMENTS**.
    "commit" / "ship it" / "push" do you run them — and only once every gate above is
    either clear or explicitly waived by the user, never silently skipped.
 
+## Watch window — hand these to whoever deploys
+
+This command stops at the commit, so the deploy happens after you. Put the rollout
+thresholds in the hand-off anyway, so "did it work?" has an answer that isn't a vibe.
+These are **defaults to tune per service**, not gospel — a nightly batch job and a
+checkout API deserve different numbers.
+
+| Signal                   | Green          | Yellow — investigate     | Red — roll back   |
+| ------------------------ | -------------- | ------------------------ | ----------------- |
+| Error rate vs. baseline  | within 10%     | 10–100% over             | >2× baseline      |
+| p95 latency vs. baseline | within 20%     | 20–50% over              | >50% over         |
+| New client-side errors   | no new types   | new type, <0.1% sessions | >0.1% of sessions |
+| Key business metric      | flat or better | <5% decline              | >5% decline       |
+
+Compare against the pre-deploy baseline over a comparable window, not against zero. If a
+signal isn't instrumented, say so — an unwatched rollout is a choice, not a pass.
+
 Keep it honest: if tests failed or a step was skipped, say so plainly in the summary.

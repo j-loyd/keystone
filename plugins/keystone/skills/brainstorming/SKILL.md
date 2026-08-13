@@ -23,9 +23,9 @@ survive longest, because nobody thought to check them.
 Work these in order:
 
 1. **Explore project context** — check files, docs, recent commits
-2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+2. **Ask clarifying questions** — hypothesis and confidence number first, then one at a time; understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
-4. **Present design** — in sections scaled to their complexity, get user approval after each section
+4. **Present design** — in sections scaled to their complexity, get an explicit approval after each section
 5. **Write design doc** — save to `docs/specs/YYYY-MM-DD-<topic>-design.md` (leave it uncommitted — the no-auto-commit rule applies here too)
 6. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 7. **User reviews written spec** — ask user to review the spec file before proceeding
@@ -62,6 +62,25 @@ digraph brainstorming {
 
 ## The Process
 
+**Before the first question, state your read:**
+
+- Write your current best read of what the user wants in **one sentence**, with an honest
+  confidence number next to it. Below ~70%, name what's missing on the same line:
+
+  ```
+  HYPOTHESIS: You want to answer "how are we doing?" in standup, and "dashboard" was the
+  convention that came to mind.
+  CONFIDENCE: ~30% — missing: who it's for, what "metrics" means here, what success looks like
+  ```
+
+- The number is there to force honesty, not to be precise. If you wrote a high number but can't
+  predict how the user would react to the next three questions you'd ask, the number is wrong —
+  start where you can defend it.
+- Naming the gaps is what makes the number useful: it tells the user exactly what the
+  conversation still has to surface, so they can close it in one message instead of five.
+- Restate the read with an updated number as answers land. A number that hasn't moved after
+  several questions means you're asking the wrong ones.
+
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
@@ -72,6 +91,36 @@ digraph brainstorming {
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
 - Focus on understanding: purpose, constraints, success criteria
 - When the idea touches a known domain (auth, data, payments, realtime, search, file upload, LLM/agent, etc.), draw your clarifiers from [`domain-probes.md`](./domain-probes.md) — these are the sharp, expert-level questions that surface design-determining decisions a generic "what are the requirements?" misses. Ask the 2–3 that matter, not the whole list.
+
+**Listening for "want" vs. "should want":**
+
+The riskiest answers are the ones that sound like a thoughtful answer instead of describing what
+the user actually wants. The signals:
+
+- Best-practice talk with no specifics — "scalable", "clean architecture", "modern"
+- Deference to convention — "the way most apps do it", "the standard approach"
+- Hedged obligation — "I should probably…", "I think I'm supposed to…"
+- A buzzword standing in for an outcome
+
+When you hear one, the probe that usually unlocks it:
+
+> *"If you didn't have to justify this to anyone, what would you actually want?"*
+
+The pull toward agreement runs the other way too — a user being agreeable will ratify whatever
+you put in front of them, which reads as convergence and isn't. Stay visibly willing to be
+wrong, and occasionally aim a question in a direction you expect push-back on.
+
+**Knowing when to stop asking:**
+
+Stop when you can answer yes to: *can I predict the user's answer to the next three questions
+I'd ask?* If yes, you understand the idea well enough to present a design. If no, ask the next
+question. It's a checkable test, which is the point — "we've talked enough" is a feeling and
+this isn't.
+
+It has a floor, though. Several rounds without being able to predict is information about the
+ask, not a reason to keep grinding: say so and step back — *"I've asked five questions and still
+can't predict your answers; something foundational is missing. Should we back up?"* Usually the
+ask needs decomposing (see the scope check above) or the underlying goal isn't settled yet.
 
 **Exploring approaches:**
 
@@ -87,6 +136,20 @@ digraph brainstorming {
 - Ask after each section whether it looks right so far
 - Cover: architecture, components, data flow, error handling, testing
 - Be ready to go back and clarify if something doesn't make sense
+
+**What doesn't count as approval:**
+
+The gate is an explicit yes to the design as you've stated it. These aren't that:
+
+- **"Whatever you think is best"** — delegation, not a decision. It usually means the user
+  isn't confident here either. Re-ask it as a choice between two concrete options.
+- **"Sounds good" / "sure, let's go"** — agreement with the shape of the proposal, not with its
+  specifics. Follow up: "anything you'd refine?"
+- **Silence, or "okay, let's start"** — often the user giving up on the conversation rather than
+  converging with you. Ask what you've missed.
+
+Fold any correction back in, restate, and ask again. Loop until the yes is explicit. A yes to a
+vague design is the most expensive kind, because everyone then proceeds as though it were agreed.
 
 **Design for isolation and clarity:**
 
@@ -108,7 +171,7 @@ digraph brainstorming {
 - Write the validated design (spec) to `docs/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
 - Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Leave the design document uncommitted (the no-auto-commit rule applies here too)
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -172,6 +235,9 @@ answers a design question before there is a plan at all.
 
 - **One question at a time** - Don't overwhelm with multiple questions
 - **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **Say your confidence out loud** - A number with the gaps named beats a silent assumption
+- **Predict before you present** - Stop asking once you can predict the next three answers
+- **Explicit yes only** - "Whatever you think" and "sounds good" aren't approval
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling
 - **Incremental validation** - Present design, get approval before moving on
