@@ -79,8 +79,9 @@ footnote.
 
 - Prefer normalized, per-concern tables over monolithic JSON blobs, matching whatever
   stack the codebase already uses rather than assuming one.
-- For any LLM/agent work, apply the `cost-aware-llm-pipeline` skill (cheap→mid→high→top
-  tier routing, budgets, small-shot testing) rather than reaching for the biggest model.
+- For any LLM/agent work, apply the `designing-agent-systems` skill (cheap→mid→high→top
+  tier routing, small-shot testing) rather than reaching for the biggest model; budget
+  ceilings and velocity breakers for unattended runs live in `long-running-agents`.
 
 End with a clear verdict: **proceed / proceed-with-changes / rethink**, the scored
 rubric, and the next step.

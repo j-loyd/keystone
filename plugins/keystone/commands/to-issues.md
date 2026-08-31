@@ -31,6 +31,9 @@ Convert **$ARGUMENTS** into a set of discrete Linear issues.
    in Linear.
 3. On confirmation, create them in **Backlog**, wiring up blocked-by/blocks relationships.
 4. Report back the created issue IDs and the dependency graph.
+5. Point the source plan at them: once the issues exist in a tracker, that tracker holds
+   task state and the plan's task list becomes an **ordered index of issue IDs or links**,
+   not a second checklist — keep both and they drift apart silently.
 
 If the source is still fuzzy, push it through `writing-plans` (or `/office-hours`) before
 slicing into issues — don't manufacture tickets from an unresolved plan.

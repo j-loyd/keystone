@@ -142,6 +142,38 @@ have baked.
 - **Gate the risky cutover behind a flag** when you want step 4 to be a config change you can
   revert in seconds rather than a deploy.
 
+### Feature flags — deploy and release on different days
+
+That last rule points at a lever worth naming on its own. A feature flag **decouples deployment
+from release**: the code merges and ships dark, and a config change — not a deploy — decides
+when anyone sees it. That buys two things a migration wants anyway. The new path runs in
+production, exercised against real traffic shapes, before it is load-bearing. And **turning the
+flag off is a rollback that needs no redeploy** — seconds, no build, no rollout window, and
+available to whoever is holding the pager rather than only to whoever can push. That second
+property is the whole point; a flag that can't be flipped quickly under pressure isn't buying
+it, so check who can flip it and how fast before you rely on it.
+
+Five steps — create (default off) → enable for internal testing → canary on a small slice →
+full rollout → **remove the flag and the branch it was guarding**. The fifth is the one that
+gets skipped.
+
+Until that last step lands, that code path is two code paths — two branches to reason about, two to
+test, and a combination with every other live flag that nobody has actually run. Stale flags
+compound: the interesting bugs live in the configurations no one has exercised.
+
+**So a flag gets a cleanup trigger when it's created, or it becomes debt.** Mirror the
+deliberate-shortcut marker convention from `coding-standards` at the flag's definition, so
+`/debt` harvests it with everything else:
+
+```py
+# keystone: both write paths live while this flag exists; remove the flag and the legacy write
+# once the backfill finishes and reads have baked a week on the new column.
+```
+
+A date works where the timeline is known; a condition ("once every consumer is off v1") works
+better where it isn't. What doesn't work is no trigger — that's how a temporary flag becomes a
+permanent branch nobody dares delete, and it's the zombie pattern below in miniature.
+
 ### The same shape, off SQL
 
 Expand/contract isn't a database pattern. It applies to any interface where two versions can be
@@ -209,6 +241,7 @@ not an apology — if the changelog entry reads like one, the work has been misp
 | "We'll plan the deprecation after the new system ships" | By then there are new priorities and no appetite. Ask "how would we remove this in three years" while designing it, when clean interfaces are still free. |
 | "Users will migrate on their own" | They won't; their backlog isn't yours. Ship tooling, or do the migration yourself — the Churn Rule. |
 | "We can maintain both indefinitely" | Two systems doing one job is double the tests, docs, on-call surface, and onboarding, forever. |
+| "The flag is temporary, we'll clean it up after launch" | Launch is exactly when attention leaves. Give the flag a removal trigger at creation, marked in the code where `/debt` will find it. |
 | "Just rename the column, it's one line" | During rollout, old and new code run together and one of them queries a column that no longer exists. Expand/contract. |
 | "I'll add the column and drop the old one in the same migration" | That welds a safe add to a destructive drop and forfeits the rollback. Drops ship alone, later. |
 | "We'll write the rollback if we need it" | You'll be writing it during the incident, untested, at speed. Write and run the down before merging. |
@@ -220,6 +253,8 @@ not an apology — if the changelog entry reads like one, the work has been misp
 - A deadline set for consumers while the owning team ships no migration help
 - "Soft" deprecation that's been advisory for years with no consumers actually moved
 - New features being added to something already deprecated
+- A feature flag at 100% (or 0%) for months with both branches still in the code, or any flag
+  created without a removal trigger
 - Deprecation decided without measuring current usage; removal done without verifying zero usage
 - Zombie code with live consumers and no owner, left in limbo rather than adopted or removed
 - A schema change and the code depending on it in the same deploy

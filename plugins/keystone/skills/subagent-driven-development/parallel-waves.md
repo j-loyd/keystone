@@ -17,6 +17,23 @@ Parallel dispatch is allowed **ONLY when BOTH hold**:
 If isolation **cannot be proven, run sequentially.** No exceptions — the conflict risk is
 real and silent. When in doubt, sequential.
 
+## Needs coordination — earning parallelism on a coupled pair
+
+Between "safe to parallelize" and "must be sequential" sits a third case: tasks coupled **only**
+through an interface they share — a type, a schema, an endpoint contract. Those can be waved, but
+the parallelism has to be earned first:
+
+1. **Define the contract as its own step**, in an earlier wave or sequentially before any wave.
+   One task, one owner — the provider side of the interface.
+2. With the contract written and staged, its consumers are genuinely independent: they build
+   against a fixed shape instead of negotiating one mid-flight.
+3. **Then re-run the gate above.** Contract-first satisfies (a) in substance; it does not
+   excuse (b) — the consumer tasks still need disjoint file sets or their own worktrees.
+
+If the contract can't be pinned down before the work starts, the coupling is real and the tasks
+are sequential. Speculating a shared interface and reconciling later is how one wave produces two
+incompatible halves.
+
 ## Grouping
 
 Partition the independent tasks into **waves**. Every task within a wave is mutually
@@ -32,7 +49,8 @@ independent; any task that depends on another task's output goes in a **later wa
 
 ## When NOT to wave
 
-- Tightly-coupled tasks, or any shared-file edits.
+- Tightly-coupled tasks — coupled beyond a single shared interface (see *Needs
+  coordination*) — or any shared-file edits.
 - A short plan (≤3 tasks) — coordination overhead isn't worth it.
 - No worktree support and file sets aren't provably disjoint.
 

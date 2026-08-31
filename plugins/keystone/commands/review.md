@@ -120,7 +120,7 @@ This is the cost-tier fan-out pattern in practice: route the per-lens passes at 
 **cheap/mid tiers**, reserve the **high tier** for a finding you can't confidently confirm
 or dismiss, and save the **top tier** (where available) for adjudicating a genuine
 specialist disagreement — the one seat where the extra judgment is worth the premium.
-(The tier ladder and how to resolve current models/prices live in `cost-aware-llm-pipeline`.)
+(The tier ladder and how to resolve current models/prices live in `designing-agent-systems`.)
 
 ### 4. Adversarial second pass (HIGH-risk diffs, or on request)
 
@@ -141,7 +141,7 @@ Scale effort to the diff. Small/mechanical diff → review inline yourself. Larg
 high-risk diff → fan out per-file at the **cheap tier** to flag candidates, escalate only
 the flagged spots to the **mid tier**, and reserve the **high tier** for genuinely
 ambiguous calls — with the **top tier** held for adjudication seats only, per
-`cost-aware-llm-pipeline`. Don't burn the big model on boilerplate.
+`designing-agent-systems`. Don't burn the big model on boilerplate.
 
 ### 6. Verdict
 

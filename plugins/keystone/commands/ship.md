@@ -84,6 +84,8 @@ checkout API deserve different numbers.
 | Key business metric      | flat or better | <5% decline              | >5% decline       |
 
 Compare against the pre-deploy baseline over a comparable window, not against zero. If a
-signal isn't instrumented, say so — an unwatched rollout is a choice, not a pass.
+signal isn't instrumented, say so — an unwatched rollout is a choice, not a pass. Where
+any of this shipped behind a feature flag, name the flag and who can flip it: **flag-off is the
+first rollback lever** — faster and lower-risk than reverting and redeploying.
 
 Keep it honest: if tests failed or a step was skipped, say so plainly in the summary.

@@ -66,7 +66,7 @@ Use judgment: ask the 2–3 probes that actually matter for the task, not the wh
 
 - Direct vs. indirect input (does model output reach a sink — shell, SQL, file, another call)?
 - Agency: what actions can it take, and which are irreversible (→ HITL gate)?
-- Cost/latency: which model tier, batching, prompt caching (see `cost-aware-llm-pipeline`)?
+- Cost/latency: which model tier, batching, prompt caching (see `designing-agent-systems`)?
 - Prompt-injection surface, system-prompt/secret leakage (see `llm-security`)?
 
 ## Reporting / analytics

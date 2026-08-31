@@ -95,9 +95,9 @@ For each layer, decide something or consciously default it:
    irreversible: **propose-then-commit** — the agent proposes, a deterministic step or human
    commits. Never auto-accept novel data on the model's self-reported confidence; agent
    confidence is input, not truth.
-5. **Observability** — log model/tier choice, tokens, verdicts per run; **cost per completed
-   task** is the metric that catches "cheaper model needed 3x the turns"
-   (`cost-aware-llm-pipeline`). Read transcripts; scores alone lie.
+5. **Observability** — log model/tier choice, tokens, cache-read tokens, and verdicts per
+   run; **cost per completed task** is the metric that catches "cheaper model needed 3x the
+   turns" — sticker rate per token never does. Read transcripts; scores alone lie.
 
 **Named failure modes to design against** (these are model behaviors, not bugs you can prompt
 away): _premature completion_ (declares done without verifying — counter: machine-checkable
@@ -108,15 +108,54 @@ re-anchor from persisted state, record locked decisions).
 
 ## Model & effort selection
 
-Tier language only — never hardcode model names into designs (they rot; resolve current IDs
-from the provider at build time, per `cost-aware-llm-pipeline`):
+**Designs speak in tiers. Model names, IDs, and prices don't belong in a design note or
+scattered through call sites** — they rot on a months-long cycle: names change, tiers get
+renamed, an ID you assumed was a floating alias turns out to be a pinned snapshot, rates move.
+Resolve the concrete IDs and prices **at build time** from the provider's live models list or
+pricing page into **one config place**, with the as-of date recorded beside every number
+copied. Store cache and batch discounts as _ratios_, not dollar figures — ratios survive a
+price change that strands a constant.
 
-- **Orchestrator / synthesis / adjudication** → high or top tier; a weak orchestrator's
-  mistakes are paid by every worker.
-- **Focused workers** → mid tier; **mechanical transforms** → cheap tier if it clears your
-  eval bar.
-- **Sweep the effort control per task class** before reaching for a bigger model — it's the
-  finer-grained dial, and its impact grows with each model generation.
+The ladder — cheapest rung that clears the bar:
+
+- **Cheap** — classification, extraction, triage, mechanical transforms, per-item fan-out.
+- **Mid** — the default: focused workers and most application logic.
+- **High** — orchestration, synthesis, ambiguous judgment. A weak orchestrator's mistakes are
+  paid for by every worker under it.
+- **Top** — reserved for genuine adjudication: adversarial verify seats, tournament judges,
+  one-way-door calls. It is not a routing default, and reaching for it on everyday work is the
+  usual way an agent design overspends without getting better.
+
+Escalate **one rung at a time, on a signal**: schema or structural validation failing twice
+(one failure is usually a prompt problem, not a capability ceiling), genuinely conflicting
+signals rather than pattern-matching, or output expensive enough to be wrong. Don't escalate
+work a cheap tier already clears against spot-checked ground truth — that buys back a percent
+or two at full price.
+
+**Sweep the effort control per task class before reaching for a bigger rung** — it trades
+intelligence for cost inside the same model, it's the finer-grained dial, and its impact grows
+with each model generation. Re-tune it on migration rather than carrying an old setting
+forward.
+
+## Loop economics — audit the cache prefix before the tier
+
+An agent loop re-sends its history every turn, so **re-sent context is usually the majority of
+the bill**: cumulative cost grows roughly quadratically with turn count, and cache reads at a
+fraction of the base input rate shrink that curve by the same fraction rather than changing its
+shape — which is what makes a long loop affordable. On most loops this is a
+larger lever than model choice, and unlike a tier change it carries no quality risk.
+
+- **Hit rate is the lever, and byte-stability is what buys it.** Anything that varies
+  per-request inside the cached prefix — a timestamp, unsorted JSON keys, a tool list that
+  changes between turns — invalidates the cache from that point on, every turn after. It fails
+  silently: the loop still works, it just costs several times more.
+- **Watch the diagnostic, not the vibes.** Cache-read tokens in the usage block should be
+  nonzero and stable across turns; a mid-loop drop to zero means something upstream perturbed
+  the prefix.
+- **A prefix used once is a net loss** — cache writes bill above base input, so caching pays
+  only when the same prefix is reused enough times inside its TTL to amortize the write.
+- Where the API offers mid-conversation instruction injection, prefer it to editing the system
+  prompt, which invalidates the whole prefix.
 
 ## Scaffolding has a sunset
 
@@ -185,14 +224,14 @@ Seed tasks · rubric · end-state assertions
 - Same-context self-review as the only verification → separate it
 - Auto-accepting novel data on self-reported confidence → propose-then-commit
 - Free-text returns where downstream code must decide → schema-constrain them
-- Model names hardcoded in the design → tiers + build-time resolution
+- Model names or prices hardcoded in the design → tiers + build-time resolution
+- A loop design that tunes the model tier without ever measuring cache hit rate → wrong lever
 - Scaffolding with no upgrade trigger → it will silently outlive its reason
 
 ## Integration
 
 - Before `writing-plans` — the design note feeds the plan.
 - `dispatching-parallel-agents` — dispatch mechanics and fan-out economics.
-- `long-running-agents` — loop modes, iteration contract, stuck detection.
-- `cost-aware-llm-pipeline` — tiers, budgets, cache/loop cost mechanics.
+- `long-running-agents` — loop modes, iteration contract, stuck detection, budget enforcement.
 - `llm-security` — the agent attack surface (prompt injection, tool trust, excessive agency).
 - `adversarial-review` — stress-test the design note itself before building from it.

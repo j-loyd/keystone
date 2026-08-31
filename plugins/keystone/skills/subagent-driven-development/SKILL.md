@@ -207,7 +207,7 @@ on a harness without overrides, this section stays advisory prose. Keystone deli
 **not** pin a model in the agent definitions — the same reviewer sees trivial and critical diffs,
 so tier is a per-task call, not a per-agent one. The tier ladder — and how to resolve current model
 IDs and prices at build time (never hardcoded in prose or code) — lives in
-`cost-aware-llm-pipeline`, including the top adjudication tier above the everyday ladder.
+`designing-agent-systems`, including the top adjudication tier above the everyday ladder.
 
 ## Rigor Scales to Risk
 

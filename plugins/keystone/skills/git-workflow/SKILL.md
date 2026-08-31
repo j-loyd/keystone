@@ -52,6 +52,41 @@ Rules:
 Branch per unit of shippable work (mirrors how `/to-issues` slices). Long-lived or risky
 work → use a worktree (`using-git-worktrees`) so it's isolated from the current workspace.
 
+## Version bumps
+
+`/ship` says "bump appropriately." This is what appropriate means.
+
+**Bump by consumer-observable impact, not by how big the diff felt.** A one-line change that
+alters a return shape is breaking; a thousand-line internal refactor nothing outside can detect
+is a patch. Diff size and bump size are unrelated.
+
+| Bump | When |
+| --- | --- |
+| `major` | a consumer who changes nothing has to change something — removed or renamed surface, changed default, stricter validation, new required input |
+| `minor` | new capability; existing usage keeps working unchanged |
+| `patch` | a fix or internal change adding no new surface |
+
+- **When unsure, assume breaking.** A major bump nobody needed costs a version number; a
+  breaking change shipped as a patch costs consumers an incident, and they find out at runtime.
+- **Behavior counts even when the signature doesn't move** — a changed default, a tightened
+  validation, a different error type or exit code, an output format consumers parse.
+- Which files carry the version, and keeping them in sync: `/ship` step 5.
+
+## Changelog
+
+Group entries by what they do to a consumer — **Added / Changed / Fixed / Deprecated / Removed
+/ Security** — not by commit order. `Deprecated`, `Removed`, and `Security` are the three a
+reader scans for first and the three most often folded into `Changed`; keep them separate. For
+the work behind a `Deprecated` entry, see `deprecation-and-migration`.
+
+- **Write the entry with the change, not at release time.** A changelog reconstructed from
+  `git log` on release day is a list of commit subjects: accurate about what was touched,
+  useless about what it means. The person making the change is the only one who cheaply knows
+  why it mattered.
+- **Write for the consumer, not the author.** "Bump the parser dependency" is a commit
+  message; "comments in config files no longer break parsing" is a changelog entry. If an
+  entry requires action from the reader — a migration, a config edit — say so in the entry.
+
 ## Conflicts
 
 When a merge or rebase stops with conflicts, use `resolving-merge-conflicts` — resolving by

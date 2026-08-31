@@ -9,7 +9,7 @@ capability** across four layers:
 - **Process discipline** — TDD, debugging, plans, worktrees, review.
 - **Domain language** — a CONTEXT.md glossary + ADRs, grill, zoom-out.
 - **Explicit workflows** — office-hours, ceo/eng review, qa, cso, ship, retro.
-- **Harness & judgment** — cost-aware LLM routing, security review, coding standards, and
+- **Harness & judgment** — tiered model routing, security review, coding standards, and
   the instinct/memory/security-hook harness.
 
 Design is intentionally **out of scope** — the `impeccable` suite stays a separate plugin.
@@ -18,7 +18,7 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      31 auto-invoked skills (process discipline + agent/loop design + domain language + security + adversarial review + perf/observability/migration + onboarding/git)
+├── skills/      30 auto-invoked skills (process discipline + agent/loop design + domain language + security + adversarial review + perf/observability/migration + onboarding/git)
 ├── commands/    26 explicit /commands (spec, planning, challenge, review, qa, simplify, security, ship, safety, learn, handoff, research)
 ├── agents/      the crew: Pat (planner) · Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
@@ -43,7 +43,7 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 - **Linear Backlog** — `/to-issues` never creates in Triage.
 - **Cost tiers** — `/review` scales cheap → mid → high tiers, with the top tier reserved
   for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
-  how to resolve current IDs/prices at build time live in `cost-aware-llm-pipeline`.
+  how to resolve current IDs/prices at build time live in `designing-agent-systems`.
 - **The loop closes** — SDD task completion harvests what the gates caught into per-repo
   lessons (fatigue-gated, one-tap, never silent), and each task packet carries the matching
   lessons back in — so runs compound instead of re-paying for known mistakes.

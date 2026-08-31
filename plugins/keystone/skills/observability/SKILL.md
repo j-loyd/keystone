@@ -138,7 +138,7 @@ errors — a sampled-away trace of a failure is the one you needed. Traces die a
 context, same as correlation IDs and for the same reasons.
 
 If the traced path calls an LLM, the token and cost dimensions belong here too —
-`cost-aware-llm-pipeline` covers what to record.
+`designing-agent-systems` covers what to record per run.
 
 ## Alerts — symptoms, not causes
 

@@ -33,7 +33,10 @@ command ties them together into an audit.
 > lead, not a verdict.
 
 1. **Secrets archaeology.** Scan the repo and git history for committed secrets, keys,
-   tokens, `.env` leaks. Check that secret files are gitignored and never logged.
+   tokens, `.env` leaks. Check that secret files are gitignored and never logged. A secret
+   that reached a remote is compromised as of that push — **rotate first, then purge
+   history**: purging alone leaves a live credential in every existing clone, fork, cache,
+   and CI log. Purge is cleanup; rotation is the fix.
 2. **Supply chain.** Use the **Trail of Bits `supply-chain-risk-auditor`** skill if
    installed (else `npm audit` + manual review): known CVEs (by reachability), lockfile
    integrity, postinstall scripts, typosquat/dependency-confusion, pinning/provenance, and

@@ -81,11 +81,40 @@ A loop needs three independent exits, or it has none:
   On detection: write the failure log, stop or re-plan; never just keep spinning. Cap
   iterations as a backstop (a bounded loop that halts beats an unbounded one that has to be
   killed).
-- **Budget enforcement, not budget alerts** — a hard spend/token ceiling that stops the run,
-  paired with the velocity check above (a runaway loop outruns a cumulative cap long before
-  anyone reads an alert). The money-side mechanics live in `cost-aware-llm-pipeline`
-  (velocity circuit breaker, task-level budgets the model can see); wire them in, don't
-  re-derive them.
+- **Budget enforcement, not budget alerts** — a hard spend/token ceiling that halts the run,
+  paired with a check on the burn _rate_. Alerting a human who is asleep is not an exit; the
+  run has to be able to stop itself. Mechanics in the next section.
+
+## Budget ceilings and velocity breakers
+
+**Ceiling per run and per task, not just per account.** An account-level cap is the last line
+of defense — by the time it trips, this run has already spent everything every other run
+needed. Give each run a spend/token ceiling, and each task within it a share, so one item's
+retry storm can't consume the whole night. On breach, the loop halts and writes state like
+any other exit; a ceiling that only logs is an alert wearing a budget's name. Where the
+harness or API exposes a task-level budget the model can _see_ mid-run — a remaining-work
+allowance it can wind down against — prefer it over a bare output-token cap, so the agent
+finishes and hands off cleanly instead of truncating mid-thought.
+
+**Trip on the rate, not the total.** A cumulative ceiling generous enough for an overnight run
+is generous enough for a runaway loop to exhaust before anyone reads the alert, and no single
+call in that loop looks abnormal. So track spend per unit time and per unit of _verified_
+progress (checklist items closed, tests newly green). Burn well above the run's own
+established baseline, or sustained burn with the progress denominator flat, trips the breaker
+— halt, write the failure log, escalate to a human. This is the gutter signature read off a
+different sensor, and the two don't subsume each other: a loop can spin cheaply (fast-failing
+commands, no state change) or spend heavily while looking busy (deep retries, a context that
+keeps growing). Instrument both.
+
+**Cost exhaustion is an availability problem.** A run that empties the ceiling has denied
+itself and everything else sharing that key, and the outage looks identical whether the cause
+was a bug, a poisoned tool result that induced an expensive loop, or an attacker feeding the
+agent work engineered to be costly — denial-of-wallet, in the same family as the unbounded
+consumption class `llm-security` covers. Two consequences for unattended runs, which are the
+most exposed because no one is watching: the breaker is a **control**, so keep it where the
+agent's own untrusted inputs can't raise or disable it (config the loop reads, not a number
+the model can rewrite mid-run); and scope ceilings per run so a single compromised or stuck
+agent degrades one run rather than the whole budget.
 
 ## Context across a long run
 
@@ -115,7 +144,9 @@ A loop needs three independent exits, or it has none:
 
 - `subagent-driven-development` — run-state format, orchestrator discipline, review gates.
 - `/handoff` + `/pickup` — the session-boundary handoff this skill's progress file feeds.
-- `cost-aware-llm-pipeline` — budget ceilings, velocity circuit breakers, cache economics of
-  loops.
+- `llm-security` — denial-of-wallet and unbounded consumption as an abuse class, when the
+  runaway burn is adversarial rather than accidental.
+- `designing-agent-systems` — tier ladder, effort control, and the cache/prefix economics of
+  the loop this skill schedules.
 - `dispatching-parallel-agents` — when one loop should fan work out instead of iterating.
 - `verification-before-completion` — the done-means-verified bar each iteration must clear.
