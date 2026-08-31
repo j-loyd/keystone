@@ -109,3 +109,29 @@ End with a short summary so the change is reviewable:
   behavior-bearing, so the reviewer knows it was a decision, not an oversight.
 
 Do not commit or push (see the no-auto-commit rule) — leave the change staged for review.
+
+## Rationalizations
+
+| Rationalization | Reality |
+| --- | --- |
+| "The tests still pass, so behavior is preserved" | Only for the paths a test actually covers. Before leaning on green, confirm some test exercised the branch you rewrote — an uncovered path vouches for nothing. |
+| "It's equivalent, just cleaner" | Equivalent over which inputs? Empty, null, error, and out-of-order cases are where a rewrite quietly diverges. Name the ones you checked. |
+| "That block was confusing, so I rewrote it" | Confusing code is sometimes carrying a reason nobody wrote down — an ordering constraint, a workaround, an old bug. Check blame, the comment, or the test before deciding it's noise. |
+| "I moved the complexity into a helper" | A helper hiding the same branching hasn't removed complexity; it's added a name and a jump. Count concepts across the change, not lines in one function. |
+| "Nothing calls this, so simplifying it is free" | Nothing calling it makes it a deletion candidate, not a simplification target. Polishing it spends review attention on code that should be leaving. |
+| "Fewer lines is obviously better" | Only when the shorter form reads faster. A dense chain trades your five minutes for the next reader's twenty, and the next reader is often a model. |
+| "The old error message was sloppy, so I improved it" | Messages, error types, log fields, and return shapes are behavior — something downstream matches on them. Change them in a diff that says it changes them. |
+| "I was already in that file" | Proximity isn't scope. A clarity pass over code the user didn't touch turns a reviewable diff into a hunt for the real change. |
+
+## Red flags
+
+- A hunk inside a "no behavior change" diff that touches a condition, a default, or an error path
+- Verification that names a test command but not whether any test covers the changed branch
+- A refactor and a fix in one commit, so neither can be reviewed on its own terms
+- A helper extracted for a single caller that now reads no faster than the inline version did
+- Line count offered as the result, with no statement of what got easier to understand
+- Code rewritten for looking odd, with no check of why it was odd
+- A comment deleted as "restating the code" when it was recording a why
+- The diff spreading into files outside the session's work
+- A behavior difference noticed mid-pass and folded in as "while I was there" instead of raised
+- Edits applied when nobody asked for edits — the propose mode quietly treated as the apply mode

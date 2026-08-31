@@ -31,6 +31,30 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
 
+That split needs a shape. **When the work spans more than one module, map the capabilities
+before writing any plan** — a module table plus an explicit build order, agreed with the human
+first. Treat that agreement as a gate: a plan written against an unagreed partition is a plan you
+rewrite. Skip it for single-module work and for Light-level runs — a one-row table is not a
+partition, it is ceremony.
+
+| Module id     | Responsibility                      | Depends on   |
+| ------------- | ----------------------------------- | ------------ |
+| `ingest-csv`  | Parse and validate uploaded rows    | —            |
+| `dedupe-rows` | Collapse duplicates on a stable key | `ingest-csv` |
+
+- **Module ids are stable** — kebab-case, chosen once, not renamed mid-initiative, so downstream
+  work (plans, branches, issues) selects by id instead of guessing which plan is the live one.
+- **If two modules each need the other, the partition is wrong** — usually they are one module,
+  sometimes a shared third should be extracted. Either way a cycle in `Depends on` is a
+  partition error, not a sequencing problem — merge them and re-derive the build order.
+- **Interfaces live at the boundary.** The map records _that_ a dependency exists; the contract
+  itself lives in the **provider's** plan, so exactly one plan owns it.
+
+The map is a different cut from the folder layout above, and from the file-level pass below:
+a capability map partitions **modules**, each of which may earn its own plan; a `plan.md`
+phase index sequences **phases of work** within one; `## File Structure` decomposes **files**
+within a phase. On a large initiative all three apply, outermost first.
+
 ## Discuss / lock decisions first
 
 Before decomposing into tasks, surface and **lock the decisions that would otherwise become
@@ -57,6 +81,84 @@ When a single task is too large to be one bite-sized unit, don't just lop off "t
 
 **Don't shrink scope with deferral language.** "v1 just does X", "placeholder for now", "wire this up later" inside a task silently drops agreed scope and reads as done when it isn't. If something is genuinely out of this slice, make it an **explicit** later SPIDR slice with its own tasks — never a vague aside buried in a step.
 
+## Wide refactors — the exception to vertical slicing
+
+The slices above are vertical: each cuts a narrow but complete path and lands green on its own. A
+**wide refactor** can't. That's one mechanical change whose blast radius fans across the codebase
+— renaming a shared field, retyping a symbol hundreds of call sites read, swapping one library
+call everywhere — so a single edit breaks every caller at once and there is no narrow end-to-end
+path left to cut. Don't force it into a single narrow end-to-end slice; sequence it **expand → migrate →
+contract**:
+
+- **Expand** — add the new form beside the old so nothing breaks yet. One task.
+- **Migrate in batches sized by blast radius** — per package, per directory, per subsystem;
+  whatever keeps one batch reviewable. Each batch is its own task, depending on the expand, and
+  stays green because the old form still exists.
+- **Contract** — delete the old form once no caller remains. One task, depending on every batch.
+
+**Does your task actually qualify? The test is shape, not size.** All three must hold: the change
+is **mechanical** — one transformation applied repeatedly, correctness decidable per site; the
+call sites are **too many to change in one reviewable task**; and **no subset of them can change
+alone** and leave a working system. Fail any one and this isn't the exception. A big feature with
+many parts is a normal SPIDR split (Paths, Interfaces, Data); a mechanical change confined to one
+package is just one task; a change where some callers _can_ be cut over independently is a
+vertical slice you haven't found yet. "It's a big refactor" does not qualify — a documented
+exception that anything large can claim is a loophole for skipping vertical slicing.
+
+**Prefactor before accepting the exception.** A wide blast radius is sometimes a symptom: if a
+small structural change now — extracting the seam that scattered call sites can funnel through —
+turns the wide change into a narrow one, do that first as its own behavior-unchanged task, then
+slice normally. Make the change easy, then make the easy change; a prefactor that doesn't
+measurably shrink what follows is churn, so skip it.
+
+State those dependencies in the plan: each batch names the expand task, the contract task names
+every batch. In a plan file that's task order plus one line in the task body — don't rebuild an
+issue graph inside the plan (`/to-issues` owns that ground).
+
+Where the batches genuinely can't stay green on their own, keep the sequence and add a final
+**integrate-and-verify** task that every batch feeds — that task, not the batches, is where green
+is promised. **Say so in writing.** A per-batch "tests pass" you know is false is worse than an
+honest note that verification is deferred to the integrate task — and it puts the checkpoint
+(below) where a review can actually judge something. How the batches are held until then
+(a branch, a stack, a stage) is the user's call at execution time; plan tasks still leave work
+staged, not committed.
+
+Risk tags follow the shape rather than the total size: expand and contract change a shared
+contract, so they're usually HIGH; migrate batches are mechanical and fail loud, so often LOW/MED.
+Tag each on its own signals.
+
+The mechanics of expand/contract for data and interfaces — nullable adds, dual-write, throttled
+backfill, destructive step last and alone — live in
+[`deprecation-and-migration`](../deprecation-and-migration/SKILL.md). Cite it from the plan rather
+than restating it.
+
+## Fog — what the plan deliberately leaves unspecified
+
+A plan is _deliberately_ incomplete. Some in-scope questions can be seen coming but can't yet be
+phrased sharply, because they hang on decisions this plan hasn't reached. Write them into a
+`## Not yet specified` section of the plan document — the suspected question, the area to revisit
+— where they stay visible until earlier work makes them specifiable and they graduate into real
+tasks. This isn't a fourth partition pass: the capability map, phase index, and `## File
+Structure` each cut work you can already see; fog names the edge where none of them can cut yet.
+
+**Fog or task? The test is whether you can state the question precisely now — not whether you can
+answer it now.**
+
+- **Task (or Spike) when** the question is already sharp, even if it's blocked or unanswered. A
+  sharp question you can't _answer_ is what SPIDR's **Spike** is for: timebox it, then plan the
+  rest with confidence.
+- **Not yet specified when** you can't yet phrase it that sharply. Don't pre-slice fog into
+  task-sized pieces — sizing something you can't state produces fake tasks with invented steps,
+  and one patch of fog may graduate into several tasks, or none.
+
+Spike and fog are complements, not overlaps: Spike takes the sharp-but-unanswered case, fog holds
+the not-yet-sharp one.
+
+Fog lives in its own named section, **never inside a task's steps** — "TBD" or "v1 just does X"
+inside a task is still a plan failure (see No Placeholders). And **`## Out of scope` is a separate
+section**: fog is in scope and graduates into tasks, out-of-scope work never does — one line plus a
+reason. Omit either heading when empty.
+
 ## Checkpoint placement
 
 Plans get reviewed/verified at checkpoints. Place them at **natural boundaries** — after a coherent, independently-meaningful chunk of work (a vertical slice, a completed task) — not after every micro-step. Per-step gating causes verification fatigue and slows execution without adding signal; the right granularity is "enough work that a review can actually judge something." (This tempers, doesn't weaken, the per-claim verification discipline in `verification-before-completion` — that's about never _claiming_ without evidence; this is about where _human/review_ checkpoints go.)
@@ -80,7 +182,7 @@ This structure informs the task decomposition. Each task should produce self-con
 - "Run it to make sure it fails" - step
 - "Implement the minimal code to make the test pass" - step
 - "Run the tests and make sure they pass" - step
-- "Commit" - step
+- "Leave the work staged" - step
 
 ## Plan level
 
@@ -272,6 +374,10 @@ them.
 
 Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
 
+(Location is what makes this decidable: a `## Not yet specified` section may name a question the
+plan can't yet phrase as a task — see Fog. That is the only place unspecified work may live.
+Inside a step, all of the below are still plan failures.)
+
 - "TBD", "TODO", "implement later", "fill in details"
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
 - "Write tests for the above" (without actual test code)
@@ -290,7 +396,7 @@ Every step must contain the actual content an engineer needs. These are **plan f
 
 After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
 
-**1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
+**1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps. A requirement you can't yet phrase as a task isn't a gap to wave through — put it in `## Not yet specified` (see Fog) so it stays visible.
 
 **1b. Goal-backward:** State the phase goal in one line, then list the 3–5 truths that must hold for it. Point each truth to a task that makes it true. A truth with no covering task — or covered only by a task that creates an artifact without wiring it — is a gap; add the task. (Completeness is not achievement.)
 
@@ -301,7 +407,7 @@ adds — what concretely breaks without it? Cut any with no answer: ceremony is 
 task in the run pays, and a review gate that never fails anything is theater, not rigor.
 (`/plan-eng-review` scores this same question from outside as its "lean process" row.)
 
-**2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them. Also scan for scope-shrinking language ("v1 just does X", "wire this up later") that drops agreed scope — if a requirement is genuinely deferred, make it an explicit later SPIDR slice, not an aside.
+**2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them. Also scan for scope-shrinking language ("v1 just does X", "wire this up later") that drops agreed scope — if a requirement is genuinely deferred, make it an explicit later SPIDR slice, not an aside, and anything still too vague to slice belongs in `## Not yet specified`, never inside a step.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 

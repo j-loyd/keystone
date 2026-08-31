@@ -70,6 +70,28 @@ You can't watch a test fail with a command that doesn't run. Before the first te
 
 Don't assume a default. The `npm test` lines below are illustrative — substitute what you found.
 
+### Before RED - Agree the Seam
+
+A **seam** is where an interface lives — the place behaviour can be altered without editing in
+place, and therefore the place a test can observe it from without reaching inside.
+(`improve-codebase-architecture` owns this term for the kit.) Which seam a test belongs at is the
+other thing settled before RED, not discovered while writing the assertion.
+
+Naming it up front is what bounds the effort. Left unnamed, tests land at whatever boundary was
+easiest to reach — and you get the red flag at the end of this file: the same behavior asserted at
+three levels, and nothing at the one that would have caught the regression.
+
+**An unconfirmed seam is a question, not a default.** If you can't name the seam this test
+belongs at, stop and ask — propose the seams you'd test at and get them confirmed. When there's
+no one to confirm with (an autonomous run), the fallback is to write down the seam you chose and
+why, where a reviewer will see it — not to pick by convenience and leave the choice implicit.
+
+If *no* correct seam exists — nothing observable sits at the level the behavior actually lives
+at — that's a finding about the architecture, not a gap in your effort. Report it and route to
+`improve-codebase-architecture` rather than pinning a shallow test that goes green without
+proving anything. `systematic-debugging` Phase 4 applies the same rule to regression tests; this
+is that rule at feature-writing time.
+
 ### RED - Write Failing Test
 
 Write one minimal test showing what should happen.
@@ -400,6 +422,35 @@ When adding mocks or test utilities, read [testing-anti-patterns.md](testing-ant
 - Testing mock behavior instead of real behavior
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
+
+## Rationalizations
+
+| Rationalization | Reality |
+| --- | --- |
+| "I already know what it should do — I'll write the test after" | The test costs the same either way. Written after, it inherits the implementation's assumptions instead of checking them; knowing the answer is an argument for writing it down first, not for skipping it. |
+| "It obviously fails, no need to actually run RED" | A typo'd import "obviously fails" too, and looks identical from here. The run takes seconds and is the only evidence the test can fail at all. |
+| "It passed on the first run — good, the code already works" | Or the assertion is pinned to nothing. A test that has never failed has never demonstrated it can. Break the implementation on purpose and confirm the test notices. |
+| "This is too simple to test" | Simple code is cheap to test, which is an argument for the test rather than against it. The cases that ship broken are rarely the complicated ones. |
+| "The assertion was too strict, so I loosened it" | You edited the specification to match the output. If the looser assertion is genuinely right, say what was wrong with the requirement; otherwise it's the code that's failing. |
+| "It's a one-line fix — the test is more work than the bug" | The failing test *is* the reproduction. Without it there's no evidence the bug existed, and nothing to catch it coming back. |
+| "I'll add tests once the design settles" | Design settles by being used, and the test is the first use. Tests deferred to the end get written against whatever happened to ship. |
+| "Model output changes every run — you can't test it" | You can't assert one exact string. You can assert the properties a correct output must satisfy, over a versioned set of inputs. "Untestable" usually means the assertion hasn't been chosen yet. |
+| "I'll just test it at whatever level is easiest to reach" | Ease of access is a fact about the code's shape, not evidence the behavior lives there. Convenience picks a level; it doesn't pick the level that would catch the bug. Name the seam, then write the test it implies. |
+
+## Red flags
+
+Process signals. The test-*quality* ones — mock-shaped assertions, test-only production
+methods — live in [testing-anti-patterns.md](testing-anti-patterns.md).
+
+- Implementation and its first test arriving in one commit, with no record of the test failing
+- Every test in a new suite green on its first run
+- An assertion weakened, narrowed, or skipped in the same change that turned the suite green
+- An expected value copied from the current output rather than derived from the requirement
+- A bug fix merged with no test that fails against the code as it was before the fix
+- "Followed TDD" in a status report with no failing-then-passing output attached
+- A test still passing with the feature under test commented out, and nobody having checked
+- A prompt or model-behavior change landed with no eval run that was red before it
+- The same behavior asserted at unit, integration, and end-to-end level, with no seam ever agreed
 
 ## The short version
 

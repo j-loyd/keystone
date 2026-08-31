@@ -28,6 +28,21 @@ testable software on its own.
 > Each `phase-N-*.md` is a self-contained plan: `### Task N` sections with bite-sized
 > `- [ ]` steps, exact file paths, and complete code per the `writing-plans` skill.
 
+## Not yet specified
+
+> In-scope questions this plan can see coming but can't yet phrase sharply enough to task.
+> They stay here until earlier work makes them specifiable. Delete this section if empty —
+> an empty heading is ceremony. (See `writing-plans` → Fog.)
+
+- [The suspected question, and the area to revisit.]
+
+## Out of scope
+
+> Ruled out deliberately. Unlike the section above, these never graduate into tasks.
+> One line plus the reason. Delete this section if empty.
+
+- [Thing] — [why it's out.]
+
 ## Open questions / risks
 
 - [Anything unresolved that could change the plan.]

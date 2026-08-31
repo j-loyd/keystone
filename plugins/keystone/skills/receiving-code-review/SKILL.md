@@ -133,6 +133,32 @@ Push back when:
 
 **Signal if uncomfortable pushing back out loud:** "Strange things are afoot at the Circle K"
 
+## Rationalizations
+
+| Rationalization | Reality |
+| --- | --- |
+| "The reviewer misread the code" | Possibly — and that's checkable in a minute, the cheapest minute in the whole exchange. Bring the trace. "You misread it" without one is a slower way to disagree. |
+| "I fixed the line they pointed at" | They pointed at an instance. Check whether the same mistake is in the other call sites before treating the thread as done, or it comes back next review. |
+| "They're wrong, but arguing costs more than just doing it" | Complying with a wrong suggestion puts the defect in the code under your commit, and teaches the reviewer it was right. A reasoned decline is a paragraph. |
+| "It's marked as a nit, so it's optional" | The label reports how much the reviewer thinks it matters, not whether it's true. A nit naming a real defect is a defect with a polite label. |
+| "I wrote this code, I don't need to re-check it" | Familiarity is what let the bug through. The reviewer is reading it fresh, which is exactly the thing you can no longer do. |
+| "I resolved the thread — the discussion had run its course" | Resolving asserts that something changed or that a reason was given. With neither, it reads as agreement to everyone who wasn't in the conversation. |
+| "CI flagged it, so it's real" | Tools report patterns, not verdicts, and a bot can't be asked what it meant. A machine finding earns the same verification as a human one. |
+| "They approved the PR, so the remaining comments are optional" | An approval is trust that you'll handle what's in the threads, not a withdrawal of them. |
+
+## Red flags
+
+- A thread marked resolved with no change linked and no reason recorded
+- A fix applied at exactly the reported line while the same pattern survives elsewhere in the diff
+- Agreement arriving faster than any file was opened
+- Pushback carrying no trace, test, or counter-example — disagreement standing in for verification
+- A change made to satisfy a comment the author still believes is wrong, with the disagreement never stated
+- Feedback partly implemented while the items nobody understood went unasked
+- A suspected-severity finding "fixed" without ever being reproduced, so nobody learns whether there was a bug
+- Review items answered in prose while the code stays exactly as it was
+- A reviewer's question about *why* the code is that way, answered by editing the code
+- The same class of comment returning across review rounds because only instances were fixed
+
 ## The Bottom Line
 
 **External feedback = suggestions to evaluate, not orders to follow.**

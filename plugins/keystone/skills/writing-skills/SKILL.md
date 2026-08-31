@@ -57,6 +57,46 @@ Prefer stating the target behavior over prohibiting its opposite. Reach for a pr
 the wrong action is genuinely destructive and specific — `never --abort as an escape from
 tedium` earns its phrasing; `never write bad code` does not.
 
+## Completion criteria
+
+Every step in a narrow-bridge sequence ends on a condition that tells the agent the work is done —
+and an open-field section still needs one where it hands off. Two properties of that condition
+move independently, and confusing them wastes edits.
+
+- **Clarity** — can the agent tell done from not-done? A vague bound ("understanding reached",
+  "the code is clean") invites **premature completion**: the step ends while attention slides
+  toward *being* finished, and the steps still visible ahead supply the pull.
+- **Demand** — how much work the criterion forces. "Every modified model accounted for" compels
+  legwork that "produce a change list" does not. Demand is not step-bound: "every rule applied"
+  binds a body of flat reference the same way it binds a sequence.
+
+**Sharpen the bound first.** It is the local, cheap fix, and usually the whole fix. Splitting
+the sequence so the later steps stop pulling is the second move, worth it only when a bound is
+irreducibly fuzzy *and* you have watched the agent rush it — and that split pays only across a
+real context boundary, a handoff or a subagent dispatch. An inline continuation leaves the later
+steps sitting in context, so the split buys nothing.
+
+The strongest criteria are both checkable and exhaustive. This is the criterion the *author*
+writes; `verification-before-completion` is the gate the agent runs against it.
+
+## Leading words
+
+A **leading word** is a single word the model already holds priors for, repeated as a token
+rather than restated as a sentence — so it anchors a region of behavior at the cost of one word.
+This file runs on two: *narrow bridge* and *open field* each carry a paragraph, and every later
+use gets that paragraph free.
+
+It is a refactor move. Hunt the passages it retires: a triad spelled out at three sites
+("destructive, irreversible, silent when wrong" → *narrow bridge*), or a sentence gesturing at one
+idea ("a test you have actually watched fail" → *RED*, which also turns a fuzzy gate into a binary
+state the agent can observe).
+
+Two failure modes. A word that drags in associations you don't want costs more than the phrase it
+replaced — *aggressive* recruits harshness and false positives along with thoroughness, and the
+prose you add to fence it off eats the saving. And a word too weak to beat the model's default
+(*be thorough*, where it is already thorough-ish) is a no-op; the fix is a stronger word, not more
+sentences propping up a weak one.
+
 ## Structure
 
 - **`SKILL.md` under 500 lines.** Past that, push depth into sibling files.
@@ -125,6 +165,10 @@ half. It has happened here.
   nothing about what the agent does, delete it.
 - **Duplication** — the same meaning in two skills. Give it one owner and point at it.
 - **Restating the model's defaults** — if a capable model already does it, the line is waste.
+- **Caching the environment** — a manifest, a `--help` output, or the code itself is a source of
+  truth; a skill that restates one is a cache, and a cache goes stale silently. Cache what the
+  agent cannot find by looking — the unwritten convention, the reason behind a choice, the
+  gotcha no config confesses — not the one-command lookup.
 - **Adding a skill when an existing one should grow a branch.** Every new skill makes every
   other skill harder to retrieve. Merging is a legitimate outcome of this skill.
 

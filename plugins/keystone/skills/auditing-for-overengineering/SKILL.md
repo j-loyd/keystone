@@ -82,3 +82,27 @@ A genuinely deep module that hides real complexity behind a small interface is *
 over-engineering, even with one caller — run the deletion test before you tag it. What you're
 hunting is the inverse: an interface nearly as complex as the implementation behind it.
 "One adapter = hypothetical seam; two = real seam" — flag the hypothetical seams, keep the real ones.
+
+## Rationalizations
+
+| Rationalization | Reality |
+| --- | --- |
+| "It might be needed later" | Later has a cost today — tests, docs, review, and a shape every nearby change has to fit. If it's needed later it gets written later, with the actual requirement in hand. |
+| "One caller now, but it's future-proofing" | Run the deletion test rather than the forecast. A seam built for a second case that hasn't arrived is a guess with maintenance attached. |
+| "Removing the wrapper touches a lot of files" | A mechanical rename across many files is cheap to make and cheap to review. The wrapper is a concept every future reader carries. Diff breadth isn't difficulty. |
+| "We cut 400 lines — that's the win" | Lines are the scoreboard, not the score. Removing one concept a reader had to hold beats deleting four files of boilerplate. |
+| "I can't see why this exists, so it's bloat" | Not from the diff, you can't. The purpose usually lives outside the file — a caller, a config key, a scheduled job, an incident. Not finding the reason isn't evidence there isn't one. |
+| "It's more flexible this way" | Flexibility nobody has exercised is untested by construction. Name the second case that would use it; if you can't, it's an option set with an audience of zero. |
+| "The dependency is tiny, dropping it isn't worth it" | Size isn't the cost. A dependency is supply chain, upgrades, and a pin held forever. The question is whether the platform already does the job. |
+| "It's only one more layer" | Layers are counted by the reader traversing them, not by the author adding them — each one is another file to open before the real work appears. |
+
+## Red flags
+
+- An abstraction defended by a use case nobody has requested or scheduled
+- A wrapper or adapter whose interface is roughly as large as the thing behind it
+- Flags, options, or config where nothing in the tree sets anything but the default
+- "Generic" machinery with one concrete implementation, named for the category rather than the case
+- A net-lines total reported with no statement of which concepts went away
+- Code called dead with no sweep for dynamic callers — reflection, string dispatch, scheduled jobs, config
+- The deletion test skipped on a one-caller module, so a deep module and a pass-through get the same tag
+- A dependency carried for a single function the standard library or platform already provides

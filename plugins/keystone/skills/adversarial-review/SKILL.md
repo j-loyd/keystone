@@ -38,7 +38,7 @@ then, since that's when you most want the confirmation. Where the harness allows
 on a **different model tier** than the author to decorrelate the biases — concretely, where the
 dispatch primitive takes a per-dispatch model override (e.g. Claude Code's Agent tool), set the
 reviewer one tier **above** the session model (the tier ladder lives in
-`cost-aware-llm-pipeline`); a top-tier adjudication seat is exactly the spend that skill reserves
+`designing-agent-systems`); a top-tier adjudication seat is exactly the spend that skill reserves
 top-tier models for. A different tier decorrelates less than a different **family** —
 same-family models share training-shaped blind spots, which is why the cross-provider hop
 below exists. If no subagent primitive exists, the fallback is to re-open the doc cold in
@@ -183,8 +183,8 @@ told the doc carries.
   that `/plan-eng-review` and `/plan-ceo-review` escalate into, so there's no deeper independence
   tier to reach for: depth here means more seats, not more machinery.
 
-Cost scales with seats — be deliberate (that's `cost-aware-llm-pipeline`'s discipline applied to
-review): a routine doc earns the one same-tier pass; a HIGH-stakes one earns a heavier second seat.
+Cost scales with seats — be deliberate: a routine doc earns the one same-tier pass; a HIGH-stakes
+one earns a heavier second seat.
 
 ## Capture
 

@@ -121,10 +121,48 @@ if (!user.isAdmin) return;
 - Comment the **why**, not the what. Don't narrate obvious code.
 - JSDoc/docstrings for public/exported APIs: purpose, params, returns, throws, an example.
 
+## Documentation & API claims
+
+A load-bearing claim about a third-party API — a signature, a parameter name, a default —
+gets checked against that library's docs. Recalled-not-checked is a guess, and it reads
+identically to a fact.
+
+- **Take the version from the manifest, not from memory of the library.** The behavior that
+  matters is the behavior of the version this project actually resolves; read that version's
+  docs, not the latest ones.
+- **Cite an anchored deep link, not a bare domain.** An anchor points at the claim and
+  survives a doc restructure; a bare domain sends the next reader back to the search box.
+- **Flag what you couldn't confirm with an explicit `UNVERIFIED:` marker.** Hedged prose
+  ("should be", "I believe") reads as confidence at a glance and gets skimmed past —
+  `UNVERIFIED: option name not confirmed against the pinned version` does not. Carry the
+  marker into the PR description too, so the claim is reviewable and not just greppable;
+  it's the concrete form of the hedge `verification-before-completion` permits.
+
 ## Tests
 
 - **AAA** (Arrange / Act / Assert); one behavior per test.
 - Descriptive names: `returns empty array when no markets match`, not `works`.
+
+## Dependencies
+
+Upgrading a dependency is a code change someone else wrote, landing in your build. Review it
+like one.
+
+- **Read the changelog, not the version number.** Semver is a promise the maintainer may not
+  have kept — a patch release can carry behavioral change, and a major can be a no-op for how
+  you use the library. The version string tells you what was intended, not what shipped.
+- **One dependency per change.** A bulk bump is cheap to make and expensive to debug: when the
+  build breaks you've lost which package did it. Batch only when the ecosystem forces it — a
+  framework and plugins that pin each other move together or not at all.
+- **Green suite before and after.** Run it before the bump too, so a failure after is
+  attributable. If coverage around that dependency is thin enough that a break wouldn't show,
+  that thinness is the finding — not a reason to skip the check.
+- **Review the lockfile diff, not just the manifest.** Most of what's installed is transitive —
+  packages nobody chose directly. A one-line manifest edit (`package.json`, `pyproject.toml`,
+  `Cargo.toml`) routinely moves dozens of packages visible only in the lockfile.
+- **Don't hand-edit the lockfile — regenerate it.** A hand-edited lockfile no longer describes a
+  resolution the package manager would produce, which is the one thing it exists to guarantee.
+  Change the manifest and let the tool rewrite it.
 
 ## Deliberate shortcuts — mark them or they rot
 
@@ -138,6 +176,36 @@ upgrade. Convention: `keystone: <ceiling>, <upgrade trigger>`.
 
 `/debt` harvests these into a ledger. A shortcut with a named trigger is _managed_ debt; one
 with **no trigger** is the kind that silently becomes permanent — so always name the trigger.
+
+## Rationalizations
+
+| Rationalization | Reality |
+| --- | --- |
+| "I'll clean it up in a follow-up" | The follow-up competes with the next feature and loses. It's cheapest now, with the file open and the context in your head; if it genuinely must wait, it needs a marker with a trigger, not an intention. |
+| "They might diverge later" | Duplication defended by a future that hasn't happened. If they diverge, splitting one function is an afternoon; if they don't, every fix has to find both copies — and a duplicated correctness rule drifts without anything failing. |
+| "The number's meaning is obvious here" | Obvious to whoever just wrote it. The next reader gets a value with no unit, no source, and no way to tell whether changing it is safe. |
+| "Casting to `any` here is fine, I know the shape" | The cast doesn't record what you know — it deletes the check that would have caught you being wrong. If the shape is genuinely unknown, say unknown and narrow. |
+| "The type error is the type system being wrong" | Occasionally. More often the model in the code doesn't match the model in your head, and loosening the type moves the failure to runtime, in someone else's week. |
+| "There's a package for this" | A dependency is an install-time execution surface, a lockfile diff, an upgrade obligation, and someone else's release schedule. Worth it for the hard problems — crypto, parsing, time zones. Rarely worth it for a function you could read end to end. |
+| "It's a small abstraction, it'll pay for itself" | Run the deletion test: name what breaks without it today. A layer with one caller is speculative, and speculative structure is harder to remove later than it was to add. |
+| "I'll add the types and tests once the shape settles" | The shape settles when it ships and something else starts depending on it. That's after the window, not before it. |
+| "It's long, but it's all one flow" | Length isn't the complaint; the number of reasons the function has to change is. If you can name its sections, those are the functions. |
+| "Comments here would just restate the code" | True of the *what*, which is why the comment goes on the *why* — the constraint, the reason for the odd ordering, the approach that didn't work. |
+
+## Red flags
+
+- A `TODO` with no owner or trigger — or a marked shortcut that names its ceiling but not what should prompt the upgrade
+- The same constant, regex, or business rule living in two files
+- A type escape hatch added to silence an error, with no comment saying why it's sound
+- An empty catch, or one that logs and continues past a failure the caller needed to know about
+- A function whose name contains "and", or whose body needs section comments to be navigable
+- A new dependency for something the language's standard library already does
+- Names that only make sense from the line they sit on — `d`, `tmp`, `data2`, `handle`
+- A test named after the function rather than the behavior, or named `works`
+- A comment restating the line beneath it, next to an exported function with no docstring
+- A change that renames or restructures files the work didn't need to touch
+- A claim about a third-party API with no anchored link, or hedged prose standing in for a checked fact
+- A hand-edited lockfile, or several unrelated packages bumped in one change
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: dispatching-parallel-agents
-description: Decide inline vs. subagent vs. multi-agent orchestration, then dispatch well. Use when facing 2+ independent tasks, and when the user says "do these in parallel", "use subagents", or "is this worth delegating". Covers self-contained context packets, token cost, and cross-harness fallbacks. Distinct from designing-agent-systems, which designs the system — this one runs the dispatch.
+description: Decide inline vs. subagent vs. multi-agent orchestration, then dispatch well. Use when facing 2+ independent tasks, and when the user says "do these in parallel", "fan these out to subagents", or "is this worth delegating". Covers self-contained context packets, token cost, and cross-harness fallbacks. Distinct from designing-agent-systems, which designs the system — this one runs the dispatch.
 ---
 
 # Dispatching Parallel Agents
@@ -31,7 +31,7 @@ discover the work-list, then orchestrate over it.
 ## Is a workflow worth the tokens?
 
 Orchestration is leverage, not a default — it can spend many agents' worth of tokens in one go.
-Be thoughtful (this is `cost-aware-llm-pipeline`'s discipline applied to orchestration):
+Be thoughtful:
 
 - **Opt-in, never inferred.** Launch a multi-agent workflow only when the user asked for that
   scale, a command/skill dispatched it, or they named one. A task that would merely _benefit_ from
@@ -42,7 +42,7 @@ Be thoughtful (this is `cost-aware-llm-pipeline`'s discipline applied to orchest
 - **Estimate before you spend.** Budget `agents × (task tokens + per-agent cold start)` —
   each dispatched agent re-pays its own system prompt and tool definitions every turn, so
   real fan-out overhead runs closer to ~4x for even a two-agent split, not the naive 2x
-  (`cost-aware-llm-pipeline` has the loop-cost mechanics). If it's large, say so.
+  (`designing-agent-systems` has the loop-cost mechanics). If it's large, say so.
 
 ## Read-heavy fans out; write-heavy stays serialized (or isolated)
 

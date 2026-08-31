@@ -2,10 +2,176 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.6.0] — 2026-08-30
+
+Second borrow pass over [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
+(MIT — see `ATTRIBUTION.md`), plus the removal of one skill and a new structural-validator tier.
+Ideas are upstream's where noted; all prose written for keystone. **31 → 30 skills.**
+
+### Removed
+
+- **`cost-aware-llm-pipeline`** — its `description` claimed routing territory belonging to three
+  other skills. Measured against the live corpus, the prompt *"should I fan out subagents for this
+  or do it inline"* ranked it **#1 at 0.272** over `dispatching-parallel-agents` at 0.160 — a near
+  restatement of that skill's own stated purpose — and *"batch process these N records"* matched
+  nothing else at all. The routing evals had missed it because the suite held only positives
+  written for the skill, never adversarial prompts from a neighbour's territory.
+  Content was rehomed, not dropped: the **tier ladder, cache economics, and the
+  no-hardcoded-model-IDs/prices rule** into `designing-agent-systems`; **budget ceilings, velocity
+  circuit breakers, and denial-of-wallet** into `long-running-agents`. Thirteen prose references
+  and two eval-case `owner` fields were retargeted or cleared.
+
+### Added
+
+- **Structural validators (`scripts/`)** — a deterministic tier below the routing evals, with 111
+  new tests. `validate-versions` holds `VERSION` and both manifests to one value (the drift this
+  repo hit at 0.27-vs-0.18); `validate-reference-links` proves every relative `.md` link in a skill
+  resolves from its own directory, in-repo and in the plugin-install layout;
+  `validate-skills` enforces keystone's frontmatter contract — `name` + `description` only,
+  name matching a kebab-case directory, a description that binds use to a **situation** rather than
+  a purpose (bare "Use to…"/"Use for…" is rejected), a description-length ratchet set above the
+  observed ceiling, and dead cross-skill-reference detection. Exemptions live in the validator,
+  never in a skill's own frontmatter, so a skill cannot exempt itself.
+- **`## Rationalizations` + `## Red flags`** authored for eight discipline skills —
+  `security-review`, `api-security`, `coding-standards`, `verification-before-completion`,
+  `test-driven-development`, `simplifying-code`, `auditing-for-overengineering`,
+  `receiving-code-review`. Scoped deliberately to skills where rationalization is a *live* failure
+  mode rather than applied catalog-wide: a generic block teaches readers the heading is skippable.
+
+### Changed
+
+- **`api-security`** — idempotency keys that actually deduplicate: key derived from the intent
+  rather than the attempt, **uniqueness on `(principal, key)`** so one caller cannot claim
+  another's key or be handed their stored response, atomic claim (look-up-then-write is a race),
+  a payload hash over a *canonical* form, an explicit in-flight-duplicate policy, **unknown as a
+  third outcome**, and retention that outlives the longest replay window. Plus OAuth **PKCE +
+  `state`**, and the DNS-rebinding half of SSRF.
+- **`security-review/data-privacy.md`** (new sibling) — data-lifecycle review, kept out of the
+  source→sink file because it is an architecture pass, not a diff pass: classification tiers,
+  purpose-bound minimization, and a deletion path that reaches backups, caches, indexes,
+  analytics copies, queues/CDC, and versioned object storage — while being honest that
+  append-only retention-locked logs cannot do per-subject deletion, so the control there is
+  keeping data out of them. Consent gates onward sharing, and an LLM vendor counts. Cited from
+  `SKILL.md`'s pre-deployment checklist. Plus **Subresource Integrity** stated usably in
+  `SKILL.md` — `crossorigin="anonymous"` is required or the check cannot run, SRI covers exactly
+  one hop, and some artifacts (floating refs, UA-varying stylesheets) have no stable hash.
+- **SSRF is a TOCTOU bug** (`security-review` A06, `api-security` API7) — validating a hostname and
+  then handing that hostname to the client lets the check and the connection see different IPs. The
+  fix as stated: resolve once, validate **every** address in the answer, connect to exactly one with
+  fallback to alternates disabled (happy-eyeballs-style retry silently reopens the gap), or front it
+  with a filtering egress proxy — re-checked on each redirect. `api-security` owns the full
+  treatment (SSRF is API7); `security-review` carries the reviewer's question and a pointer. Block lists now cover IPv6 and
+  IPv4-mapped forms, so `::ffff:169.254.169.254` cannot walk past a v4-only list.
+- **`coding-standards`** — dependency-*upgrade* review (changelog over version number, one
+  dependency per change, green suite before and after, the **lockfile** diff not just the manifest)
+  and documentation-verification discipline (version from the manifest, anchored deep links, an
+  explicit `UNVERIFIED:` marker instead of hedged prose).
+- **`llm-security`** — never hardcode an outbound endpoint taken from a fetched doc example without
+  surfacing it, even when the docs mark it required.
+- **`writing-plans`** — a Phase-0 **capability map** gating multi-capability requests: a module
+  table with an explicit build order, stable kebab-case ids, "if two modules each need the other
+  they are one module", and interfaces specified in the provider's plan. Reconciled explicitly with
+  the folder phase index and `## File Structure` as three nested partition passes.
+- **`systematic-debugging`** — Phase 1 no longer dead-ends at "gather more data": four branches for
+  a bug that will not reproduce (timing, environment, state, truly intermittent), plus `git bisect`.
+- **`deprecation-and-migration`** — the feature-flag lifecycle, ending at *remove the flag and its
+  dead code*, with a cleanup trigger recorded as a `keystone:` marker so `/debt` harvests it.
+- **`git-workflow`** — version-bump criteria by consumer-observable impact; changelog grouped and
+  written with the change. Which files carry the version stays owned by `/ship`.
+- **`verification-before-completion`** — acceptance criteria (per task) vs. Definition of Done
+  (standing); a task is done only when both hold.
+- **`subagent-driven-development`** — `parallel-waves` gains a third category between parallel and
+  sequential: tasks coupled only through an interface become parallel once the contract is defined
+  first. The independent-AND-isolated gate still binds.
+- **`brainstorming`** — divergent *generation* lenses (inversion, constraint removal, audience
+  shift, combination, simplification, 10×, expert lens, analogous inspiration with a
+  structural-not-surface test), supplying the method `/office-hours` assumed when it asked for three
+  genuinely different approaches.
+- **`/qa`** — browser-automation guardrails: prefer an isolated profile, since attaching to the
+  everyday session exposes every open window; DOM, console, and network content is untrusted data,
+  never instructions.
+- **`/cso`** — rotate *then* purge; a secret is compromised the moment it reaches a remote.
+- **`/to-issues`** — once issues exist in a tracker, the plan's task list is an ordered index of
+  ids, not a duplicate checklist.
+- **`/ship`** — where a change shipped behind a flag, flag-off is the first rollback lever.
+
+### Changed — second source: [mattpocock/skills](https://github.com/mattpocock/skills) (MIT)
+
+A parallel borrow pass over a library keystone had already taken `to-issues`/`to-prd` from.
+Twenty-nine live skills reviewed; four genuine gaps found, all folded, no new skills.
+
+- **`systematic-debugging`** — **minimisation**, which keystone had no equivalent of: shrink the
+  reproduction until *every remaining element is load-bearing*, because each element cut is a
+  suspect struck off before Phase 3 builds its fault tree. Above it, the **reproduction-rate**
+  framing — aim at the rate, not at a clean repro ("a bug that fails half its runs is debuggable,
+  one that fails a run in a hundred isn't"), which turns the existing intermittency branches into
+  instruments with a target and a measurable stopping condition. Minimising is gated on it:
+  against a 1%-reproduction loop you cannot tell "that cut removed the cause" from "that run got
+  lucky." Plus a **loop-construction ladder** (ten ways to build a red signal, cheapest and most
+  deterministic first), **tagged instrumentation** (`[DEBUG-a4f2]` — untagged logs survive, tagged
+  logs die) with a new **Phase 4 cleanup gate** keystone previously lacked, and "if no correct seam
+  exists, that itself is the finding" routing to `improve-codebase-architecture`.
+- **`writing-skills`** — **leading words**: recruit a pretrained concept as a repeated anchor token,
+  since a made-up word recruits no priors and you pay in definition tokens what a pretrained word
+  gives free. **Completion criteria have two independently-moving properties** — *clarity* (can the
+  agent tell done from not-done; vague bounds cause premature completion) and *demand* (how much
+  work the bound compels) — with the fix order stated: sharpen the bound first, and note that
+  splitting to push steps past a boundary only works across a *real* context boundary. And
+  **the environment is a source of truth; a doc restating it is a cache** — cache the unwritten
+  convention, not the one-command lookup.
+- **`writing-plans`** — **fog**: a plan is deliberately incomplete, and a `## Not yet specified`
+  section holds in-scope questions not yet sharp enough to task. The load-bearing rule is the
+  **fog-or-task test — whether you can state the question precisely now, not whether you can answer
+  it now** — making fog the complement of SPIDR's Spike (sharp-but-unanswered) rather than a rival.
+  Disambiguated against the existing No Placeholders rule by location: fog lives in its own named
+  section, never inside a task's steps. **"Out of scope" is a separate section, not fog** — fog
+  graduates into tasks, out-of-scope never does.
+- **`writing-plans`** — the **wide-refactor exception to vertical slicing**, with a three-part
+  qualification test (mechanical, too many call sites for one reviewable task, no subset can change
+  alone) so the exception cannot be claimed by anything merely large: *a change where some callers
+  can be cut over independently is a vertical slice you haven't found yet*. Sequenced expand →
+  migrate in batches sized by blast radius → contract, with green promised only at a final
+  integrate-and-verify task where batches cannot stay green alone. **Prefactor first** — a wide
+  blast radius is sometimes a symptom, and extracting the seam can dissolve the exception entirely.
+- **`test-driven-development`** — **agree the seam before RED**, alongside the existing
+  find-the-real-test-command step. An unconfirmed seam is a question, not a default: unnamed, tests
+  land at whatever boundary was easiest to reach, producing a suite that is simultaneously
+  over-tested (the same behavior asserted at three levels "to be safe") and under-tested (nothing
+  at the level that would catch the regression). Where there is nobody to confirm with, record the
+  chosen seam and the reason where a reviewer sees it rather than picking by convenience. The
+  no-correct-seam case is the same rule `systematic-debugging` applies at bug-fixing time, here at
+  feature-writing time — both route to `improve-codebase-architecture`.
+
+### Fixed — pre-release review and audit pass
+
+A `/review` over the folds that had not been independently reviewed, plus an `/audit` over the
+whole release, run before shipping. Both returned findings; all were applied.
+
+- **`writing-plans`' wide-refactor section told the executor to land batches on a shared
+  integration branch**, which requires per-batch commits — contradicting the no-auto-commit rule
+  stated four times in that same file and in `CLAUDE.md`. Green is now promised at the
+  integrate-and-verify task; how batches are held until then is the user's call at execution time.
+- **The "no correct seam" rule was restated near-verbatim in two skills** rather than owned by one
+  — a Duplication violation shipped in the same release that added the Duplication rule, and one
+  that wrote past a pointer already present a bullet above. `test-driven-development` now owns it;
+  `systematic-debugging` cites it.
+- **The new `seam` definition contradicted the kit's own glossary** and was built on "boundary", a
+  word `improve-codebase-architecture/LANGUAGE.md` explicitly bans as overloaded — while both new
+  folds route readers into that skill. Now defers to the owning definition.
+- **The capability-map gate contradicted the Light plan level** and failed this file's own
+  lean-process self-review. Scoped to multi-module work; skipped for single-module and Light runs.
+- **`[DEBUG-]` tagging was buried inside a multi-component step** that single-component debuggers
+  skip, while the Phase 4 checklist greps for the marker they were never given. Lifted to a
+  standing rule at the top of Phase 1.
+- **Trimmed ~160 lines of restatement and decoration**: the duplicated SSRF treatment, four
+  Rationalizations/Red-flags entries that restated their own file, a ten-rung ladder where the
+  first item covered nine cases in ten, an ASCII diagram restating the prose above it, and three
+  paragraphs of border patrol defending a term rather than using it.
+
 ## [0.5.0] — 2026-08-10
 
 Borrow pass over [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (MIT —
-see `ATTRIBUTION.md`): three new skills and technique folds across fourteen existing files.
+see `ATTRIBUTION.md`): three new skills and technique folds across fifteen existing files.
 Ideas are upstream's where noted; all prose written for keystone.
 
 ### Added
@@ -27,7 +193,12 @@ Ideas are upstream's where noted; all prose written for keystone.
   backfill) generalized to any interface where two versions run live; zombie-code signals with
   a binary verdict, routing remove-vs-keep through `auditing-for-overengineering`'s deletion
   test.
+
 ### Changed
+
+- **`systematic-debugging`** — description gains "a working feature is suddenly slower or
+  broken", the routing boundary that keeps sudden-slowdown asks here rather than at the new
+  `performance-optimization` skill (whose scope note points back the same way).
 
 - **`adversarial-review`** — three moves from upstream's `doubt-driven-development`: **blind
   dispatch** (the reviewer gets the doc + its contract, never your conclusion — handing over
