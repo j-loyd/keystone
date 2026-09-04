@@ -30,13 +30,16 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
 
     ## Before You Begin
 
-    If you have questions about:
-    - The requirements or acceptance criteria
-    - The approach or implementation strategy
-    - Dependencies or assumptions
-    - Anything unclear in the task description
+    If anything in this packet is unclear — the requirements or acceptance criteria, the
+    approach, a dependency or assumption — **say so now, before any work**, by returning
+    `NEEDS_CONTEXT` with the specific question.
 
-    **Ask them now.** Raise any concerns before starting work.
+    Once you start, you are running unattended: the orchestrator is not watching in real
+    time and cannot answer questions mid-task. For reversible steps this packet already
+    covers, proceed without asking. Stop only for a destructive or irreversible action, a
+    genuine scope question, or a trigger under **When You're in Over Your Head** below — and
+    stop by returning `NEEDS_CONTEXT` or `BLOCKED` with the specific question, never by
+    ending your turn on "Shall I…?".
 
     ## Your Job
 
@@ -47,16 +50,27 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
        run it GREEN. Capture both runs — they are your evidence, not a claim.
     3. Verify the implementation works, and keep the test output pristine
     4. Commit your work
-    5. Self-review (see below)
+    5. Check the work against the packet (see below)
     6. Report back
 
     Work from: [directory]
 
-    While iterating, run the focused test for what you're changing; run the
-    full suite once before you commit, not after every edit.
+    Before each turn, privately list what you need next; then request every item that
+    doesn't depend on another's result in that one response — reads, greps, and test runs
+    alike. Edit surgically: change the lines the task needs rather than rewriting a file,
+    unless the file is short or most of it is changing.
 
-    **While you work:** If you encounter something unexpected or unclear, **ask questions**.
-    It's always OK to pause and clarify. Don't guess or make assumptions.
+    While iterating, run the focused test for what you're changing; run the
+    full suite once before you commit, not after every edit. Keep test additions sized to
+    the task — roughly one focused test per stated behavior, shaped like the neighboring
+    test files. Scratch checks you used to convince yourself needn't be kept and don't
+    become extra permanent test files.
+
+    **While you work:** something unexpected that *changes the task* is a `NEEDS_CONTEXT`
+    or `BLOCKED` return with specifics — don't guess, and don't proceed on an assumption
+    the packet doesn't support. Something unexpected that *doesn't* change the task — a
+    nearby bug, a cleanup, behavior the task doesn't mention — is a line in your report,
+    not a change.
 
     ## Code Organization
 
@@ -88,32 +102,19 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
     The controller can provide more context, re-dispatch with a more capable model,
     or break the task into smaller pieces.
 
-    ## Before Reporting Back: Self-Review
+    ## Before Reporting Back
 
-    Review your work with fresh eyes. Ask yourself:
+    Check the work against the packet — not against your own sense of whether it's good:
 
-    **Completeness:**
-    - Did I fully implement everything in the spec?
-    - Did I miss any requirements?
-    - Are there edge cases I didn't handle?
+    - **Complete:** every requirement and acceptance criterion in the task text is
+      implemented, not stubbed, with the edge cases the spec implies handled.
+    - **In scope:** nothing built that the task didn't ask for; existing patterns followed;
+      names say what things do; no restructuring outside the task.
+    - **Evidenced:** the RED→GREEN runs and the pristine full run are captured, and the
+      tests assert behavior, not mocks.
 
-    **Quality:**
-    - Is this my best work?
-    - Are names clear and accurate (match what things do, not how they work)?
-    - Is the code clean and maintainable?
-
-    **Discipline:**
-    - Did I avoid overbuilding (YAGNI)?
-    - Did I only build what was requested?
-    - Did I follow existing patterns in the codebase?
-
-    **Testing:**
-    - Do tests actually verify behavior (not just mock behavior)?
-    - Did I follow TDD if required — and can I show the RED→GREEN evidence?
-    - Are tests comprehensive?
-    - Is the test output pristine (no stray warnings, errors, or unexpected skips)?
-
-    If you find issues during self-review, fix them now before reporting.
+    Fix a gap you find, then report. Don't re-run verification you already hold the
+    evidence for — the report fields below are the check.
 
     ## After Review Findings
 
@@ -125,6 +126,9 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
     until the tests are green *on the code as it now stands*.
 
     ## Report Format
+
+    End your turn on the report — never on a plan, a question this packet answers, or a
+    "next I'll…". If your last paragraph is one of those, do that work first.
 
     When done, report:
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
@@ -141,7 +145,7 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
       unexpected warnings, errors, or skips (not just "N passed"). If the run
       carries noise you cannot remove, name it and say why it is benign.
     - Files changed
-    - Self-review findings (if any)
+    - Gaps you found and fixed before reporting (if any)
     - **Things I didn't touch (intentionally):** adjacent problems you noticed and
       deliberately left alone — the tangled file next door, a duplicated helper, a
       missing test on a neighboring path. One line each with the path. This is

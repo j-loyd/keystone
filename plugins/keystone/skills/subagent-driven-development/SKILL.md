@@ -17,6 +17,9 @@ skill. This skill covers the execution loop that sits on top of it.
 you to execute the plan; execute it. Stop only for a BLOCKED status you can't resolve, ambiguity
 that genuinely prevents progress, or completion. Interim "should I continue?" prompts and
 progress summaries cost the user a turn and tell them nothing they didn't already expect.
+Before you end any turn mid-run, read your own last paragraph: if it is a plan, a question the
+plan already answers, or a "Next, I'll dispatch…", that is work to do now, not a message to
+send. End the turn only at completion or on a blocker only the user can clear.
 
 ## Why fresh context — context rot
 
@@ -100,7 +103,11 @@ surfacing does not follow a dispatch, so a packet without them re-pays for known
 Build it from the plan; pass it in the dispatch prompt, not as
 "go read the plan file." The packet is a **hard ceiling, not a starting point** — a subagent
 that has to read the plan file or wander the tree to orient is a packet you under-built. If it's
-missing a fact, fix the packet, don't tell the subagent to go find it.
+missing a fact, fix the packet, don't tell the subagent to go find it. Every packet ends with
+the standard footer from `dispatching-parallel-agents/patterns.md` — the worker runs
+unattended, batches its independent calls, stays inside the packet, and returns a result, not
+a transcript. The implementer and reviewer templates below carry it; for any other dispatch
+(Quinn, Sage, a one-off), append it yourself.
 
 **The chain:** Pat (plan) → **Mason** (implement) → **Quinn** (QA gate) → **Riley** (review) →
 **Sage** (security, if a sensitive surface is in scope). Quinn and Riley are **advisory** —
@@ -148,7 +155,7 @@ digraph process {
         "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
-        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
+        "Implementer subagent implements, tests, commits, checks against packet" [shape=box];
         "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
         "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
         "Implementer subagent fixes spec gaps" [shape=box];
@@ -167,8 +174,8 @@ digraph process {
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, checks against packet" [label="no"];
+    "Implementer subagent implements, tests, commits, checks against packet" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
     "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
     "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
     "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
@@ -186,7 +193,12 @@ digraph process {
 
 ## Model Selection
 
-Use the least powerful model that can handle each role to conserve cost and increase speed.
+Use the cheapest **model-and-effort pairing** that can handle each role. Effort is the finer
+dial: a frontier model at low effort is often cheaper _and_ stronger than a smaller model at
+high effort, so "cheap" below means the cheapest pairing your evals show clearing the bar, not
+necessarily the smallest model. Two cautions carry over from `designing-agent-systems`: on some
+models low effort suppresses search, so a scouting or research seat gets a rung up; and effort
+names don't mean the same thinking budget across models, so re-sweep on migration.
 
 **Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
 
@@ -263,7 +275,10 @@ touch the same file, you _may_ review them as one diff to cut round-trips. It's 
 concurrent **waves** (see `./parallel-waves.md`) to cut wall-clock. The **default stays
 sequential**; gates still run per task at their Risk tier (waves skip nothing). Parallel is
 allowed **ONLY** when tasks are both **independent** AND **isolated** — disjoint file sets, or
-each task in its own worktree. If isolation can't be proven, run sequentially.
+each task in its own worktree. If isolation can't be proven, run sequentially. Within a wave
+you keep working — where dispatch returns immediately, gates run per task as each result lands
+and only the _next_ wave's dispatch waits on the barrier. On a blocking primitive the wave lands
+as one batch; gate them in order.
 
 ## Handling deviations (auto-fix vs ask vs defer)
 
@@ -307,7 +322,7 @@ failure mode: agents mark done without verifying unless the harness demands the 
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 
-**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch.
+**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch. **If the stop is a request to confirm a destructive or irreversible action, that decision is the user's** — you cannot grant it on their behalf, and a relayed approval is not approval. Put the question to the user, record the answer as a **Locked decision** in the run-state, then re-dispatch with it in the packet.
 
 **BLOCKED:** The implementer cannot complete the task. Assess the blocker:
 
@@ -336,6 +351,9 @@ out to be a real gap, a BLOCKED exposed a wrong plan assumption, or reality cont
 packet's verified-behavior. On a clean pass, offer nothing: a reflexive prompt trains a
 reflexive "no."
 
+Offer it at a boundary where you'd be stopping anyway — task completion that ends the run, or a
+blocker you're already surfacing — never as a mid-run interruption that ends a turn on a question.
+
 When there is signal, draft the entry in `/learn`'s format — type, 1–3 lines, **evidence =
 the finding itself**, `**Triggers:**` tags from the controlled vocabulary — and offer it
 one-tap. The human approves; never silently write. Then append the durable finding to the
@@ -354,7 +372,7 @@ The reviewer → fix → re-review cycle must be bounded, or it can ping-pong fo
   HIGH-risk tasks, where the harness takes per-dispatch overrides, put the reviewer on a
   different tier — or model family — than the implementer to decorrelate their blind spots.
 - **Cap iterations.** Give a review→fix loop ~3 rounds. If it isn't resolved by then, stop looping and escalate to the human — more rounds rarely converge.
-- **Detect stalls.** Track the open-issue count across rounds. If it isn't _decreasing_ (same count, or new issues replacing fixed ones each round), the loop is stuck — stop and escalate rather than spinning. A reviewer that keeps finding new issues on each pass is a signal the task or plan is wrong, not that one more round will do it.
+- **Detect stalls.** Track the open **must-fix** count — blockers, plus the should-fixes you chose to accept — across rounds; nits don't count toward it, or ordinary nit churn reads as a stall. If it isn't _decreasing_ (same count, or new issues replacing fixed ones each round), the loop is stuck — stop and escalate rather than spinning. A reviewer that keeps finding new issues on each pass is a signal the task or plan is wrong, not that one more round will do it.
 - **Verify until closure (bounded).** The same loop governs the QA gate, not just code review. A **FAIL** from Quinn (or a **CONCERNS** the orchestrator decides not to accept) doesn't end at a one-shot handback: loop it back to Mason with Quinn's findings **verbatim**, then **re-verify** — repeat until the gate returns **PASS or WAIVED**. Bound it with the **same ~3-round cap and stall detection** above (don't invent a new limit): if the open-issue count isn't decreasing, escalate to the human instead of spinning. Quinn stays **advisory** — this only makes "iterate until the gap actually closes" explicit; it does **not** turn the gate into a hard blocker. The orchestrator still owns the ship decision and may accept CONCERNS or WAIVE with a stated reason.
 
 ## Prompt Templates

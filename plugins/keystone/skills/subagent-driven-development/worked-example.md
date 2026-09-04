@@ -23,15 +23,14 @@ Task 1: Hook installation script
 [Get Task 1 text and context (already extracted)]
 [Dispatch implementation subagent with full task text + context]
 
-Implementer: "Before I begin - should the hook be installed at user or system level?"
+Implementer: NEEDS_CONTEXT — "user or system level for the hook install?"
 
-You: "User level (~/.claude/hooks/)"
+[Re-dispatch, packet now says: user level (~/.claude/hooks/)]
 
-Implementer: "Got it. Implementing now..."
-[Later] Implementer:
+Implementer:
   - Implemented install-hook command
   - TDD: RED (test_install fails, no command yet) → GREEN, 5/5 passing, output pristine
-  - Self-review: Found I missed --force flag, added it
+  - Packet check: caught a missing --force flag, added it
   - Committed
 
 [Dispatch spec compliance reviewer]
@@ -51,7 +50,7 @@ Implementer: [No questions, proceeds]
 Implementer:
   - Added verify/repair modes
   - TDD: RED → GREEN, 8/8 passing, output pristine
-  - Self-review: All good
+  - Packet check: complete, in scope, evidenced
   - Committed
 
 [Dispatch spec compliance reviewer]
@@ -92,7 +91,7 @@ Done!
 - Subagents follow TDD naturally
 - Fresh context per task (no confusion)
 - Context-isolated (each subagent gets a clean window; no cross-task confusion)
-- Subagent can ask questions (before AND during work)
+- Subagent stops cleanly — NEEDS_CONTEXT before work, NEEDS_CONTEXT/BLOCKED mid-task — and is re-dispatched with the answer
 
 **vs. Executing Plans:**
 
@@ -109,7 +108,7 @@ Done!
 
 **Quality gates:**
 
-- Self-review catches issues before handoff
+- The implementer's packet check catches gaps before handoff
 - Two-stage review: spec compliance, then code quality
 - Review loops ensure fixes actually work
 - Spec compliance prevents over/under-building
@@ -135,7 +134,7 @@ Done!
 - Ignore subagent questions (answer before letting them proceed)
 - Accept "close enough" on spec compliance (spec reviewer found issues = not done)
 - Skip review loops (reviewer found issues = implementer fixes = review again)
-- Let implementer self-review replace actual review (both are needed)
+- Let the implementer's own packet check replace actual review (both are needed)
 - **Start code quality review before spec compliance is ✅** (wrong order)
 - Move to next task while either review has open issues
 

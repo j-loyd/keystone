@@ -41,8 +41,15 @@ independent; any task that depends on another task's output goes in a **later wa
 
 ## Dispatch + barrier
 
-- Dispatch a wave's implementers **concurrently**, each with its **own full handoff packet**.
-- **Wait for the entire wave to finish (barrier)** before starting the next wave.
+- Dispatch a wave's implementers **concurrently** — in one turn, each with its **own full
+  handoff packet**.
+- **Don't idle during the wave.** Gates are per task and don't depend on siblings: run Quinn
+  and Riley on whichever task returns first while the rest are still working, and build the
+  next wave's packets in the gaps. Wait explicitly only when the next step needs a result that
+  hasn't landed.
+- **The barrier is for the next wave's _dispatch_, not for the gates.** Start wave N+1's
+  implementers only once every wave-N task has returned and cleared its gates — a wave-N+1
+  task may depend on any of them.
 - **Review every task's output at its own Risk tier** — waves do **NOT** skip gates.
 - On any **conflict signal** (overlapping edits, merge clash), **fall back to sequential**
   for that wave.

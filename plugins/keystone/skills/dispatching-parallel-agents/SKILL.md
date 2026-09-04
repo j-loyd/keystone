@@ -20,8 +20,8 @@ when the rung below can't carry the job.
 
 | Reach for                                                    | When                                                                                                                                                                                                                                                    | Cost                        |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| **Inline / direct**                                          | a single fact or edit you can already locate                                                                                                                                                                                                            | ~free                       |
-| **One subagent**                                             | a bounded search or self-contained task where you want the conclusion, not the file-dumps, and want to keep your own context clean                                                                                                                      | one agent                   |
+| **Inline / direct**                                          | anything you can finish in a handful of tool calls — a fact, an edit, a targeted search. Reading the file yourself is cheaper than briefing someone to read it for you                                                                                 | ~free                       |
+| **One subagent**                                             | a bounded task whose _read volume_ would swamp your window (a wide sweep, a long investigation) — you want the conclusion, not the file dumps. One agent, not several, whenever one can do it                                                            | one agent                   |
 | **Orchestrated workflow** (deterministic fan-out / pipeline) | the work is genuinely **broad** (sweep many files/sources), needs **confidence** (independent perspectives + adversarial verification before you commit), or **exceeds one context** (migration, audit, large refactor) — **and the user has opted in** | many agents — be deliberate |
 
 A workflow is only as good as its **decomposition** and its **verification stage**. If you can't
@@ -43,6 +43,35 @@ Be thoughtful:
   each dispatched agent re-pays its own system prompt and tool definitions every turn, so
   real fan-out overhead runs closer to ~4x for even a two-agent split, not the naive 2x
   (`designing-agent-systems` has the loop-cost mechanics). If it's large, say so.
+- **Never spawn a seat to settle what a command settles.** A verify seat is _judgment_ on an
+  artifact — a reviewer on a diff, a skeptic on a design, including one **you** authored — and
+  it earns its cost by bringing blind spots the author doesn't have (`harness-notes.md`;
+  `adversarial-review` is exactly this pass on your own document). A seat to confirm a **fact**
+  — the tests pass, the file exists, the grep is empty — buys nothing the command doesn't and
+  compounds with the checking you already do. Run the command.
+- **Keep spawn counts low, and cap them deterministically where you can.** A prompt line
+  saying "few agents" is a wish; a harness limit on spawn depth, concurrency, or spend is a
+  control, and it still holds when a worker spawns workers of its own (`harness-notes.md`).
+
+## Batch what's independent — tool calls and dispatches alike
+
+Before each turn, privately list what you need next; then request every item that doesn't
+depend on another's result in that one response — file reads, greps, test runs, and worker
+dispatches together. This matters most in coding loops, where the next calls are _implied_ by
+the task rather than named by anyone: that is exactly where a model drifts to one call per
+turn, and every extra turn is a round trip, a re-sent context, and wall-clock the user waits
+through. Dispatch on the same rule — launch every independent worker before waiting on any.
+
+## Don't idle while workers run
+
+Carrying the baton is not the same as standing still. When the dispatch primitive returns
+immediately (workers run in the background and their results arrive later), keep doing the
+work that doesn't depend on the result: build the next packet, scout the next domain, run the
+gate on whichever result has already landed. Wait only at the point where the next step
+genuinely needs an outstanding result — and wait explicitly, through the harness's wait
+primitive, not by polling. On coding work this lowers time-to-completion at similar quality
+and token cost. When nothing independent is left, waiting is the right call; the savings come
+from the turns where something was.
 
 ## Read-heavy fans out; write-heavy stays serialized (or isolated)
 

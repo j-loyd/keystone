@@ -58,6 +58,14 @@ original wording — no text or code was copied from these sources:
   guarding, account/session lifecycle revocation), reimplemented original.
 - **GSD**, **BMAD**, and **ponytail** (DietrichGebert, MIT): several rigor techniques were adapted
   idea-only and written original; no framework machinery or text was copied.
+- **Anthropic's model-specific prompting guides** (platform docs for
+  [Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5)
+  and [Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1)):
+  the 0.7.0 multi-task pass — spawn discipline, tool-call batching, keep-working-while-workers-run,
+  effort-as-a-tier-axis, and the unattended-run contract — was adapted from these guides in
+  keystone's wording. Two load-bearing sentences in the `dispatching-parallel-agents` packet
+  footer (the batching nudge and the "not watching in real time" opener) stay close to the
+  guides' phrasing because the guides note that the wording carries the effect.
 
 ---
 

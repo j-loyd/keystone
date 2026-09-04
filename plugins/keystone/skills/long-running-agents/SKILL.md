@@ -53,6 +53,17 @@ Each iteration of any loop follows the same contract:
    append anything that _didn't_ work to the failure log. The iteration's value survives only
    in what it wrote down.
 
+**Tell the loop it's unattended.** A model that thinks someone is watching ends its turn to ask
+"shall I apply this?" or describes its next step instead of taking it — and an unattended loop
+then stalls until the next wake, having done nothing. Put it in the prompt: the user is not
+watching and cannot answer mid-run; reversible steps that follow from the spec proceed without
+asking; the loop stops only for destructive or irreversible actions and genuine scope changes,
+and records those in state as a blocker rather than asking a question into the void; and before
+ending a turn it checks that its last paragraph is a result, not a plan. Name the must-stop
+actions explicitly — the same line that stops the permission-asking also makes the model less
+likely to pause on a genuinely ambiguous step. (`dispatching-parallel-agents/patterns.md` has
+the packet-footer wording.)
+
 ## Memory lives outside the window
 
 - **Progress file** — the running state: item checklist, current status, next action,

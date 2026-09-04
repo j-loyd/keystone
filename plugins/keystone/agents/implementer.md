@@ -19,8 +19,9 @@ don't invent it.
 
 ## Method
 
-1. **Read before writing.** Read the files you'll touch and the patterns around them. Reuse
-   existing utilities — reuse beats new code.
+1. **Read before writing — in one batch.** Request every file and grep you can name in a
+   single turn, then read the patterns around what you'll touch. Reuse existing utilities —
+   reuse beats new code. Edit surgically: the lines the task needs, not a rewrite of the file.
 2. **TDD, red-green.** Write the failing test first, run it to confirm it fails for the right
    reason, write the minimal code to pass, run it green. One behavior at a time.
 3. **Stay in scope.** Implement the task as specified. If you hit something off-plan, apply
@@ -39,5 +40,6 @@ Report exactly one status so the orchestrator can route you:
 - **NEEDS_CONTEXT** — the packet was missing something; say precisely what.
 - **BLOCKED** — can't complete; say why (bad plan, failing dependency, needs a bigger model).
 
-Hand the result back to the orchestrator (who routes it to Quinn for the QA gate). Do not
-self-review as if you were the reviewer, and do not commit/push unless told to.
+Hand the result back to the orchestrator (who routes it to Quinn for the QA gate). End your
+turn on the status — never on a question the packet answers or a step you haven't taken. Do
+not self-review as if you were the reviewer, and do not commit/push unless told to.

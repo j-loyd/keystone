@@ -49,6 +49,11 @@ Default to **one**. The multi-agent question resolved into an asymmetry, not a w
 - **Every seat must earn its coordination cost.** Multi-agent runs multiply spend
   (each agent re-pays system prompt + tools per turn — ~4x for even a two-way split); a seat
   that doesn't demonstrably add breadth, isolation, or independent judgment is over-engineering.
+- **A seat to confirm a fact is not a seat.** The verify-seat pattern is a fresh reader
+  exercising _judgment_ on an artifact — including one you wrote (`adversarial-review` is that
+  pass on your own doc). Spawning an agent to confirm a claim one command would settle is the
+  commonest way a run over-delegates — and it compounds with the model's own self-checking
+  instead of adding to it.
 - Topology need not be fixed at design time — modern harnesses let the running agent compose
   orchestration (fan-out, pipelines) at runtime. Design the _gate_ ("what justifies spawning?")
   rather than hardcoding the org chart.
@@ -91,7 +96,8 @@ For each layer, decide something or consciously default it:
    model where stakes warrant), against **binary, machine-checkable criteria** where possible.
    A model grading its own output in-context is decoration, not verification.
 4. **Guardrails** — budget **enforcement** (ceiling + a velocity check for motion-without-
-   progress), sandbox/permission assumptions made explicit, HITL gates where actions are
+   progress), spawn caps (depth, concurrency, spend) wherever the harness exposes them,
+   sandbox/permission assumptions made explicit, HITL gates where actions are
    irreversible: **propose-then-commit** — the agent proposes, a deterministic step or human
    commits. Never auto-accept novel data on the model's self-reported confidence; agent
    confidence is input, not truth.
@@ -104,7 +110,12 @@ away): _premature completion_ (declares done without verifying — counter: mach
 done criteria), _one-shot overreach_ (attempts everything at once — counter: one task per
 iteration), _self-preferential bias_ (trusts its own output when verifying — counter:
 independent verify seat), _goal drift_ (loses the objective over many turns — counter:
-re-anchor from persisted state, record locked decisions).
+re-anchor from persisted state, record locked decisions), _over-delegation_ (spawns a worker
+for a handful of tool calls, or a verifier for a claim a command settles — counter: the inline rung in
+`dispatching-parallel-agents` plus deterministic spawn caps), _under-batching_ (one tool call
+per turn when several are independent — counter: a per-turn "list what you need, then request
+all of it" line), _lead idling_ (waits on every worker before doing anything — counter: a
+dispatch that returns immediately plus an explicit wait, so the lead works the gaps).
 
 ## Model & effort selection
 
@@ -132,10 +143,16 @@ signals rather than pattern-matching, or output expensive enough to be wrong. Do
 work a cheap tier already clears against spot-checked ground truth — that buys back a percent
 or two at full price.
 
-**Sweep the effort control per task class before reaching for a bigger rung** — it trades
-intelligence for cost inside the same model, it's the finer-grained dial, and its impact grows
-with each model generation. Re-tune it on migration rather than carrying an old setting
-forward.
+**A rung is a model _and_ an effort setting.** Effort trades intelligence for cost inside one
+model, it's the finer-grained dial, and its impact grows with each generation — a frontier model
+at low effort can now beat a smaller model at high effort on cost per task _and_ on score, so
+put that pairing in the sweep instead of assuming smaller means cheaper. Sweep per task class
+before reaching for a bigger rung, and re-sweep on every migration: effort names don't map to
+the same thinking budget across models. Two things effort does _not_ reliably do: it doesn't
+shorten output (prompt for length separately), and on some models the low end suppresses tool
+use — a low-effort seat may answer from memory rather than searching. Check both on your own
+evals; where they hold, give retrieval-heavy seats a rung up or an explicit
+search-before-answering line.
 
 ## Loop economics — audit the cache prefix before the tier
 
@@ -167,6 +184,14 @@ capability. Every workaround gets a marker with a **ceiling and an upgrade trigg
 this call`. On every model migration, re-run the deletion test over the scaffolding before
 re-tuning it.
 
+**Prompt lines are scaffolding too**, and behavioral corrections rot fastest — in _both_
+directions. One model generation over-narrates and earns a "hold findings for the final
+response" line; the next under-narrates and that same line silences it. One delegates too
+eagerly and gets a cap; the next under-batches and needs a nudge. Write every such rule as the
+**behavior you want** — the cadence, the shape, the threshold — never as a correction of last
+generation's habit, and re-check prompt-level workarounds on migration alongside the code-level
+ones.
+
 ## Evaluation
 
 - Start with **20–50 tasks derived from real failures**, not a synthetic benchmark. A good
@@ -195,7 +220,7 @@ Over-engineering check: [what was cut from this design and why what's left survi
 Shape: [from the vocabulary above]  ·  Loop mode: [if long-running — see long-running-agents]
 
 ## Per-agent scoping
-Objective / Output format / Tools + guidance / Boundaries / Effort budget
+Objective / Output format / Tools + guidance / Boundaries / Work budget (tool calls, tokens)
 
 ## Verification
 What's machine-checkable · who verifies (fresh context? different model?) · binary criteria
@@ -222,6 +247,8 @@ Seed tasks · rubric · end-state assertions
 - A crew where a single agent + one verify seat would do → cut seats
 - A gate that has never failed anything → it's theater; delete or sharpen it
 - Same-context self-review as the only verification → separate it
+- A verify seat spawned to confirm a fact a command settles → run the command instead
+- A prompt line written as a correction of a past model's habit → restate it as the wanted behavior
 - Auto-accepting novel data on self-reported confidence → propose-then-commit
 - Free-text returns where downstream code must decide → schema-constrain them
 - Model names or prices hardcoded in the design → tiers + build-time resolution

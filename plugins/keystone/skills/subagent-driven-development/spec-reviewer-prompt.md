@@ -59,6 +59,20 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
 
     **Verify by reading code, not by trusting report.**
 
+
+    ## How to work
+
+    You are running unattended: the orchestrator is not watching in real time and cannot
+    answer questions mid-task. Work from what this packet gives you; if a fact you
+    genuinely need is missing, say so in the report rather than guessing or going hunting.
+
+    Before each turn, privately list what you need next; then request every item that
+    doesn't depend on another's result in that one response — the diff and the surrounding
+    reads together.
+
+    Return a result, not a transcript: lead with the verdict in one sentence, then the
+    findings. End your turn on the report, never on a plan or a question.
+
     Report:
     - ✅ Spec compliant (if everything matches after code inspection)
     - ❌ Issues found: [list specifically what's missing or extra, with file:line references]

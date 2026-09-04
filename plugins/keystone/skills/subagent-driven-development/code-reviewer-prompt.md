@@ -68,7 +68,10 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
 
     ## Calibration
 
-    Categorize issues by actual severity. Not everything is Critical.
+    Report every finding you can substantiate, graded. Severity is the filter — not your
+    threshold for whether an issue is worth mentioning — and the orchestrator decides what
+    to act on; a finding you dropped can't be triaged. Categorize by actual severity. Not
+    everything is Critical.
     Acknowledge what was done well before listing issues — accurate praise
     helps the implementer trust the rest of the feedback.
 
@@ -76,6 +79,20 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
     so the implementer can confirm whether the deviation was intentional.
     If you find issues with the plan itself rather than the implementation,
     say so.
+
+
+    ## How to work
+
+    You are running unattended: the orchestrator is not watching in real time and cannot
+    answer questions mid-review. Work from what this packet gives you; if a fact you
+    genuinely need is missing, say so in the report rather than guessing or going hunting.
+
+    Before each turn, privately list what you need next; then request every item that
+    doesn't depend on another's result in that one response — the diff and the surrounding
+    reads together.
+
+    Return a result, not a transcript: lead with the verdict in one sentence, then the
+    findings. End your turn on the report, never on a plan or a question.
 
     ## Output Format
 
