@@ -5,9 +5,9 @@ description: Execute a written plan task-by-task, each in a fresh subagent, with
 
 # Subagent-Driven Development
 
-Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+Execute a plan by dispatching a fresh subagent per **slice** of it, with review after each task at that task's risk tier.
 
-**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+**Core principle:** Fresh context per **slice** of the plan + review gated to each task's risk = high quality, fast iteration
 
 For how to construct a dispatch — what goes in a self-contained context packet, when delegation
 beats working inline, and the cross-harness fallbacks — see the `dispatching-parallel-agents`
@@ -23,12 +23,31 @@ send. End the turn only at completion or on a blocker only the user can clear.
 
 ## Why fresh context — context rot
 
-Fresh-subagent-per-task isn't a style choice; it's the defense against **context rot**. As a
+Fresh context isn't a style choice; it's the defense against **context rot**. As a
 window fills, a model doesn't fail loudly — its quality quietly degrades: it contradicts
 decisions made earlier in the session, drifts from the codebase's style, ignores requirements
 now buried deep in the history, and starts inventing file or function names that don't exist.
-The longer a single context runs, the worse it silently gets. So each task goes to a subagent
+The longer a single context runs, the worse it silently gets. So work goes to a subagent
 that starts clean, receives exactly its packet, and terminates — its rot dies with it.
+
+**Dispatch a slice, not necessarily a single task.** Rot is real; the threshold is not one task.
+A **slice** is consecutive plan tasks that share files or an interface, sized so the packet plus
+the files it touches fit comfortably in one worker window. Defaults:
+
+- A plan of **≤3 tasks is one slice** — splitting it costs more coordination than the rot it avoids.
+- Tasks that are **genuinely disjoint** (no shared files, no shared interface) may go one per
+  dispatch — which is also what makes them wave-able (`./parallel-waves.md`).
+- A slice's **Risk is the max of its tasks'**, and gates run **per task** at each task's own
+  tier. Slicing changes what gets *dispatched*, never what gets *reviewed*.
+- **Split on signal:** a worker returning `NEEDS_CONTEXT` for want of window, or a report that
+  thins out across the later tasks, means the slice was too big. Split and re-dispatch.
+
+Why not always one-per-task: each dispatch re-pays its own cold start (system prompt + tool
+definitions — ~4x overhead for even a two-way split; `dispatching-parallel-agents` has the
+mechanics), and a coherent multi-file change is exactly the work that suffers most from being
+cut into fragments that each rediscover the same context. **Tasks remain the tracking unit** —
+run-state checkboxes, the resume heuristic, and AC tracing are all per task, and a slice's
+worker returns per-task evidence.
 (Rot is one of three independent reasons this pattern wins: shared-context orchestration also
 measurably loses steering accuracy as unrelated agent traffic accumulates, and per-task
 isolation is what keeps each dispatch's cost linear instead of compounding.)
@@ -109,9 +128,11 @@ unattended, batches its independent calls, stays inside the packet, and returns 
 a transcript. The implementer and reviewer templates below carry it; for any other dispatch
 (Quinn, Sage, a one-off), append it yourself.
 
-**The chain:** Pat (plan) → **Mason** (implement) → **Quinn** (QA gate) → **Riley** (review) →
-**Sage** (security, if a sensitive surface is in scope). Quinn and Riley are **advisory** —
-they return a graded verdict (PASS / CONCERNS / FAIL / WAIVED); **you** own the ship decision:
+**The chain:** Pat (plan) → **Mason** (implement) → **Riley** (review; at HIGH, **Quinn**'s QA
+gate runs first) → **Sage** (security, if a sensitive surface is in scope). Read the Risk table
+below for which gates actually fire. Quinn and Riley are **advisory** — they return a graded
+verdict (PASS / CONCERNS / FAIL; **WAIVED is yours**, not theirs — a gate reports, only you
+accept a known issue); **you** own the ship decision:
 
 - **FAIL** → back to Mason with the verbatim findings (bounded by Review Loop Control below).
 - **CONCERNS** → you decide: accept-and-proceed (record them as `/learn` candidates) or loop.
@@ -140,8 +161,8 @@ digraph when_to_use {
 **vs. Executing Plans (parallel session):**
 
 - Same session (no context switch)
-- Fresh subagent per task (no context pollution)
-- Two-stage review after each task: spec compliance first, then code quality
+- Fresh subagent per slice (no context pollution)
+- Review after each task at its Risk tier — one pass at MED, spec-then-quality at HIGH
 - Faster iteration (no human-in-loop between tasks)
 
 ## The Process
@@ -156,10 +177,16 @@ digraph process {
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
         "Implementer subagent implements, tests, commits, checks against packet" [shape=box];
-        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
+        "Which Risk tier? (see Rigor Scales to Risk)" [shape=diamond];
+        "LOW: you verify — tests pass, diff matches spec" [shape=box];
+        "MED: one Riley pass (./code-reviewer-prompt.md)" [shape=box];
+        "Riley approves?" [shape=diamond];
+        "Implementer subagent fixes Riley's findings" [shape=box];
+        "HIGH: Quinn QA gate, then spec + quality passes" [shape=box];
+        "Dispatch spec reviewer subagent — HIGH only (./spec-reviewer-prompt.md)" [shape=box];
         "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
         "Implementer subagent fixes spec gaps" [shape=box];
-        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Dispatch code quality reviewer subagent — HIGH only (./code-quality-reviewer-prompt.md)" [shape=box];
         "Code quality reviewer subagent approves?" [shape=diamond];
         "Implementer subagent fixes quality issues" [shape=box];
         "Mark task complete in TodoWrite (and append the task's summary block to the run-state file)" [shape=box];
@@ -175,14 +202,23 @@ digraph process {
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, checks against packet" [label="no"];
-    "Implementer subagent implements, tests, commits, checks against packet" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
-    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
+    "Implementer subagent implements, tests, commits, checks against packet" -> "Which Risk tier? (see Rigor Scales to Risk)";
+    "Which Risk tier? (see Rigor Scales to Risk)" -> "LOW: you verify — tests pass, diff matches spec" [label="LOW"];
+    "LOW: you verify — tests pass, diff matches spec" -> "Mark task complete in TodoWrite (and append the task's summary block to the run-state file)";
+    "Which Risk tier? (see Rigor Scales to Risk)" -> "MED: one Riley pass (./code-reviewer-prompt.md)" [label="MED"];
+    "MED: one Riley pass (./code-reviewer-prompt.md)" -> "Riley approves?";
+    "Riley approves?" -> "Implementer subagent fixes Riley's findings" [label="no"];
+    "Implementer subagent fixes Riley's findings" -> "MED: one Riley pass (./code-reviewer-prompt.md)" [label="re-review"];
+    "Riley approves?" -> "Mark task complete in TodoWrite (and append the task's summary block to the run-state file)" [label="yes"];
+    "Which Risk tier? (see Rigor Scales to Risk)" -> "HIGH: Quinn QA gate, then spec + quality passes" [label="HIGH"];
+    "HIGH: Quinn QA gate, then spec + quality passes" -> "Dispatch spec reviewer subagent — HIGH only (./spec-reviewer-prompt.md)";
+    "Dispatch spec reviewer subagent — HIGH only (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
     "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
-    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
-    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
-    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent — HIGH only (./spec-reviewer-prompt.md)" [label="re-review"];
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent — HIGH only (./code-quality-reviewer-prompt.md)" [label="yes"];
+    "Dispatch code quality reviewer subagent — HIGH only (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
     "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
-    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent — HIGH only (./code-quality-reviewer-prompt.md)" [label="re-review"];
     "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite (and append the task's summary block to the run-state file)" [label="yes"];
     "Mark task complete in TodoWrite (and append the task's summary block to the run-state file)" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
@@ -224,20 +260,48 @@ IDs and prices at build time (never hardcoded in prose or code) — lives in
 ## Rigor Scales to Risk
 
 Model Selection scales _which model_ runs each task; this scales _which gates_ run. Match
-ceremony to blast-radius — the full two-stage review earns its cost on load-bearing tasks and
-wastes it on mechanical ports. Read the **`Risk` tag** the plan assigns each task (writing-plans
-defines the rubric; one HIGH signal ⇒ HIGH, unknown ⇒ HIGH) and run the matching gates:
+ceremony to blast-radius — the full Quinn-plus-two-Riley-passes sequence earns its cost on
+load-bearing tasks and wastes it on mechanical ports. Read the **`Risk` tag** the plan assigns each task (writing-plans
+defines the rubric; one HIGH **signal** ⇒ HIGH; an **unanswerable** signal ⇒ HIGH; a **missing
+tag** ⇒ score it, per the rule at the end of this section) and run the matching gates:
 
 The run's declared **effort level** (`writing-plans/plan-levels.md`) sets the _default_ tier for
 the run; an individual task's **`Risk` tag** can still escalate _its own_ gates above that default
 (ceiling, not average, wins per task). The two compose — the level is the floor, the tag is the
 per-task ceiling — they don't conflict.
 
-| Risk     | Model        | Gates                                                                |
-| -------- | ------------ | -------------------------------------------------------------------- |
-| **LOW**  | cheap        | Mason → **you verify** (tests pass, diff matches spec). No Riley.    |
-| **MED**  | standard     | Mason → Quinn → Riley **quality** (single pass)                      |
-| **HIGH** | most capable | Mason → Quinn → Riley **spec then quality** → Sage if safety surface |
+| Risk     | Model        | Gates                                                                       |
+| -------- | ------------ | --------------------------------------------------------------------------- |
+| **LOW**  | cheap        | Mason → **you verify** (tests pass, diff matches spec). No Riley.           |
+| **MED**  | standard     | Mason → Riley, **one pass** (spec + quality + test quality + the AC trace)  |
+| **HIGH** | most capable | Mason → Quinn → Riley **spec then quality** → Sage if safety surface        |
+
+**Why MED is one seat.** A second reviewer on the same diff costs a dispatch for marginal
+findings we have **no measurement of** — this is the stacked-verification shape
+`designing-agent-systems` names as over-delegation, and the `Gates:` tally added alongside this change is
+precisely how we intend to find out whether the seat was earning its cost. Until it says
+otherwise, spend the seat where blast radius justifies it. So at MED, Riley's single pass takes
+over Quinn's
+mechanical work — she runs the suite, reads Mason's RED→GREEN evidence, audits test *quality*,
+and emits the **one-row-per-AC trace**.
+
+**Be honest about what MED gives up.** This is a trade, not a free merge. Reserved for HIGH,
+where Quinn has her own seat: an **independent** risk profile (probability × impact, with
+scrutiny budgeted to the riskiest areas rather than a fixed priority order), the **NFR pass**,
+and a second reader whose blind spots differ from the first's. Two of Quinn's habits are
+**carried into the MED pass** rather than dropped, because they're cheap and load-bearing:
+
+- **Escalate to HIGH, don't just report, when the diff removes or weakens a test, a validation,
+  or an authz check** — the same signal Quinn escalates on. This is the trigger that catches an
+  over-applied `defend:` tag, so it does not get to live only at HIGH.
+- **Tag every number with its provenance** — `measured-now` (you ran it this pass),
+  `read-from-artifact`, or `estimated`; write `not measured` where you have none, and call a
+  statically-derived concern **potential impact**, not impact. This matters more at MED, not
+  less, because Riley now owns the suite run and nobody is double-checking her figures.
+- **Severity mapping is Quinn's, unchanged:** an uncovered high-risk AC ⇒ **FAIL**; a missing
+  trace row ⇒ FAIL-grade; an uncovered low-risk AC ⇒ CONCERNS.
+- **A serious security finding routes to Sage** even though the MED tier doesn't include him —
+  escalate the task to HIGH and dispatch him. A security finding is never a nit you file.
 
 **Optional enforcement (where the harness has a pre-edit hook — e.g. Claude Code):** when you
 dispatch a MED/HIGH task, you can export `KEYSTONE_TASK_RISK=med|high` and
@@ -248,8 +312,23 @@ replacement — on a harness without such a hook the rubric above still governs,
 
 LOW is for leaf/mechanical/loud-fail tasks only (a guard test, a dead-code sweep) — when in
 doubt it's not LOW. If a task tagged LOW turns out to touch a shared contract or fail silently,
-stop and treat it as HIGH; the tag was wrong. **A missing or absent `Risk` tag ⇒ treat as
-HIGH** — never skip review on an un-scored task.
+stop and treat it as HIGH; the tag was wrong.
+
+**A missing `Risk` tag is a plan defect — score it now, don't default it.** Score it against
+`writing-plans`' rubric before dispatching, from the plan **and a read of the files the task
+names**: that rubric makes the signals checkable *from the diff/codebase*, not from the plan's
+prose. This matters most in exactly the case the rule governs — an untagged task normally has
+**no `Verified-behavior` block** (that block is only required once a tag exists, and a Light plan
+carries none at all), so the plan text alone rarely settles the safety-surface signals.
+
+**The absence of an alarming word in a plan is not the absence of a signal.** Never score MED on
+silence. If the task names no files, or you have not read the ones it names, the signals are
+unanswerable ⇒ **HIGH**. Then: any HIGH signal ⇒ **HIGH**; unanswerable ⇒ **HIGH** (an
+un-discovered task is un-scorable, which is itself a high-risk signal); otherwise **MED**.
+**Never LOW by default** — LOW has to be earned against all four of its signals. Write the tag
+you scored into the plan and record it as a **Locked decision** in the run-state. The rule being
+enforced is that *nothing runs un-scored* — the cheap way to satisfy it is to read the files, not
+to skim the prose.
 
 **Level delta (mid-run).** When a task's real risk exceeds its tag enough to imply a higher run
 level (e.g. a Light run hits a safety surface), **stop** per the escalation rule just above,
@@ -309,39 +388,6 @@ Asking someone to be your terminal is friction, not diligence.
 The exception is a step that genuinely requires them — an interactive login, a secret you don't
 hold, a physical or account action. Name those explicitly when you hit them.
 
-## Handling Implementer Status
-
-Implementer subagents report one of four statuses. Handle each appropriately:
-
-**DONE:** Before you advance it, confirm the report actually _shows_ its test rigor, not just
-asserts it — **RED→GREEN evidence** (the failing-then-passing commands and output, when TDD was
-required) and an explicitly **pristine run** (clean output, no unexpected warnings/errors/skips).
-A DONE that only claims "tests pass" with no RED/GREEN and no pristine statement is unverified —
-send it back for the evidence before it enters the gate (this is the *victory declaration*
-failure mode: agents mark done without verifying unless the harness demands the evidence). Then proceed to spec compliance review.
-
-**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
-
-**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch. **If the stop is a request to confirm a destructive or irreversible action, that decision is the user's** — you cannot grant it on their behalf, and a relayed approval is not approval. Put the question to the user, record the answer as a **Locked decision** in the run-state, then re-dispatch with it in the packet.
-
-**BLOCKED:** The implementer cannot complete the task. Assess the blocker:
-
-1. If it's a context problem, provide more context and re-dispatch with the same model
-2. If the task requires more reasoning, re-dispatch with a more capable model
-3. If the task is too large, break it into smaller pieces
-4. If the plan itself is wrong, escalate to the human
-
-**Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
-
-## Handling Reviewer ⚠️ Items
-
-Riley may flag **"⚠️ Cannot verify from diff"** items — requirements that live in unchanged code
-or span tasks, which the task's diff can't settle. These don't block the rest of the review, but
-**you** must resolve each one before the task is marked done: you hold the plan and cross-task
-context the reviewer lacks. Confirm the requirement yourself; if you find a real gap, treat it as
-a failed review — loop it back to Mason (verbatim) and re-review. **Never let a ⚠️ pass silently
-into "complete"** — an unresolved "cannot verify" is an open question, not an approval.
-
 ## Harvest the lesson (the loop's automatic capture point)
 
 Task completion is where lessons get captured without anyone remembering to run a command —
@@ -353,6 +399,9 @@ reflexive "no."
 
 Offer it at a boundary where you'd be stopping anyway — task completion that ends the run, or a
 blocker you're already surfacing — never as a mid-run interruption that ends a turn on a question.
+(The complementary capture is the gate tally at run end: `finishing-a-development-branch` Step 7
+turns "this gate ran N times and caught nothing" into a lesson too. Lessons record what the
+gates *found*; the tally records what they *cost*.)
 
 When there is signal, draft the entry in `/learn`'s format — type, 1–3 lines, **evidence =
 the finding itself**, `**Triggers:**` tags from the controlled vocabulary — and offer it
@@ -381,18 +430,23 @@ Dispatch each with the matching crew member's **agent type** (so its persona + m
 passing the template as the task prompt plus the handoff packet:
 
 - `./implementer-prompt.md` — dispatch **Mason** (`implementer`).
-- Then the **Quinn** (`qa`) gate — she runs the tests and returns the graded verdict; this is
-  the testing stage of the pipeline (no separate prompt file; her agent definition is the method).
-- `./spec-reviewer-prompt.md` + `./code-quality-reviewer-prompt.md` — dispatch **Riley**
-  (`code-reviewer`) for spec-compliance then code-quality. (Sage / `security-reviewer` joins
-  when there's a security surface.)
+- **At MED:** `./code-reviewer-prompt.md` — one **Riley** (`code-reviewer`) pass, carrying the
+  AC trace and the evidence check.
+- **At HIGH:** the **Quinn** (`qa`) gate first — she runs the tests and returns the graded
+  verdict (no separate prompt file; her agent definition is the method) — then
+  `./spec-reviewer-prompt.md` and `./code-quality-reviewer-prompt.md` as two **Riley** passes.
+  (Sage / `security-reviewer` joins when there's a security surface.)
 
 ## Going deeper
 
 - [`worked-example.md`](worked-example.md) — a full run end to end, why the pattern wins, and
   the red flags that mean you have drifted out of it.
 - [`no-subagent-fallback.md`](no-subagent-fallback.md) — the same loop collapsed into one
-  window, for harnesses without per-task dispatch.
+  window, for harnesses without subagent dispatch.
+- [`routing-results.md`](routing-results.md) — what to do with each implementer status
+  (DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED, including the destructive-action stop)
+  and how to resolve a reviewer's ⚠️ "cannot verify from diff" items. Read when a dispatch
+  returns something other than a clean DONE.
 
 ## Integration
 

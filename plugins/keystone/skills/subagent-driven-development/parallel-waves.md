@@ -36,16 +36,19 @@ incompatible halves.
 
 ## Grouping
 
-Partition the independent tasks into **waves**. Every task within a wave is mutually
-independent; any task that depends on another task's output goes in a **later wave**.
+Partition the independent units into **waves**. The unit is a **slice** (`SKILL.md`, "Why fresh
+context") — often a single task, since one-per-dispatch is what disjoint tasks earn. Every unit
+in a wave is mutually independent; anything depending on another's output goes in a **later
+wave**. Where a slice holds several tasks, the isolation gate applies to the **union** of its
+files.
 
 ## Dispatch + barrier
 
 - Dispatch a wave's implementers **concurrently** — in one turn, each with its **own full
   handoff packet**.
-- **Don't idle during the wave.** Gates are per task and don't depend on siblings: run Quinn
-  and Riley on whichever task returns first while the rest are still working, and build the
-  next wave's packets in the gaps. Wait explicitly only when the next step needs a result that
+- **Don't idle during the wave.** Gates are per task and don't depend on siblings: run the
+  task's tier gates on whichever unit returns first while the rest are still working, and build
+  the next wave's packets in the gaps. Wait explicitly only when the next step needs a result that
   hasn't landed.
 - **The barrier is for the next wave's _dispatch_, not for the gates.** Start wave N+1's
   implementers only once every wave-N task has returned and cleared its gates — a wave-N+1

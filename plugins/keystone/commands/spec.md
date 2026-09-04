@@ -14,14 +14,16 @@ allowed-tools:
 Drive the full plan-then-execute workflow for: **$ARGUMENTS**
 
 This is the explicit front door to keystone's favorite loop: **author a spec → save it as a
-plan file → execute it with a fresh subagent per task** (no context pollution), reviewing
+plan file → execute it in fresh-context slices** (no context pollution), reviewing
 between tasks. It chains existing skills — follow them, don't reinvent.
 
 ## 0. Declare the effort level
 
-At the front door, state or confirm the run's effort level — **Light / Medium / Heavy (default
-Medium)** — and carry it into `writing-plans`, which composes the `spec → middle → execute`
-pipeline accordingly. See [`../skills/writing-plans/plan-levels.md`](../skills/writing-plans/plan-levels.md).
+At the front door, propose the run's effort level — **Light / Medium / Heavy** — from the
+observed signals (subsystems touched, safety surface, reversibility, and task count if known):
+take the **lowest band the signals allow**, name the signal that set it, and let the user
+confirm or override in a word. Medium is the fallback only when nothing is known yet. Carry the
+level into `writing-plans`, which composes the `spec → middle → execute` pipeline accordingly. See [`../skills/writing-plans/plan-levels.md`](../skills/writing-plans/plan-levels.md).
 
 ## 1. Sharpen the spec first (if it's fuzzy)
 
@@ -52,8 +54,8 @@ replans until no HIGH concern remains across the goal / buildability / security 
 Offer the two execution modes from `writing-plans`'s handoff:
 
 - **Subagent-driven (recommended)** — invoke **`subagent-driven-development`**: a **fresh
-  subagent per task in an isolated context** that never inherits this planning session's
-  history; two-stage review after each task (spec-compliance, then code-quality). This is the
+  subagent per slice of the plan, in an isolated context** that never inherits this planning session's
+  history; review after each task at its Risk tier — you verify at LOW, one Riley pass at MED, Quinn plus spec-then-quality (plus Sage on a safety surface) at HIGH. This is the
   "execute in a new context window" handoff. Your context stays free for coordination.
 - **Separate-session / inline** — subagent-driven-development's `no-subagent-fallback.md` for batch execution with review
   checkpoints when subagents aren't available.

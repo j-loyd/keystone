@@ -1,7 +1,7 @@
 # Plans
 
 Implementation plans / specs for this repo, written by keystone's `writing-plans` skill
-(via `/spec`) and executed by `subagent-driven-development` / `executing-plans`.
+(via `/spec`) and executed by `subagent-driven-development`.
 
 ## Layout (adaptive)
 

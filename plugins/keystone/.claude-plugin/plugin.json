@@ -2,7 +2,7 @@
   "name": "keystone",
   "displayName": "Keystone",
   "description": "Repo-agnostic Claude Code kit: instincts + security hooks, process-discipline skills, a domain-language layer (CONTEXT.md + ADRs), and heavy explicit workflows.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": {
     "name": "Jordan Loyd"
   },

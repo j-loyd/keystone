@@ -1,13 +1,16 @@
 # Plan Levels
 
-Every run is `SPEC → MIDDLE → EXECUTE`. At kickoff the user declares an **effort level** —
-Light, Medium (default), or Heavy — that composes _which_ steps fire at each stage. The level is
+Every run is `SPEC → MIDDLE → EXECUTE`. At kickoff the user sets an **effort level** — Light,
+Medium, or Heavy — that composes _which_ steps fire at each stage. **Propose the lowest band the
+observed signals allow** (rubric below) rather than defaulting to Medium, and name the signal
+that set it; the user confirms or overrides in a word. Where nothing is known yet, Medium is the
+fallback. The level is
 **one word in the plan header**, an effort floor declared once; it is never parsed as control
 flow, never re-prompted per task, never a status enum.
 
 ## The three ladders
 
-| Stage                  | Light                                                              | Medium (default)                                                                                                                            | Heavy                                                                                                                                                             |
+| Stage                  | Light                                                              | Medium                                                                                                                                      | Heavy                                                                                                                                                             |
 | ---------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Spec**               | inline one-liner, no sharpening                                    | clarify only if fuzzy                                                                                                                       | mandatory sharpening (`office-hours` and/or `grill-with-docs`; `llm-security` + `designing-agent-systems` if LLM/agent work; `research-notes` for novel domains)  |
 | **Middle (plan)**      | minimal task list, LOW/MED tags, no Verified-behavior, no reviewer | full `writing-plans` (tasks + Risk tags + Verified-behavior + File Structure + lock-decisions + Self-Review; optional single reviewer pass) | folder plan (`plan.md` + `phase-N`); Self-Review + bounded `plan-convergence-loop` (≤3 cycles); `plan-eng-review`/`plan-ceo-review`; ADRs for locked architecture |
@@ -44,7 +47,9 @@ Rough bands:
 - **Light** only if all-LOW + single file + reversible.
 - **Medium** otherwise.
 
-These bands guide the **challenge** below — they are not an auto-override.
+These bands set the **proposed** level at the front door and guide the **challenge** below.
+Neither is an auto-override: the user's word wins, and the delta policy's one blocking trigger
+is the only place the run stops on its own.
 
 ## Delta-callback policy
 
@@ -69,5 +74,6 @@ floor, deepen mid-run if the work demands it, never silently downgrade.
 ## What it is NOT
 
 - **Not a status machine** — one word in a header, not a phase/status enum any tool transitions.
-- **Light is not a new tax** — it is _cheaper_ than today's default, not extra ceremony.
+- **Light is not a new tax** — it is _cheaper_ than Medium, not extra ceremony. Small,
+  reversible, single-file work should land there, and proposing it is the point of the rubric.
 - **One knob, declared once** — no per-task re-prompt for the level.

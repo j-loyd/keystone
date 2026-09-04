@@ -1,6 +1,10 @@
 # Code Reviewer Prompt Template
 
-Use this template when dispatching a code reviewer subagent.
+Use this template when dispatching a code reviewer subagent. **This is the MED-tier combined
+pass** — spec compliance, quality, test quality, and the AC trace in one seat. At HIGH it is
+preceded by Quinn's QA gate and split into `./spec-reviewer-prompt.md` then
+`./code-quality-reviewer-prompt.md`; at LOW the orchestrator verifies and no reviewer is
+dispatched. See **Rigor Scales to Risk**.
 
 **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
 
@@ -32,7 +36,7 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
 
     ## Read-Only Review
 
-    Your review is read-only on this checkout. Do not mutate the working tree, the index, HEAD, or branch state in any way. Use tools like `git show`, `git diff`, and `git log` to inspect history. If you need a working copy of a different revision, check it out into a separate temporary directory (e.g. `git worktree add /tmp/review-[SHA] [SHA]`) — never move HEAD on this checkout.
+    Your review is read-only on this checkout: do not edit source, and do not mutate the index, HEAD, or branch state in any way. **Running the test suite and the build is expected** where this pass owns the suite run (see Testing below) — the incidental artifacts they produce (coverage output, build dirs, caches) are fine; leave tracked source files untouched. Use tools like `git show`, `git diff`, and `git log` to inspect history. If you need a working copy of a different revision, check it out into a separate temporary directory (e.g. `git worktree add /tmp/review-[SHA] [SHA]`) — never move HEAD on this checkout.
 
     ## What to Check
 
@@ -40,6 +44,34 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
     - Does the implementation match the plan / requirements?
     - Are deviations justified improvements, or problematic departures?
     - Is all planned functionality present?
+    - **Acceptance-criteria trace (required).** Emit one row per acceptance criterion:
+      `AC → test-name [Source: path:line]`, or `[UNCOVERED] — gap` where no test proves it.
+      The block must have **exactly as many rows as the plan has ACs** — a missing row is
+      itself a gap. An uncovered high-risk AC is Critical; an uncovered low-risk one is
+      Important.
+    - **Scope.** Every changed line should trace to a requirement. A hunk tracing to nothing
+      is either a boy-scout cleanup inside the footprint (fine) or unrequested scope (an
+      Important finding). Good code nobody asked for is still a finding.
+    - **Severity mapping for the trace:** an uncovered **high-risk** AC is a FAIL-grade gap; a
+      missing row is itself FAIL-grade; an uncovered low-risk AC is CONCERNS-grade.
+
+    **Escalation — say which fired, and escalate rather than merely reporting:**
+
+    - The diff **removes or weakens a test, a validation, or an authz check.** This is the
+      highest-signal diff shape there is, and the one that catches an over-applied `defend:`
+      tag. Treat the task as HIGH-risk: report it as Critical and tell the orchestrator the
+      task needs the HIGH-tier gates (a QA seat, and Sage if a safety surface is in play).
+    - **A serious security finding.** Route it to the security reviewer via the orchestrator —
+      a security finding is never a nit you file and move past.
+    - Auth/authz/session, payments/money/credits, or data migration/deletion is touched; no
+      tests were added for new logic; the diff exceeds ~500 lines; 5+ acceptance criteria.
+
+    **Tag every number with its provenance:** `measured-now` (you ran it this pass),
+    `read-from-artifact` (a coverage report, a CI run), or `estimated`. Where you have none,
+    write `not measured` and name the command that would produce one. Reading source cannot
+    yield a runtime figure — a concern derived statically is **potential impact**, not impact.
+    A plausible invented number is worse than an admitted gap; it gets quoted downstream as
+    fact.
 
     **Code quality:**
     - Clean separation of concerns?
@@ -58,7 +90,14 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
     - Tests verify real behavior, not mocks?
     - Edge cases covered?
     - Integration tests where they matter?
-    - All tests passing?
+    - All tests passing? **If no separate QA gate ran before you** (the usual case), you own
+      this: run the suite, read the whole output, and check the implementer's RED→GREEN
+      evidence against the code as it now stands. A bare "tests pass" with no RED→GREEN
+      behind it is a finding; so are warnings, errors, or unexpected skips — the run should be
+      pristine, not merely green. Also audit test *quality*: circular tests that assert the
+      implementation back at itself, weak assertions (`toBeDefined` where a value check
+      belongs), `.skip`/`.only`, and expected values whose only provenance is "what the code
+      returned".
 
     **Production readiness:**
     - Migration strategy if schema changed?
@@ -119,7 +158,20 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
     ### Recommendations
     [Improvements for code quality, architecture, or process]
 
+    ### ⚠️ Cannot verify from diff
+
+    Some requirements live in unchanged code or span tasks, so the diff in front of you
+    can't settle them. When that happens, **do not** broaden your crawl through the codebase
+    and **do not** guess a verdict: raise a ⚠️ item naming the requirement and stating what
+    the orchestrator should check. It holds the plan and cross-task context you lack.
+    Silent uncertainty dressed up as a pass is exactly what this catches. Write "none" if
+    there are none.
+
     ### Assessment
+
+    **Verdict:** PASS | CONCERNS | FAIL — this is what the orchestrator routes on and records
+    in the run-state `Gates:` line, so state exactly one. PASS = ship. CONCERNS = ships if the
+    orchestrator accepts the listed items. FAIL = a must-fix gap; back to the implementer.
 
     **Ready to merge?** [Yes | No | With fixes]
 
@@ -149,7 +201,7 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
 - `{BASE_SHA}` — starting commit
 - `{HEAD_SHA}` — ending commit
 
-**Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
+**Reviewer returns:** Strengths, Issues (Critical / Important / Minor), the AC trace, ⚠️ Cannot-verify-from-diff items, Recommendations, Assessment
 
 ## Example Output
 

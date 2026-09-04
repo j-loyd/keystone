@@ -186,7 +186,8 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ## Plan level
 
-A run is declared **Light / Medium / Heavy** at kickoff — **default Medium** when unstated. The
+A run is set **Light / Medium / Heavy** at kickoff — propose the lowest band the observed
+signals allow, falling back to **Medium** when nothing is known yet (`./plan-levels.md`). The
 level composes the `spec → middle → execute` pipeline (which steps fire at each stage) per
 [`./plan-levels.md`](./plan-levels.md), and is recorded in the plan header as
 `**Level:** light | medium | heavy`.
@@ -208,7 +209,7 @@ the observed-level rubric, and the delta-callback policy; do not restate them he
 
 > **For agentic workers:** Use subagent-driven-development to implement this plan task-by-task (its `no-subagent-fallback.md` covers harnesses without dispatch). Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Level:** [light | medium | heavy — see plan-levels.md; default medium]
+**Level:** [light | medium | heavy — see plan-levels.md; propose the lowest band the signals allow]
 
 **Goal:** [One sentence describing what this builds]
 
@@ -224,7 +225,7 @@ the observed-level rubric, and the delta-callback policy; do not restate them he
 ## Risk tagging
 
 Every task carries a **risk** tag that scales how much review ceremony it gets at execution
-time (a load-bearing task earns the full two-stage review; a mechanical port doesn't). The tag
+time (a load-bearing task earns the full QA-plus-two-review-pass sequence; a mechanical port doesn't). The tag
 is **derived from observable signals, not from how hard the task feels.** Three rules keep it
 decidable:
 
@@ -301,7 +302,7 @@ LLM risk; see the `llm-security` skill.)
 ````markdown
 ### Task N: [Component Name]
 
-**Risk:** low | med | high _(see Risk tagging; one HIGH signal ⇒ HIGH; unknown ⇒ HIGH)_
+**Risk:** low | med | high _(see Risk tagging; one HIGH signal ⇒ HIGH; unknown ⇒ HIGH. Not optional — an untagged task is a plan defect the executor has to score for you.)_
 
 **Verified-behavior:** _(required unless Risk is unambiguously low)_
 
@@ -430,7 +431,7 @@ After saving the plan, offer execution choice:
 
 **"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per slice of the plan, with review after each task at its risk tier, fast iteration
 
 **2. Inline Execution** - Execute tasks in this session via subagent-driven-development's `no-subagent-fallback.md`, batch execution with checkpoints
 
@@ -439,7 +440,7 @@ After saving the plan, offer execution choice:
 **If Subagent-Driven chosen:**
 
 - **REQUIRED SUB-SKILL:** Use subagent-driven-development
-- Fresh subagent per task + two-stage review
+- Fresh context per slice + review gated to each task's risk
 
 **If Inline Execution chosen:**
 

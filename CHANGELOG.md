@@ -2,6 +2,119 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.8.0] — 2026-09-04
+
+**Right-sizing pass.** keystone's execution loop was built when context rot bit early and models
+under-verified; both have moved. This applies keystone's own doctrine — *a gate that has never
+failed anything is theater*, *scaffolding has a sunset* — to keystone itself, cutting ceremony
+where it was paying for constraints that have relaxed while leaving every safety ceiling intact.
+Plus four principle folds that close real gaps rather than restating neighbours.
+
+### Changed — the ceremony cut
+
+- **Dispatch a slice, not necessarily a task** (`subagent-driven-development`). A **slice** is
+  consecutive plan tasks sharing files or an interface, sized to fit one worker window; a plan of
+  ≤3 tasks is one slice, genuinely disjoint tasks may still go one-per-dispatch (which is what
+  makes them wave-able), and a slice's Risk is the max of its tasks'. **Tasks remain the tracking
+  unit** — run-state checkboxes, the resume heuristic, and AC tracing are untouched, and the
+  slice's worker returns per-task evidence. Rationale stated in the skill: every dispatch re-pays
+  its cold start, and a coherent multi-file change is the work that suffers most from being cut
+  into fragments that each rediscover the same context. Split on signal (a `NEEDS_CONTEXT` for
+  want of window, or a report thinning across later tasks).
+- **One review seat at MED.** The gate table is now LOW → you verify · MED → **Mason → Riley, one
+  pass** (spec + quality + test quality + the one-row-per-AC trace) · HIGH → Mason → Quinn → Riley
+  spec → Riley quality → Sage if a safety surface. Riley's single pass takes over Quinn's
+  mechanical work (runs the suite, checks RED→GREEN against the code as it stands, audits test
+  *quality*, emits the AC trace, and inherits her severity mapping and evidence-provenance
+  tagging), and **carries two of her triggers**: escalate to HIGH when a diff removes or weakens
+  a test/validation/authz check — the trigger that catches an over-applied `defend:` — and route
+  a serious security finding to Sage by escalating, since the MED tier doesn't include him.
+  **The justification is explicitly unmeasured**: we have no evidence about a second reviewer's
+  marginal findings, which is why the `Gates:` tally ships in the same release. The two changes
+  are ordered deliberately — cut where blast radius doesn't justify the seat, and start
+  collecting the evidence that would confirm or reverse it.
+  **What MED genuinely gives up is stated in the skill rather than papered over**: an independent
+  risk profile (probability × impact with a scrutiny budget), the NFR pass, and a second reader
+  with different blind spots. Those are what HIGH buys. `spec-reviewer-prompt.md` and
+  `code-quality-reviewer-prompt.md` are now marked HIGH-only.
+- **An untagged task is scored, not defaulted to HIGH.** Previously *absent `Risk` tag ⇒ HIGH*,
+  which made the un-tagged case the main ceremony driver. Now: score it against `writing-plans`'
+  rubric **from the plan and a read of the files the task names** — the rubric makes signals
+  checkable from the diff/codebase, and an untagged task usually has no `Verified-behavior` block
+  to read, so the plan's prose alone rarely settles the safety-surface signals. **Absence of an
+  alarming word in a plan is not absence of a signal**: never MED on silence; no files named, or
+  files not read ⇒ HIGH. Any HIGH signal ⇒ HIGH; unanswerable ⇒ HIGH; otherwise MED; **never LOW
+  by default**. Write the scored tag in and record it as a Locked decision. The rule being
+  enforced is that nothing runs un-scored. `writing-plans` now calls an untagged task a plan
+  defect.
+- **The front door proposes the level from signals** (`/spec`, `writing-plans`, `plan-levels.md`).
+  Was a fixed default of Medium; now propose the **lowest band the observed rubric allows**, name
+  the signal that set it, and let the user confirm or override in a word — Medium only as the
+  fallback when nothing is known yet. The delta-callback policy and its single blocking trigger
+  (a safety surface under a declared Light/Medium) are unchanged.
+- **Gate verdicts are recorded, so the next cut is measured.** The run-state summary block gains a
+  `Gates:` line (one verdict per gate, `—` for gates the tier didn't run), and
+  `finishing-a-development-branch` Step 7 **tallies the run before retiring the file** — a gate
+  that ran 3+ times and returned PASS every time gets a one-tap `/learn` entry recording that, so
+  evidence accumulates across runs. This is deliberately the cheap version: no new telemetry file,
+  no new format. One run is a data point, not a verdict.
+
+Two safety properties held explicitly through all of the above. **No ceiling moved for a scored
+task** — the six safety-surface signals still force HIGH, the plan-level blocking trigger still
+fires, waves still require proven isolation. The one default that changed is the **untagged**
+case, which is now scored against the codebase rather than assumed maximal (see above, and note
+the non-inference rule that came with it). And **`DONE_WITH_CONCERNS` stays first-class**, with
+the orchestrator still owning the ship decision at every tier.
+
+An audit for redundant re-check instructions (the sixth planned task) found **nothing left to
+cut** — the v0.7.0 pass had already removed them. Recorded rather than padded.
+
+### Fixed
+
+- **Three dead references to a non-existent `executing-plans` skill** in shipped templates
+  (`plugins/keystone/templates/plans/plan.md`, `templates/plans/plan.md`,
+  `templates/plans/README.md`) — pre-existing, and invisible to the validators, which check
+  relative `.md` links but not prose skill-name references. Found while sweeping those same
+  headers for the slice/level wording.
+- **`templates/INSTINCTS.md`** — the subagent-dispatch instinct still triggered on "a bounded,
+  well-specified task … one plan-task", which contradicted both the widened inline rung (0.7.0)
+  and slices. Retriggered on the thing that actually justifies a dispatch: the task's own **read
+  volume** swamping your context.
+
+### Added — four principle folds
+
+- **The judgment/determinism duality** (`designing-agent-systems`). The skill carried only
+  *deterministic-first*; it now carries the dual — **do not replace model judgment with keyword
+  rules, scoring heuristics, hard-coded decision trees, or fixed loops merely because they are
+  easier to implement.** A keyword list standing in for "is this relevant?" is the same mistake as
+  an agent that should have been a regex: the wrong tool, picked for the author's convenience, and
+  it fails silently on everything its author didn't enumerate. Stated as a division of labor —
+  **the agent owns judgment; the host owns constraints and guarantees** (schema validation, authz
+  boundaries, exact identifiers and populations, lineage, idempotency, budgets, retry limits,
+  persistence, structural invariants) — and carried into the harness-layers framing plus two red
+  flags.
+- **Say the better idea; don't ship it uninvited** (`coding-standards`). Scope discipline bounds
+  what you *change*, not what you *say*, and collapsing the two channels fails in both directions.
+  This closes a tension v0.7.0 introduced by hardening "the scope is the deliverable": name the
+  materially better approach with its tradeoff, keep it out of the implementation, and let the
+  user take or drop it — unless the work cannot be correct without it, in which case it's a
+  blocker, not a suggestion.
+- **`defend:` — defensive code as a bloat category** (`auditing-for-overengineering`, `/review`,
+  `code-reviewer`). A sixth tag for error handling, validation, or fallbacks for states that
+  cannot occur: a null check on a value the caller just constructed, a `try` around code that
+  doesn't throw, re-validating a value a private helper got from its only in-process caller, a
+  default branch on an exhaustive enum. Three guardrails shipped with it, because it is the
+  easiest tag to misuse: **trust boundaries are never bloat**; **a separate service, process, or
+  agent is a trust boundary, not an "internal caller"** (`api-security`: an internal caller is an
+  unauthenticated caller with a friendlier name); and **"cannot occur" must be a guarantee you can
+  name** — a type, an invariant, a caller you have read — or the check stays. The guardrails
+  travel with the tag to `/review` and `code-reviewer`, not just the owning skill.
+- **Scope traceability as a reviewer check** (`/review`, `code-reviewer`). Every changed line
+  should trace to a requirement; a hunk tracing to nothing is either a boy-scout cleanup inside
+  the footprint or unrequested scope. keystone had only the negative boundary (what cleanup is
+  *allowed*); this adds the positive check, which catches what a correctness pass misses — good
+  code nobody asked for.
+
 ## [0.7.0] — 2026-09-03
 
 Multi-task pass: keystone's dispatch, orchestration, and worker-prompt guidance re-aligned with

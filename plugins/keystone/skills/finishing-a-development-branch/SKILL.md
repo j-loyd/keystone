@@ -203,12 +203,26 @@ If this work executed a `subagent-driven-development` run, its run-state file
 A completed run-state that lingers will **shadow every newer `/handoff`** at `/pickup` time, since
 `/pickup` weighs a run-state ahead of a freeform note. So on completion, retire it:
 
-1. **Archive or delete the run-state file** so it is no longer discoverable as live work:
+1. **Tally the gates before you retire the file.** Read the `Gates:` line of every task's
+   summary block and print the run's totals — for each gate, how many tasks it ran on and what
+   it returned. Any gate that ran on 3+ tasks and returned **PASS on every one** caught nothing
+   this run: offer a one-tap `/learn` entry recording that (`gate X: N runs, 0 findings, run
+   <plan>`), so the evidence accumulates across runs instead of dying with the file. A gate that
+   has never failed anything is theater; this is the only place keystone can notice. Don't
+   editorialize beyond the counts — one run is a data point, not a verdict.
+
+   Two exclusions keep the tally from arguing for something dangerous: a **security or
+   safety-surface gate (Sage) is never a deletion candidate on a clean record** — a clean
+   security review is the *expected* outcome, not evidence the seat was idle — and **the last
+   remaining gate at a tier is out of scope**, because a tier with no gate isn't a cut, it's an
+   unreviewed tier. If the run had **no run-state file** (optional on short runs, absent at
+   Light), skip the tally and say so rather than inventing counts.
+2. **Archive or delete the run-state file** so it is no longer discoverable as live work:
    - Options 1–2 (Merge / PR): move it with the plan — `git mv` it into `docs/plans/archive/`
      (or delete it; git retains the history).
    - Option 4 (Discard): delete it alongside the discarded work.
    - Option 3 (Keep as-is): only if the run is genuinely finished — otherwise leave it live.
-2. **Clear its row from the continuity index** `docs/handoffs/README.md`: remove the run's entry
+3. **Clear its row from the continuity index** `docs/handoffs/README.md`: remove the run's entry
    from the **Active run-state** table (or mark it `superseded`). This is what guarantees a
    completed run can never shadow a newer handoff note.
 

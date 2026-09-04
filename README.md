@@ -87,7 +87,8 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
   lenses.
 - **A named crew** — `subagent-driven-development` dispatches a virtual team and carries the
   baton between them: **Pat** plans → **Mason** implements (TDD; the only one who edits code)
-  → **Quinn** runs a QA gate (risk/coverage/trace/NFR → **PASS/CONCERNS/FAIL/WAIVED**, advisory)
+  → **Quinn** runs a QA gate on HIGH-risk work (risk/coverage/trace/NFR →
+  **PASS/CONCERNS/FAIL/WAIVED**, advisory)
   → **Riley** reviews → **Sage** audits security. Each gets a self-contained handoff packet;
   the orchestrator owns the ship decision. Reviewers report, never edit.
 

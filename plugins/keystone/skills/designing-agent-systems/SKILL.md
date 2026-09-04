@@ -34,7 +34,25 @@ build that; use a model only for the residual. An agent is justified when **all 
 3. Task value clears the token/latency/failure-mode overhead vs. the deterministic version
 4. A deterministic alternative was actually considered and rejected **with reasons**
 
-**Red flag:** "the agent will figure it out" → constrain it or don't build it.
+**But the rule cuts both ways.** Deterministic-first is about work a rule genuinely _covers_ —
+not a licence to encode judgment as machinery because machinery is easier to write. Do **not**
+replace model judgment with keyword rules, scoring heuristics, hard-coded decision trees, or
+fixed loops for work that actually requires interpretation, exploration, synthesis,
+prioritization, or critique. A keyword list standing in for "is this relevant?" and a weighted
+score standing in for "which of these matters most?" are the same mistake as an agent that
+should have been a regex: the wrong tool, picked for the author's convenience. Such a rule
+_looks_ decisive and fails silently on everything its author didn't enumerate.
+
+The shorthand worth holding onto: **the agent owns judgment; the host owns constraints and
+guarantees.** Judgment work — interpretation, synthesis, critique, ranking by relevance — goes
+to the model. Guarantees go in code: schema validation, authorization boundaries, exact
+identifiers and populations, lineage and provenance, idempotency, budgets, retry limits,
+persistence, structural invariants. Neither side substitutes for the other, and most bad agent
+designs are one of them wearing the other's clothes.
+
+**Red flags:** "the agent will figure it out" → constrain it or don't build it. A scoring
+heuristic or keyword rule where the real question is a judgment call → give it to the model and
+spend the code on the guarantees instead.
 
 ## Prior question 2 — one agent or many?
 
@@ -82,7 +100,9 @@ worker), not left to worker judgment.
 
 ## The harness layers — what you're actually designing
 
-For each layer, decide something or consciously default it:
+Each layer below is either a **guarantee** (belongs in code, enforced) or an input to
+**judgment** (belongs to the model, guided) — keep the division of labor above in view as you
+decide each one. For each layer, decide something or consciously default it:
 
 1. **Tool surface** — few, purposeful, well-described tools beat API mirrors; specialized
    beats generic; typed inputs; a terminal signal so loops can end. Past ~10 tools, prefer
@@ -246,6 +266,8 @@ Seed tasks · rubric · end-state assertions
 - "The agent will figure it out" → constrain it
 - A crew where a single agent + one verify seat would do → cut seats
 - A gate that has never failed anything → it's theater; delete or sharpen it
+- A keyword rule, score, or decision tree standing in for a judgment call → hand it to the model
+- A guarantee (authz, idempotency, budget, schema) left to the model's discretion → put it in code
 - Same-context self-review as the only verification → separate it
 - A verify seat spawned to confirm a fact a command settles → run the command instead
 - A prompt line written as a correction of a past model's habit → restate it as the wanted behavior

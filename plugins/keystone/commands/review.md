@@ -48,9 +48,19 @@ new public APIs; LOW = comments, tests, UI, logging) and spend your budget on HI
    - **Side effects** — anything irreversible behind a weak condition.
 3. **Reuse & over-engineering** — duplicates an existing util, reinvents stdlib/the
    platform, ships an abstraction with one caller, or could be plainly shorter? This is the
-   `auditing-for-overengineering` lens at diff scope — tag findings `delete/stdlib/native/yagni/shrink`
-   and **name the replacement**.
-4. **Tests** — does risky logic have coverage? (Don't demand tests for trivial changes.)
+   `auditing-for-overengineering` lens at diff scope — tag findings
+   `delete/stdlib/native/yagni/shrink/defend` and **name the replacement**. `defend:` covers
+   error handling or validation for a state that cannot occur — but **never at a trust
+   boundary**, where validation is load-bearing however unlikely the bad case looks (a separate
+   service, process, or agent is a trust boundary, not an "internal caller"), and **"cannot
+   occur" must be a guarantee you can name** — a type, an invariant, a caller you have actually
+   read. If you cannot name it, the check stays.
+4. **Scope — every changed line should trace to the request.** Walk the diff and ask of each
+   hunk: which requirement puts this here? A line that traces to nothing is either a boy-scout
+   cleanup inside the footprint (fine — `coding-standards` has the three-part test), or it's
+   unrequested scope, and it gets flagged as such. This catches what a correctness pass misses:
+   a change that is perfectly good code and simply wasn't asked for.
+5. **Tests** — does risky logic have coverage? (Don't demand tests for trivial changes.)
 
 Score every finding's confidence 1–10: verified by reading the exact line(s) that cause it
 = 9–10; a strong pattern match you're fairly sure of = 7–8; plausible but unconfirmed =
@@ -84,7 +94,7 @@ the author. Say what shape to leave behind — the common moves:
 - Delete pass-through wrappers that only forward their arguments.
 - Extract or split a unit that has outgrown one responsibility.
 
-These run alongside the `delete/stdlib/native/yagni/shrink` tags from step 2's reuse item, not instead of
+These run alongside the `delete/stdlib/native/yagni/shrink/defend` tags from step 2's reuse item, not instead of
 them: the tags say what to cut, the moves say what to build in its place. When two remedies
 compete, prefer the one that removes moving pieces over the one that spreads the same
 complexity across more of them.
@@ -125,7 +135,7 @@ specialist disagreement — the one seat where the extra judgment is worth the p
 ### 4. Adversarial second pass (HIGH-risk diffs, or on request)
 
 The passes above are checklist-shaped — they miss what isn't on any checklist. For a diff
-carrying a HIGH-risk file (per 2b) or 200+ changed lines, run one more pass with fresh
+carrying a HIGH-risk file (per step 1) or 200+ changed lines, run one more pass with fresh
 context and no checklist: "think like an attacker and a chaos engineer — what breaks this
 in production that the structured review didn't catch?" Dispatch this as an independent
 `code-reviewer` pass through this harness's subagent-dispatch primitive (genuinely fresh

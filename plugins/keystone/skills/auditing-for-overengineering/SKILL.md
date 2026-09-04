@@ -32,13 +32,28 @@ One per finding. Every tag **names the replacement** — a finding without one i
 - `native:` a dependency or code doing what the platform/framework already does. Name the feature.
 - `yagni:` an abstraction with one implementation, config nobody sets, a layer with one caller. Inline it until a second case exists.
 - `shrink:` same behaviour, fewer lines. Show the shorter form.
+- `defend:` error handling, validation, or a fallback for a case that cannot occur on any real
+  path — a null check on a value the caller just constructed, a `try` around code that doesn't
+  throw, re-validating a value a private helper was handed by its only in-process caller, a
+  default branch for an exhaustive enum. Replacement: let it fail. Name the guarantee that makes
+  the check dead. **If the "internal caller" is a separate service, process, or agent, that is a
+  trust boundary, not an internal caller** — `api-security` puts it exactly: an internal caller
+  is an unauthenticated caller with a friendlier name until something verifies it, and it
+  forwards whatever a user handed it. Read the two cautions below before applying this tag.
 
 ## Hunt
 
 Dependencies the stdlib or platform already ships; single-implementation interfaces;
 factories with one product; wrappers that only delegate; files exporting one thing;
 dead flags and config; hand-rolled stdlib; retry/cache/abstraction layers around
-something that doesn't need them.
+something that doesn't need them; defensive scaffolding for impossible states.
+
+Two cautions on the `defend:` tag specifically, because it is the easiest one to get wrong.
+**Trust boundaries are not bloat** — validation of anything crossing one (user input, a network
+or tool response, a file, another service, model output) is load-bearing no matter how unlikely
+the bad case looks, and cutting it is a security finding waiting to happen. And **"cannot occur"
+must be a guarantee you can name** — a type, an invariant, a caller you have actually read — not
+an assumption that the value looks fine today. If you cannot name it, the check stays.
 
 ## Output
 
@@ -95,6 +110,7 @@ hunting is the inverse: an interface nearly as complex as the implementation beh
 | "It's more flexible this way" | Flexibility nobody has exercised is untested by construction. Name the second case that would use it; if you can't, it's an option set with an audience of zero. |
 | "The dependency is tiny, dropping it isn't worth it" | Size isn't the cost. A dependency is supply chain, upgrades, and a pin held forever. The question is whether the platform already does the job. |
 | "It's only one more layer" | Layers are counted by the reader traversing them, not by the author adding them — each one is another file to open before the real work appears. |
+| "The extra error handling is harmless — it just never fires" | It is not free: it is code a reader has to decide the meaning of, a branch tests must either cover or leave uncovered, and a claim that the impossible case is possible. Handling that can't fire also hides the real bug, converting a loud crash into a plausible wrong answer. Delete it, or name the trust boundary that makes it real. |
 
 ## Red flags
 
