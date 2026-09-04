@@ -2,6 +2,56 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.8.1] — 2026-09-04
+
+Bug fixes in the safety layer, all three found by investigating why keystone's hooks were
+reporting themselves INACTIVE in a live session. None is a Codex issue; all three predate 0.8.0.
+
+### Fixed
+
+- **`guard.js`'s degrade path now fails CLOSED.** Root cause: `${CLAUDE_PLUGIN_ROOT}` is
+  inline-substituted by Claude Code **at parse time**, so the version-pinned plugin path is frozen
+  into each hook command for the life of a session. A mid-session plugin update prunes that
+  directory, stranding every running session — and the `${PLUGIN_ROOT}` fallback cannot rescue it,
+  because that variable belongs to a different harness and is unset on Claude Code. The old
+  degrade emitted only `systemMessage`, and a `PreToolUse` hook without a `permissionDecision`
+  **allows** the call: the freeze boundary and destructive-command gate switched silently off while
+  the message described the state as merely "inactive". The degrade now returns
+  `permissionDecision: "ask"` with a reason that says the guard is inactive and why, so an
+  unguarded session prompts instead of proceeding. Staleness itself is not fixable from inside a
+  running session — a session cannot discover where the new version landed — so the fix corrects
+  the failure mode rather than pretending the failure is avoidable.
+- **The `scan.js` degrade notice is deduplicated per session.** Its `PostToolUse` matcher covers
+  most tool traffic, so an un-deduped notice re-announced a session-fatal condition on nearly
+  every call. It now writes a `${CLAUDE_SESSION_ID}`-keyed sentinel and reports once. Failing open
+  stays correct for a detector that can only warn; the noise was the bug.
+- **`/guard` and `/freeze` silently ignored their directory argument.** Both used
+  `DIR="${ARGUMENTS:-$PWD}"`, but the braced form is **not** a Claude Code substitution — only bare
+  `$ARGUMENTS` is — so the literal string reached bash, `ARGUMENTS` was an unset *shell* variable,
+  and the fallback always won. `/guard ~/elsewhere` fenced the current directory instead, while
+  `argument-hint` advertised otherwise; `freeze.md` was worse, its prose promising the argument its
+  script discarded. Verified empirically (`ARGUMENTS` is absent from the hook shell environment),
+  not just from documentation. Both now use bare `$ARGUMENTS` with a shell emptiness check.
+
+### Changed
+
+- **Two tests pin the corrected behavior** (263 total): a degrade on a permission-honoring event
+  must carry `permissionDecision: "ask"` or `"deny"`, and a fail-open degrade notice on a
+  repeat-firing event must be session-deduplicated. Both were confirmed to fail against the old
+  configuration before the fix landed. The pre-existing graceful-degrade assertion was widened to
+  accept a permission-decision degrade alongside `systemMessage` / `|| true`.
+
+### Known tradeoff
+
+Restoring bare `$ARGUMENTS` means `/guard` no longer converts to a Codex skill — Codex skips
+migrating any command whose body contains that literal substring, so the generated set drops from
+four to three (`careful`, `pause`, `unfreeze`). This is deliberate: the argument never worked on
+either platform, and Codex does not pass command arguments to a migrated skill anyway, so the
+choice was between a safety command that works where it is actually used and one that is present
+but silently wrong on a secondary harness. Chasing wider Codex command coverage by adopting the
+braced spelling was evaluated and **rejected** — it is undocumented on Claude Code and would trade
+the primary platform for a degraded secondary one.
+
 ## [0.8.0] — 2026-09-04
 
 **Right-sizing pass.** keystone's execution loop was built when context rot bit early and models

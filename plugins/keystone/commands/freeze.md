@@ -16,7 +16,7 @@ Set the boundary to **$ARGUMENTS** (or the current directory if no argument), pr
 any existing `careful` flag:
 
 ```bash
-DIR="${ARGUMENTS:-$PWD}"
+DIR="$ARGUMENTS"; [ -n "$DIR" ] || DIR="$PWD"
 ABS="$(cd "$DIR" 2>/dev/null && pwd)" || { echo "No such directory: $DIR"; exit 1; }
 STATE="$HOME/.claude/keystone-guard.json"
 CAREFUL=false

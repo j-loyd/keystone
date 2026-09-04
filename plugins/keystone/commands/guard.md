@@ -13,7 +13,7 @@ require confirmation for destructive commands (like `/careful`). Use in producti
 shared repos where you want maximum protection.
 
 ```bash
-DIR="${ARGUMENTS:-$PWD}"
+DIR="$ARGUMENTS"; [ -n "$DIR" ] || DIR="$PWD"
 ABS="$(cd "$DIR" 2>/dev/null && pwd)" || { echo "No such directory: $DIR"; exit 1; }
 STATE="$HOME/.claude/keystone-guard.json"
 printf '{\n  "freeze": "%s",\n  "careful": true\n}\n' "$ABS" > "$STATE"

@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/guard.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/guard.js\" ]; then node \"$R/hooks/guard.js\"; else echo '{\"systemMessage\":\"keystone: guard.js not found under the plugin root (plugin updated mid-session?) - the safety guard is INACTIVE; restart this session to restore keystone hooks.\"}'; fi",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/guard.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/guard.js\" ]; then node \"$R/hooks/guard.js\"; else printf '%s' '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"ask\", \"permissionDecisionReason\": \"🛑 [keystone] guard.js is unreachable, so the safety guard (freeze boundary + destructive-command gate) is INACTIVE. The plugin was most likely updated mid-session, which strands the version-pinned path baked into the hooks of this session. Approve only if you accept running unguarded; restart the session to restore protection.\"}}'; fi",
             "timeout": 5,
             "statusMessage": "Safety guard..."
           }
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/scan.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/scan.js\" ]; then node \"$R/hooks/scan.js\"; else echo '{\"systemMessage\":\"keystone: scan.js not found under the plugin root (plugin updated mid-session?) - the injection scanner is INACTIVE; restart this session to restore keystone hooks.\"}'; fi",
+            "command": "R=\"${CLAUDE_PLUGIN_ROOT}\"; [ -f \"$R/hooks/scan.js\" ] || R=\"${PLUGIN_ROOT}\"; if [ -f \"$R/hooks/scan.js\" ]; then node \"$R/hooks/scan.js\"; else S=\"${CLAUDE_SESSION_ID:-nosession}\"; M=\"${TMPDIR:-/tmp}/keystone-degraded-scan-$S\"; if [ ! -f \"$M\" ]; then : > \"$M\"; printf '%s' '{\"systemMessage\": \"keystone: scan.js is unreachable, so the prompt-injection scanner is INACTIVE for the rest of this session (plugin updated mid-session?). Restart to restore it. Reported once per session.\"}'; fi; fi",
             "timeout": 5,
             "statusMessage": "Injection scan..."
           }
