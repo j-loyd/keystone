@@ -160,6 +160,45 @@ test("every referenced bundled hook script exists", () => {
 // by Claude Code at parse time) with a ${PLUGIN_ROOT} fallback (exported by Codex-style
 // harnesses), and must degrade to exit 0 when the script is missing — a plugin update that
 // replaces the version directory mid-session otherwise turns every hook into exit-1 spam.
+// A degrade path on a permission-honoring event must FAIL CLOSED. `${CLAUDE_PLUGIN_ROOT}` is
+// inline-substituted at parse time, so a mid-session plugin update strands the version-pinned
+// path for the life of the session. When that happens a PreToolUse hook that emits only
+// `systemMessage` still ALLOWS the tool — a security control silently switching off while
+// reporting itself merely "inactive". The degrade must carry a permissionDecision instead.
+test("a degrade path on a permission-honoring event fails closed", () => {
+  for (const { event, command } of eachHook()) {
+    if (!PERMISSION_EVENTS.has(event)) continue;
+    if (!command.includes("/hooks/") || !command.includes(".js")) continue;
+    const degrade = command.slice(command.indexOf("else"));
+    assert.ok(
+      degrade.includes("permissionDecision"),
+      `${event} hook degrades without a permissionDecision, so a missing script fails OPEN: ${command}`,
+    );
+    assert.ok(
+      /"permissionDecision":\s*"(ask|deny)"/.test(degrade),
+      `${event} degrade path must ask or deny, not allow: ${command}`,
+    );
+  }
+});
+
+// Events that fire at most once per session, where a degrade notice needs no dedup.
+const ONCE_PER_SESSION_EVENTS = new Set(["SessionStart", "SessionEnd"]);
+
+// A detector that can only warn may fail open, but must not re-announce on every matched call:
+// PostToolUse matches most tool traffic, so an un-deduped notice is per-call spam.
+test("a fail-open degrade notice is deduplicated per session", () => {
+  for (const { event, command } of eachHook()) {
+    if (PERMISSION_EVENTS.has(event)) continue;
+    if (ONCE_PER_SESSION_EVENTS.has(event)) continue;
+    if (!command.includes("/hooks/") || !command.includes(".js")) continue;
+    if (!command.includes("systemMessage")) continue;
+    assert.ok(
+      command.includes("CLAUDE_SESSION_ID"),
+      `${event} hook announces a degrade without session-scoped dedup: ${command}`,
+    );
+  }
+});
+
 test("node hook commands carry the root-fallback chain and a missing-script degrade path", () => {
   for (const { command } of eachHook()) {
     if (!command.includes("/hooks/") || !command.includes(".js")) continue;
@@ -172,7 +211,9 @@ test("node hook commands carry the root-fallback chain and a missing-script degr
       `node hook command should fall back to \${PLUGIN_ROOT}: ${command}`,
     );
     assert.ok(
-      command.includes("systemMessage") || command.includes("|| true"),
+      command.includes("systemMessage") ||
+        command.includes("permissionDecision") ||
+        command.includes("|| true"),
       `node hook command must not exit nonzero when its script is missing: ${command}`,
     );
   }

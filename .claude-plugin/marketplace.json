@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "A repo-agnostic Claude Code kit: harness (instincts + security hooks), process-discipline skills, a domain-language layer, and heavy explicit workflows.",
-    "version": "0.8.0"
+    "version": "0.8.1"
   },
   "plugins": [
     {
