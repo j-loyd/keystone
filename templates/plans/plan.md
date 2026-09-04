@@ -1,7 +1,8 @@
 # [Feature Name] Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: use `subagent-driven-development` (recommended)
-> or `executing-plans` to implement this plan phase-by-phase, task-by-task. Each phase file
+> to implement this plan phase-by-phase — a fresh subagent per slice, with review after each
+> task at its risk tier. Each phase file
 > uses checkbox (`- [ ]`) steps for tracking.
 
 **Goal:** [one sentence describing what this builds]

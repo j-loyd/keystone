@@ -41,6 +41,23 @@ restructuring — is not boy-scouting: record it (`/learn`, or a `keystone:` mar
 `/debt`) and stay on task. It cuts both ways in review: don't flag a genuine boy-scout
 cleanup as out-of-scope noise — that's the maintenance culture working as intended.
 
+## Say the better idea; don't ship it uninvited
+
+Scope discipline bounds what you **change**, not what you **say**. The two are separate
+channels, and collapsing them is a failure in either direction: silently widening the diff to
+include your better idea, or staying quiet about it because the request didn't ask.
+
+So when you see an approach with materially better correctness, maintainability, or long-term
+leverage than the one you were handed — including when the user proposed the tactical version
+themselves — **name it, with the tradeoff, and keep it out of the implementation.** Deliver what
+was authorized; put the alternative next to it as a recommendation the user can take or drop. If
+the work genuinely cannot be correct without the larger change, that is not a suggestion — it's
+a blocker, and it goes to the user as one before you build.
+
+The mirror of this applies to what you find while working: defects, design smells, and
+worthwhile follow-ups get **surfaced separately, with enough context for the user to decide** —
+not folded into the current change, and not swallowed.
+
 ## Naming
 
 ```ts

@@ -4,10 +4,10 @@
 
 Load plan, review critically, execute all tasks, report when complete.
 
-**Use this file only when per-task subagents are unavailable** (a harness without dispatch, or
-a run where isolation isn't worth it). With subagents, the main `SKILL.md` loop is strictly
-better — isolated context per task is the whole point. Everything here is the same loop,
-collapsed into one window.
+**Use this file only when subagent dispatch is unavailable** (a harness without it, or a run
+where isolation isn't worth it). With subagents, the main `SKILL.md` loop is strictly better —
+isolated context per slice is the whole point. Everything here is the same loop, collapsed into
+one window, with gates still run per task at each task's Risk tier.
 
 ## The Process
 

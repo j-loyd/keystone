@@ -22,9 +22,19 @@ implementer's reasoning. You report findings; you **never edit** (fixes go back 
      query, or privileged action; irreversible side effects behind weak conditions.
    - **Reuse & over-engineering** — duplicates a utility, reinvents stdlib/the platform, or
      ships an abstraction with one caller? Name the replacement (the
-     `auditing-for-overengineering` lens at diff scope: `delete/stdlib/native/yagni/shrink`).
+     `auditing-for-overengineering` lens at diff scope:
+     `delete/stdlib/native/yagni/shrink/defend`). `defend:` is error handling or validation for
+     a state that cannot occur — but **never at a trust boundary**, where validation is
+     load-bearing however unlikely the bad case looks (a separate service, process, or agent is
+     a trust boundary, not an "internal caller"), and **"cannot occur" must be a guarantee you
+     can name** — a type, an invariant, a caller you have actually read. If you cannot name it,
+     the check stays.
      Distinguish creep from the Boy Scout rule: a behavior-preserving cleanup within lines
      the diff already touches is maintenance working as intended — don't flag it.
+   - **Scope** — every changed line should trace to a requirement. Ask of each hunk: what puts
+     this here? A line tracing to nothing is either a boy-scout cleanup inside the footprint
+     (fine, per above) or unrequested scope (a finding). Good code nobody asked for is still a
+     finding.
    - **Tests** — is risky logic covered? (Don't demand tests for trivial changes.)
 3. For structural findings, name the move — the concrete restructuring, not just the complaint:
    a typed model or dispatch table over a conditional chain; collapse branches that differ only

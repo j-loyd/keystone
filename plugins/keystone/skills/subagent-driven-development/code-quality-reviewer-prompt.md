@@ -4,7 +4,9 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Purpose:** Verify implementation is well-built (clean, tested, maintainable)
 
-**Only dispatch after spec compliance review passes.**
+**HIGH-risk tasks only — and only after the spec compliance review passes.** At MED there is
+one combined Riley pass (`./code-reviewer-prompt.md`), not this two-stage sequence; see
+**Rigor Scales to Risk** in `SKILL.md`.
 
 ```
 Task tool (agent type: code-reviewer, or general-purpose if your harness has no registered agents):
@@ -25,7 +27,7 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
 
 **Tests and pristine output:**
 
-- Quinn (the QA gate) already ran the suite and Mason reported RED→GREEN
+- At HIGH, Quinn (the QA gate) already ran the suite and Mason reported RED→GREEN
   evidence for exactly this code — don't re-run the full suite to confirm it.
   Run a focused test only when reading the diff raises a specific doubt that no
   existing run answers; if heavier validation seems warranted, recommend it in

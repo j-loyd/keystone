@@ -4,6 +4,11 @@ Use this template when dispatching a spec compliance reviewer subagent.
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
+**HIGH-risk tasks only.** At MED, the single `./code-reviewer-prompt.md` pass covers spec
+compliance alongside quality — see **Rigor Scales to Risk** in `SKILL.md`. Dispatch this
+separate pass when the task's Risk tier is HIGH, where splitting spec from quality
+decorrelates two different questions.
+
 ```
 Task tool (agent type: code-reviewer, or general-purpose if your harness has no registered agents):
   description: "Review spec compliance for Task N"

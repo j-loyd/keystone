@@ -43,6 +43,7 @@ to it.
 
 - [x] Task 1: <title>
   - Status: DONE | DONE_WITH_CONCERNS
+  - Gates: Riley CONCERNS(2)→accepted · Quinn — · Sage —
   - Files: path/a, path/b
   - Finding: <the one durable fact worth carrying forward>
   - Concern: <any, or "none">
@@ -50,8 +51,20 @@ to it.
 - [ ] Task 3: <title>
 ```
 
-Each completed task carries a **≤5-line summary block** under its checked box — this is the
-implementer's Report Format (Status / files / finding / concern), trimmed to the durable bits.
+Each completed task carries a **≤6-line summary block** under its checked box — this is the
+implementer's Report Format (Status / files / finding / concern) trimmed to the durable bits,
+plus the orchestrator-written `Gates:` line (the implementer has terminated by then and never
+writes to this file).
+**Tasks are the tracking unit even when several were dispatched as one slice** (see `SKILL.md`,
+"Why fresh context"): the slice's worker returns per-task evidence and the orchestrator writes
+one block per task. Slicing does not change the resume heuristic below.
+
+The **Gates** line records each gate that ran and its verdict (`—` for one the tier didn't
+run). It costs a line and buys the only evidence anyone will ever have about whether a gate is
+worth its dispatch: `finishing-a-development-branch` tallies it at the end of the run, and a
+gate that fires repeatedly and catches nothing is a gate arguing for its own deletion. keystone's
+own rule is that a gate which has never failed anything is theater — this is how you find out
+which ones those are instead of guessing.
 An unchecked task has no block yet. A task with a checked box but **no summary block** is the
 one that was interrupted mid-flight.
 

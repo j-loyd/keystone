@@ -66,6 +66,15 @@ original wording — no text or code was copied from these sources:
   keystone's wording. Two load-bearing sentences in the `dispatching-parallel-agents` packet
   footer (the batching nudge and the "not watching in real time" opener) stay close to the
   guides' phrasing because the guides note that the wording carries the effect.
+- **Andrej Karpathy's January 2026 observations on LLM coding failure modes**, as packaged by
+  Forrest Chang in [`multica-ai/andrej-karpathy-skills`](https://github.com/multica-ai/andrej-karpathy-skills):
+  two narrow **idea-only** folds in 0.8.0, written original — defensive code for impossible states
+  as an over-engineering category (the `defend:` tag in `auditing-for-overengineering`), and
+  "every changed line should trace to the request" as a reviewer check. The remaining principles
+  in that file (think before coding, simplicity first, surgical changes, goal-driven execution)
+  were assessed and **deliberately not adopted**: keystone already covers each in more depth, and
+  a surface restating them would collide with `auditing-for-overengineering`'s routing — the
+  failure mode that got `cost-aware-llm-pipeline` deleted in 0.6.0.
 
 ---
 
