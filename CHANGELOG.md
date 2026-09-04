@@ -2,6 +2,69 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.7.0] — 2026-09-03
+
+Multi-task pass: keystone's dispatch, orchestration, and worker-prompt guidance re-aligned with
+the current frontier-model prompting guides ([Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5),
+[Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1)).
+Per their own guides the two pull in opposite directions on several axes — one over-delegates and
+over-narrates, the other under-batches and goes quiet — so every rule here is written as the
+**wanted behavior**, model-agnostic, not as a correction of either model's habit. No model names
+in shipped prose.
+
+### Changed
+
+- **`dispatching-parallel-agents`** — the inline rung widened: anything you can finish in a
+  handful of tool calls is inline, not a dispatch; one subagent is for work whose _read volume_
+  would swamp your window, and one agent, not several, whenever one can do it. **Spawn
+  discipline**: never a seat to settle what a *command* settles — the line is fact vs judgment, so
+  a fresh reviewer on an artifact you authored (`adversarial-review`, `/review`) still earns its
+  seat; keep counts low, cap deterministically where the harness allows. Two new sections — **Batch
+  what's independent** (privately list what you need, then request every independent item in
+  one response; tool calls and dispatches alike) and **Don't idle while workers run** (when
+  dispatch returns immediately, build the next packet and run landed gates; wait explicitly, once).
+  `patterns.md` gains a standard **packet footer** — the unattended-run contract, the batching
+  nudge, the scope fence, and a compressed-return shape — plus three new common mistakes
+  (open-bottomed packets, verify-by-proxy, dispatch-and-wait one at a time). `harness-notes.md`
+  gives the **test** for which dispatch shape you have — a spawn call that returns an id with a
+  separate wait call (both major coding CLIs today) vs one that hands back the finished result,
+  where "don't idle" degrades to "launch all at once" — plus deterministic spawn-depth /
+  concurrency / spend caps named as instances and dated, and per-dispatch effort with the
+  low-effort-may-suppress-search caveat.
+- **`designing-agent-systems`** — a rung is a **model _and_ an effort setting**: a frontier model
+  at low effort belongs in the sweep against a smaller model at high effort; effort doesn't
+  shorten output and at the low end suppresses tool use. A seat to check your own work is not a
+  seat. Three new named failure modes — _over-delegation_, _under-batching_, _lead idling_ — with
+  counters; spawn caps join the guardrails layer. **Prompt lines are scaffolding too**: behavioral
+  corrections rot in both directions across model generations, so write the wanted behavior,
+  never last generation's correction. Two red flags to match.
+- **`subagent-driven-development`** — the orchestrator's end-of-turn check (a last paragraph
+  that is a plan or a "Next, I'll dispatch…" is work to do, not a message to send); every packet
+  carries the standard footer; **Model Selection** reframed as the cheapest model-and-effort
+  pairing, with scouting seats a rung up. `parallel-waves.md`: gates run per task as each result
+  lands and the next wave's packets get built in the gaps — the barrier gates only the _next
+  wave's dispatch_. `implementer-prompt.md`: questions return as `NEEDS_CONTEXT` before work
+  begins, then the worker runs unattended (proceed on reversible steps the packet covers; stop
+  only for destructive actions or a real scope question, by returning a status); batch
+  independent calls and edit surgically; test additions sized to the task, scratch checks not
+  promoted to permanent files; the **self-review checklist trimmed to a packet check** —
+  complete, in scope, evidenced — with no re-running of verification the report already holds
+  (the report fields are the check); end the turn on the report.
+- **`code-reviewer`** (agent + `code-reviewer-prompt.md`) — report every substantiated finding,
+  graded; severity is the filter, not the threshold for mentioning; the orchestrator triages.
+  Stall detection now counts open **must-fix** items so nit churn doesn't read as a stall.
+- **Reviewer dispatch templates** (`code-reviewer-prompt.md`, `spec-reviewer-prompt.md`) — carry
+  the unattended / batching / result-not-transcript footer, like the implementer template.
+- **Destructive-action stops have a handler** — a worker's `NEEDS_CONTEXT` asking to confirm an
+  irreversible action routes to the **user**, not the orchestrator (a relayed approval is not
+  approval), and the answer is recorded as a Locked decision before re-dispatch.
+- **`implementer`** agent — read in one batch, edit surgically, end on the status.
+- **`long-running-agents`** — **tell the loop it's unattended**: the stall-on-permission failure
+  mode (a turn ended on "shall I apply this?" that nobody answers until the next wake), the
+  proceed / must-stop split, and the end-of-turn check, with must-stop actions named explicitly.
+- **`ATTRIBUTION.md`** — the two prompting guides recorded under methodology inspiration, naming
+  the two sentences kept close to their wording and why.
+
 ## [0.6.0] — 2026-08-30
 
 Second borrow pass over [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
