@@ -16,7 +16,7 @@ Apply a clarity pass to the code in **$ARGUMENTS** (default: the current diff ag
 base — the work just written, not the whole repo). This command is **apply mode**: the user
 asked, so make the edits, then prove behavior is preserved.
 
-Follow the **`simplifying-code`** skill for the full method. The short version:
+Load and follow the **`simplifying-code`** skill (Claude Code: the Skill tool with `keystone:simplifying-code`) for the full method. The short version:
 
 ## Process
 

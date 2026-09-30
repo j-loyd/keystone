@@ -88,12 +88,12 @@ Task tool (agent type: implementer, or general-purpose if your harness has no re
     ## When You're in Over Your Head
 
     It is always OK to stop and say "this is too hard for me." Bad work is worse than
-    no work. You will not be penalized for escalating.
+    no work.
 
-    **STOP and escalate when:**
-    - The task requires architectural decisions with multiple valid approaches
+    **Escalate when:**
+    - The task requires an architectural decision with several valid approaches the packet doesn't settle
     - You need to understand code beyond what was provided and can't find clarity
-    - You feel uncertain about whether your approach is correct
+    - Different readings of the task would lead to materially different work, and the packet doesn't say which
     - The task involves restructuring existing code in ways the plan didn't anticipate
     - You've been reading file after file trying to understand the system without progress
 

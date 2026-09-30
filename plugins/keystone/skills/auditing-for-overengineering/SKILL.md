@@ -61,7 +61,7 @@ One line per finding, ranked biggest cut first:
 
 `<tag> <what to cut>. <replacement>. [path:line]`
 
-End with the only metric that matters: `net: -<N> lines, -<M> deps possible.`
+End with the scoreboard: `net: -<N> lines, -<M> deps possible.`
 If there is nothing to cut: `Lean already. Ship.` and stop.
 
 ```

@@ -40,12 +40,13 @@ Same triage as the main loop — see **Handling deviations** in `SKILL.md`.
 
 ## When to Stop and Ask for Help
 
-**STOP executing immediately when:**
+**Stop and ask when:**
 
-- Hit a blocker (missing dependency, test fails, instruction unclear)
-- Plan has critical gaps preventing starting
-- You don't understand an instruction
-- Verification fails repeatedly
+- A blocker you can't clear with the tools you have (a dependency you can't install, a
+  credential you don't hold)
+- The plan has critical gaps that prevent starting, or an instruction you can't interpret
+- Verification still fails after you've fixed what the task covers (the main loop's
+  ~3-round cap)
 
 **Ask for clarification rather than guessing.**
 

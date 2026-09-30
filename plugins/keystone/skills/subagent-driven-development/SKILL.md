@@ -15,8 +15,9 @@ skill. This skill covers the execution loop that sits on top of it.
 
 **Continuous execution:** Don't stop between tasks to ask whether to keep going. The user asked
 you to execute the plan; execute it. Stop only for a BLOCKED status you can't resolve, ambiguity
-that genuinely prevents progress, or completion. Interim "should I continue?" prompts and
-progress summaries cost the user a turn and tell them nothing they didn't already expect.
+that genuinely prevents progress, or completion. Ending a turn on "should I continue?" or on a
+progress summary costs the user a turn and tells them nothing they didn't already expect; a
+brief progress note while you keep working is fine.
 Before you end any turn mid-run, read your own last paragraph: if it is a plan, a question the
 plan already answers, or a "Next, I'll dispatch…", that is work to do now, not a message to
 send. End the turn only at completion or on a blocker only the user can clear.
@@ -81,7 +82,7 @@ your context — is the source of truth, so a compaction or crash can't lose the
 nothing to it). It's **optional for short runs**: a 2-task plan doesn't need it. Rigor scales to
 run length, the same as everything else here.
 
-**At Heavy level,** also create a **run-manifest** from `keystone/templates/plans/run-manifest.md`
+**At Heavy level,** also create a **run-manifest** from `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/templates/plans/run-manifest.md`
 and keep per-task summary spillover. The manifest is a sibling index pointing at the run's
 artifacts (run-state, research, codebase map, ADRs, handoffs). This is the
 **additive-and-ignorable invariant**: a resume reads only the run-state task log — the manifest,
@@ -278,8 +279,8 @@ per-task ceiling — they don't conflict.
 
 **Why MED is one seat.** A second reviewer on the same diff costs a dispatch for marginal
 findings we have **no measurement of** — this is the stacked-verification shape
-`designing-agent-systems` names as over-delegation, and the `Gates:` tally added alongside this change is
-precisely how we intend to find out whether the seat was earning its cost. Until it says
+`designing-agent-systems` names as over-delegation, and the gate tally
+(`finishing-a-development-branch` Step 7) is how to find out whether the seat earns its cost. Until it says
 otherwise, spend the seat where blast radius justifies it. So at MED, Riley's single pass takes
 over Quinn's
 mechanical work — she runs the suite, reads Mason's RED→GREEN evidence, audits test *quality*,

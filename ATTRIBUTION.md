@@ -28,7 +28,7 @@ section below.
 | Component(s)                                                                                                                                          | Source                                                                  | License | Relationship                                                                                                                               |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `office-hours`, `plan-ceo-review`, `plan-eng-review`, `review`, `qa`, `cso`, `ship`, `retro`, `investigate`, `freeze`, `careful`, `guard`, `unfreeze` | [garrytan/gstack](https://github.com/garrytan/gstack) — Garry Tan       | MIT     | Re-authored for keystone (gstack-specific infra removed; adapted to keystone's conventions and the Chrome MCP tools). Not verbatim copies. |
-| `to-issues`, `to-prd`                                                                                                                                 | [mattpocock/skills](https://github.com/mattpocock/skills) — Matt Pocock | MIT     | Re-authored; `to-issues` retargeted from GitHub issues to Linear. **In 0.6.0**, further idea-only folds from the same source were rewritten for keystone: reproduction **minimisation**, the reproduction-*rate* framing, tagged debug instrumentation with a cleanup gate, the loop-construction ladder, and "no correct seam is itself the finding" into `systematic-debugging` (from `diagnosing-bugs`); **leading words**, the clarity/demand split in completion criteria, and environment-as-cache into `writing-skills` (from `writing-for-agents`); the **fog-or-task test** and the out-of-scope/fog distinction into `writing-plans` (from `wayfinder`); the **wide-refactor exception** to vertical slicing, with prefactoring, into `writing-plans` (from `to-tickets`); and the **agree-the-seam-before-RED** discipline into `test-driven-development` (from `tdd`). |
+| `to-issues`, `to-prd`                                                                                                                                 | [mattpocock/skills](https://github.com/mattpocock/skills) — Matt Pocock | MIT     | Re-authored; `to-issues` retargeted from GitHub issues to Linear. **In 0.6.0**, further idea-only folds from the same source were rewritten for keystone: reproduction **minimisation**, the reproduction-*rate* framing, tagged debug instrumentation with a cleanup gate, the loop-construction ladder, and "no correct seam is itself the finding" into `systematic-debugging` (from `diagnosing-bugs`); **leading words**, the clarity/demand split in completion criteria, and environment-as-cache into `writing-skills` (from `writing-for-agents`); the **fog-or-task test** and the out-of-scope/fog distinction into `writing-plans` (from `wayfinder`); the **wide-refactor exception** to vertical slicing, with prefactoring, into `writing-plans` (from `to-tickets`); and the **agree-the-seam-before-RED** discipline into `test-driven-development` (from `tdd`). **In 0.9.0**, two more idea-only folds: cross-skill hand-offs name the skill explicitly rather than relying on `/name` prose (from upstream's invocation convention), and `/retro` routes mechanical lessons to deterministic checks instead of written rules (from `retro`). |
 
 ### Harness hooks
 
@@ -53,6 +53,16 @@ original wording — no text or code was copied from these sources:
   skill, and the agent-action audit in `llm-security`. Their CC-BY-SA text was deliberately **not**
   copied, so keystone stays MIT. For the full implementations, install their plugin separately
   (it stays CC-BY-SA-4.0).
+- **AI Engineering from Scratch** ([`rohitg00/ai-engineering-from-scratch`](https://github.com/rohitg00/ai-engineering-from-scratch),
+  Rohit Ghumare, MIT): the labeled routing-test set with a held-out split in `writing-skills`,
+  task-by-task change comparison with pre-declared thresholds in `designing-agent-systems`, and
+  earliest-control-first plus retirement conditions for promoted instincts in `/learn`.
+- **Cloudflare security-audit-skill** ([`cloudflare/security-audit-skill`](https://github.com/cloudflare/security-audit-skill),
+  MIT): the _needs validation_ verdict, severity capped at demonstrated impact with anchored
+  levels, the finding test that separates hardening from findings, and the coverage statement
+  in `security-review` / `security-reviewer` / `/cso`; the between-category vulnerability
+  classes in `security-review`; and "injection alone is not a finding; a prompt guardrail is
+  not a boundary" in `llm-security`.
 - **BehiSec VibeSec** ([`BehiSecc/VibeSec-Skill`](https://github.com/BehiSecc/VibeSec-Skill),
   Apache-2.0): three `security-review` additions (XXE hardening, open-redirect / IDN-homograph
   guarding, account/session lifecycle revocation), reimplemented original.

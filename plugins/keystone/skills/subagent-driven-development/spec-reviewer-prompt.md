@@ -23,21 +23,12 @@ Task tool (agent type: code-reviewer, or general-purpose if your harness has no 
 
     [From implementer's report]
 
-    ## CRITICAL: Do Not Trust the Report
+    ## Verify Against the Code, Not the Report
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
-
-    **DO NOT:**
-    - Take their word for what they implemented
-    - Trust their claims about completeness
-    - Accept their interpretation of requirements
-
-    **DO:**
-    - Read the actual code they wrote
-    - Compare actual implementation to requirements line by line
-    - Check for missing pieces they claimed to implement
-    - Look for extra features they didn't mention
+    The implementer's report is a claim, not evidence — it can be incomplete or optimistic,
+    and their reading of the requirements may differ from the spec's. Read the code they
+    wrote and compare it to the requirements line by line: look for pieces the report
+    claims but the code lacks, and for work the report doesn't mention.
 
     ## Your Job
 

@@ -27,6 +27,22 @@ Security bugs live where **untrusted input reaches a dangerous sink**. Trace it:
 4. **Verify exploitability** before calling it confirmed. Note severity (critical/high/
    medium/low), the concrete attack, and the fix.
 
+**What counts as a finding.** Each one names the lower-trust principal, the boundary it
+crosses, and the concrete result. A missing best practice with no such path is **hardening** —
+report it in its own section, not as a finding. Keep severity at or below the impact you
+actually demonstrated: don't inflate a crash into RCE, or an action a user could already take
+into privilege gain. Anchor the levels: **critical/high** when a control is fully defeated for
+data or actions that matter, **medium** when it's weakened or needs an unlikely precondition,
+**low** for limited reach.
+
+**Three verdicts, not two.** _Confirmed_ (the path is reachable and unguarded), _rejected_,
+or _needs validation_ — when the deciding fact isn't in the source (a proxy, the identity
+provider, deploy config). A needs-validation item carries no severity; it names the exact
+missing fact and a check the owner can run to settle it.
+
+**State coverage.** Say what you reviewed, what you deferred, and what was out of scope. A
+scoped or time-boxed pass says it's partial — never let silence imply the rest is clean.
+
 **Model refusals on security work.** Top-tier models ship safety classifiers that can
 false-positive on benign security work — exactly the exploit-shaped reasoning this skill asks
 for. When dispatching this review to a subagent, state the authorization context in the packet
@@ -113,6 +129,8 @@ const csp = `default-src 'self'; base-uri 'self'; object-src 'none';
   Anti-Reinvention & Package Legitimacy gate, which catches hallucinated/typosquatted
   dependencies and forbidden hand-rolling at plan-write time, before code review.
 - **Untrusted MCP servers and skills are supply chain too** — vet tool descriptions.
+- **CI that runs untrusted code with privileges** — e.g. a `pull_request_target` workflow that
+  checks out the PR's code while holding secrets or a write token.
 - For a full dependency/provenance pass, use the Trail of Bits **`supply-chain-risk-auditor`**
   skill (install separately — see the keystone README).
 
@@ -203,6 +221,21 @@ console.log("charge", { userId, last4: c.last4 }); // not full card / cvv
 - Generic error to the user; full detail server-side only — never leak stack traces,
   internal paths, or SQL to the client. Handle every external-call failure explicitly.
 
+## Classes that sit between the categories
+
+Easy to miss because no single OWASP heading owns them:
+
+- **Proxy and cache trust** — request smuggling between a proxy and the app, cache poisoning
+  or deception, and trusting `Host` / `X-Forwarded-*` headers the client can set.
+- **Federated and passwordless auth** — SAML signature and assertion handling, WebAuthn
+  origin/RP-ID checks, and account linking that merges identities on an unverified email.
+- **Data lifecycle** — search or filter endpoints that leak records through match counts or
+  timing, soft-deleted rows still reachable, a restore that reintroduces a state since made
+  invalid, and stored values that are safe when written but used unsafely later.
+- **Resource amplification** — regexes with catastrophic backtracking on user input, and
+  decompression or parsing that expands a small request into a large one.
+- **Chained findings** — two low-severity issues that combine into a real one; check pairs.
+
 ## Data privacy
 
 Personal data carries obligations a source→sink trace won't surface: what you may collect,
@@ -269,7 +302,7 @@ if (!parsed.success)
 - [ ] **Errors/logging**: fail closed; generic client errors; no secrets/PII in logs
 - [ ] **Data privacy**: worked through [`data-privacy.md`](./data-privacy.md) — fields tiered + purpose-bound, retention clock set, deletion reaches every copy, export/delete authorized per-object
 - [ ] **Resource limits**: rate limiting via a durable store (serverless/edge-appropriate); upload size/type limits
-- [ ] **LLM/agent code present?** → run the `llm-security` skill too
+- [ ] **LLM/agent code present?** → also load the `llm-security` skill (Claude Code: the Skill tool with `keystone:llm-security`)
 
 ## Rationalizations
 

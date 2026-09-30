@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"CONTEXT WAS JUST COMPACTED. Re-orient before continuing: check task progress against the users original request. If you were mid-task, read docs/handoffs/README.md (this repo continuity index) or run /pickup to resume. Note: MEMORY.md is your PERSONAL cross-project index, not this repo task-state.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Context was just compacted. Re-orient before continuing: check task progress against the original request. If you were mid-task, read docs/handoffs/README.md (this repo continuity index) or run /pickup to resume. Note: MEMORY.md is your personal cross-project index, not this repo task-state.\"}}'",
             "timeout": 5,
             "statusMessage": "Re-orienting after compaction..."
           }

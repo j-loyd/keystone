@@ -100,3 +100,9 @@ Give the `%` a transparent source: add a trailing evidence line in the instinct 
 `_(0.7 — banked across 3 retros in this repo; user didn't correct it)_`, and let the number
 reflect that count, not a guess. Confidence is a stated, evidence-backed heuristic the user can
 hand-edit down to mute — **not** a stored or auto-decaying float.
+
+Before promoting, check for an earlier control: if a type, test, hook, or permission could
+catch the mistake, propose that instead of an instruction (the `/retro` capture rule). Give
+each promoted instinct a **retirement condition** in its evidence line — what supersedes it,
+such as "retire once lint rule X exists" or "re-check at the next model release" — so the
+instinct list can be pruned rather than only grown.

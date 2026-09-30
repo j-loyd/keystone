@@ -84,7 +84,9 @@ check catches more real breakage than the hunk-by-hunk work does.
 ## Finishing the operation
 
 Leaving the repo mid-merge is its own failure — the next session inherits a broken tree with no
-context.
+context. Concluding a merge or rebase the user asked for is part of that request, so the commit
+it creates is covered. If the conflicts came from an operation you started on your own, stop once
+every file is resolved and staged, and hand back to the user (`git-workflow`'s commit rule applies).
 
 ```bash
 # merge

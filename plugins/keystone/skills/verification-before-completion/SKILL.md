@@ -18,7 +18,11 @@ So treat the gate below as a fixed sequence, not a checklist to adapt.
 
 1. **Identify** — name the exact command that would prove this specific claim.
 2. **Run** it — in full, in this turn. A run from earlier in the session does not count; the
-   code has changed since.
+   code has changed since. The check has to exercise the change: a syntax-only check, or a
+   command that failed to start, is not a run. If all that's missing is the project's declared
+   dependencies, install them with its own package manager (`npm install`,
+   `pip install -r requirements.txt`) unless told not to. If no real check can run here, say
+   which one you didn't run and why instead of reporting the change as done.
 3. **Read** the whole output — exit code, failure count, skip count. Not just the last line.
 4. **Compare** — does that output establish *this* claim, or a neighboring one?
 5. **State** it with the evidence attached, or state the real status instead.

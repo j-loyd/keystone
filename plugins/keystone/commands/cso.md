@@ -68,6 +68,10 @@ command ties them together into an audit.
 ## Output
 
 A findings report grouped by severity (**critical / high / medium / low**), each with:
-location (`file:line`), the concrete attack, and a specific fix. End with the top 3
-must-fix-before-ship items. Verify exploitability where you can — don't report theoretical
-issues as confirmed. Report-only: do not change code unless explicitly asked.
+location (`file:line`), the concrete attack, and a specific fix — severity per the
+`security-review` skill's anchors. Items whose deciding fact isn't in the source go in a
+**needs validation** list with the check that would settle them; best-practice gaps with no
+attack path go in a **hardening** list. Close with a coverage statement (reviewed / deferred /
+out of scope) and the top 3 must-fix-before-ship items. Verify exploitability where you can —
+don't report theoretical issues as confirmed. Report-only: do not change code unless
+explicitly asked.

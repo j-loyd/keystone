@@ -13,6 +13,9 @@
  *   2. The exfil pattern requires a destination sink (URL/IP/email/webhook), not just
  *      a verb near a secret word — so "don't upload your .env to git" stays quiet.
  *   3. Zero-width class excludes U+200C/U+200D (legit in emoji + Indic/Persian scripts).
+ *   4. Reading this scanner's own pattern source or its test fixtures is not scanned — they
+ *      contain every pattern verbatim. Nothing else is exempt: quoting an attack does not
+ *      hide it, and keystone's security docs may still trip the (advisory) warning.
  *
  * Fails open and silent: any error or below-threshold → "{}".
  *
@@ -25,6 +28,13 @@
 
 "use strict";
 
+const path = require("node:path");
+
+// Files that contain the patterns verbatim by design. Kept to an exact list so a checked-out
+// working tree (e.g. a contributor's PR under review) is still scanned.
+const SELF_FILES = new Set(
+  ["scan.js", "guard.test.js"].map((f) => path.join(__dirname, f)),
+);
 const MAX_SCAN_CHARS = 120000;
 
 // Zero-width / bidi controls used for obfuscation — WITHOUT U+200C/U+200D (emoji/scripts).
@@ -101,6 +111,7 @@ const PATTERNS = [
   },
 ];
 
+
 /** Pull the most likely human-readable output text out of a hook payload. */
 function extractText(data) {
   const r = data && data.tool_response;
@@ -140,6 +151,12 @@ function rawHits(text) {
   return hits;
 }
 
+/** True for a Read of the scanner's own pattern source or fixtures. Exported for tests. */
+function trustedSource(data) {
+  const file = data && data.tool_name === "Read" && data.tool_input && data.tool_input.file_path;
+  return typeof file === "string" && SELF_FILES.has(path.resolve(file));
+}
+
 /**
  * Returns the labels to warn about, or [] if below threshold.
  * Threshold: any STRONG hit, OR >= 2 WEAK hits. Exported for tests.
@@ -172,7 +189,7 @@ async function main() {
   for await (const chunk of process.stdin) input += chunk;
   try {
     const data = JSON.parse(input || "{}");
-    const labels = scan(extractText(data));
+    const labels = trustedSource(data) ? [] : scan(extractText(data));
     if (labels.length) {
       process.stdout.write(
         JSON.stringify(warning(labels, data.tool_name || "tool")),
@@ -191,6 +208,7 @@ if (require.main === module) {
   module.exports = {
     scan,
     rawHits,
+    trustedSource,
     extractText,
     warning,
     PATTERNS,

@@ -24,20 +24,12 @@ WHEN receiving code review feedback:
 6. IMPLEMENT: One item at a time, test each
 ```
 
-## Forbidden Responses
+## How to respond
 
-**NEVER:**
-
-- "You're absolutely right!" (explicit `CLAUDE.md` / instruction-file violation)
-- "Great point!" / "Excellent feedback!" (performative)
-- "Let me implement that now" (before verification)
-
-**INSTEAD:**
-
-- Restate the technical requirement
-- Ask clarifying questions
-- Push back with technical reasoning if wrong
-- Just start working (actions > words)
+Lead with technical content: restate the requirement, ask the clarifying question, push back
+with reasoning, or start the work. Agreement or praise offered before you've verified the point
+signals compliance you haven't earned yet — and promising to implement before checking is the
+same failure in action form.
 
 ## Handling Unclear Feedback
 

@@ -26,8 +26,7 @@ Run a retrospective over **$ARGUMENTS** (default: the last week in the current r
   ```
   Emits `<count> fileA|fileB` rows — real co-change evidence, not a flat per-file frequency.
 - **Past conversations** — use the `episodic-memory` / `search-conversations` tooling to
-  recover decisions, blockers, and dead-ends from the working sessions. (No gbrain —
-  keystone uses the episodic-memory plugin + `MEMORY.md`.)
+  recover decisions, blockers, and dead-ends from the working sessions.
 
 ## Run the retro
 
@@ -53,6 +52,11 @@ Offer to persist durable learnings, routed by scope. Type each one as a **Decisi
 **Lesson**, **Pattern**, or **Surprise** (the `/learn` categories), each with real evidence —
 the retro questions above map onto these directly (worked → Pattern, hurt/learned → Lesson/Surprise, scope drift → Decision):
 
+- A **mechanical** lesson — a fixed pattern a tool could detect (a banned import, a missing
+  `await`, an unformatted file) → propose the check (lint rule, hook, CI step, or test) instead
+  of prose; a check is paid for once, while a written rule is re-judged on every diff. Keep
+  prose for judgment calls. A repo with no lint/typecheck/test running in CI or a pre-commit hook
+  is a finding in its own right.
 - A lesson specific to **this repo** → bank it via the `/learn` command (per-repo
   learnings store, auto-surfaced in future sessions here). Capture the strongest 1–3.
 - A reusable lesson or confirmed preference that applies **everywhere** → propose a

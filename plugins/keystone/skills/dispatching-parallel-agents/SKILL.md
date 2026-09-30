@@ -9,9 +9,9 @@ description: Decide inline vs. subagent vs. multi-agent orchestration, then disp
 
 You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
 
-When you have multiple unrelated failures (different test files, different subsystems, different bugs), investigating them sequentially wastes time. Each investigation is independent and can happen in parallel.
+When you have multiple unrelated failures (different test files, different subsystems, different bugs) and each needs substantial investigation, they can run in parallel instead of one after another.
 
-**Core principle:** Dispatch one agent per independent problem domain. Let them work concurrently.
+**Core principle:** Once the ladder below says the work is worth delegating at all, dispatch one agent per independent problem domain and let them work concurrently.
 
 ## Escalation ladder: inline → delegate → orchestrate
 
@@ -118,7 +118,7 @@ digraph when_to_use {
 
 **Use when:**
 
-- 3+ test files failing with different root causes
+- 3+ test files failing with different root causes, each needing more than a handful of tool calls to run down
 - Multiple subsystems broken independently
 - Each problem can be understood without context from others
 - No shared state between investigations

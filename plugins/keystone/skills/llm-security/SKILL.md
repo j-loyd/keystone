@@ -16,6 +16,12 @@ instructions. Never let model/tool output reach a privileged action, a shell, a 
 another user without a trust boundary in between. (keystone's `scan.js` hook flags injection
 in tool output; `guard.js` blocks the dangerous sinks — but design for it too.)
 
+Two consequences for reviews. Prompt injection alone is not a finding — the finding is what
+the injected instruction can reach (a tool, a secret, another user's data). And a guardrail
+written into the prompt is not a boundary; only a control outside the model (authorization on
+the tool, an allowlist, a human approval) is. Check that the action is authorized for the
+user it runs on behalf of, not just that the model chose it.
+
 ## OWASP LLM Top 10 : 2025 — what to check
 
 ### LLM01 Prompt Injection (the core risk)

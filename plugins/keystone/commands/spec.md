@@ -35,7 +35,7 @@ per-section lens pass from the `brainstorming` skill's `section-lenses.md` inlin
 
 ## 2. Write the plan
 
-Invoke the **`writing-plans`** skill. It produces a task-by-task plan with `- [ ]` checkbox
+Load the **`writing-plans`** skill (Claude Code: the Skill tool with `keystone:writing-plans`). It produces a task-by-task plan with `- [ ]` checkbox
 steps, saved under **`docs/plans/`** (adaptive layout): a single
 `YYYY-MM-DD-<feature>.md` for small/medium work, or a `YYYY-MM-DD-<feature>/` **folder**
 with `plan.md` + `phase-N-*.md` when the work has ~3+ phases or spans subsystems. Then

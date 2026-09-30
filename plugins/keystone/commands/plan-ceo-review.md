@@ -66,7 +66,7 @@ Don't let your own first read be the only one. State the strongest argument _aga
 your recommendation — the steelman for the opposite call — in 2–3 sentences, then say
 whether it moved you. For HIGH-stakes bets (locks the roadmap, spends real budget or
 relationship capital, hard to reverse), escalate beyond self-critique to an **independent
-adversarial pass**: invoke the `adversarial-review` skill (`/challenge`) — keystone's
+adversarial pass**: load the `adversarial-review` skill, the one behind `/challenge` (Claude Code: the Skill tool with `keystone:adversarial-review`) — keystone's
 single home for the fresh-context, zero-authorship-memory read — carrying your product
 lens's question, "what's wrong with this recommendation," with no visibility into your
 reasoning so it isn't anchored by it. Don't hand-roll a parallel dispatch here; route

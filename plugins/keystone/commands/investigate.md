@@ -13,9 +13,8 @@ allowed-tools:
 
 You are investigating: **$ARGUMENTS**
 
-This command is a deliberate entry point into the **`systematic-debugging`** skill —
-invoke and follow it. It is keystone's single debugging discipline — every debug helper is
-de-duped into this one entry point.
+This command is a deliberate entry point into the **`systematic-debugging`** skill — load and
+follow it (Claude Code: the Skill tool with `keystone:systematic-debugging`). It is keystone's single debugging discipline.
 
 ## Iron law
 

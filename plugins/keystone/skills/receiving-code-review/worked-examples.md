@@ -36,12 +36,14 @@ You understand 1,2,3,6. Unclear on 4,5.
 ```
 Riley: "blocker — sync.ts:42 unbounded loop can hang on empty input"
 Sage: "high, confirmed — auth.ts:88 IDOR: traced request→DB row, no ownership check, exploit built"
-Sage: "low, suspected — cache.ts:12 possible race under concurrent writes, not reproduced"
+Sage: "needs validation — cache.ts:12 race under concurrent writes; exploitable only if the
+       cache is shared across instances — check the deploy config's replica count"
 
 ✅ Fix Riley's blocker and Sage's confirmed IDOR immediately — both are already demonstrated, no
-   re-verification needed. Spend a few minutes trying to reproduce the suspected race before
-   deciding to fix, defer, or push back on it.
-❌ Fix all three in file order, or fix the "high" before the "blocker" because it sounds scarier —
+   re-verification needed. Run the check Sage named for the race before deciding to fix, defer,
+   or push back on it.
+❌ Fix all three in file order, or fix the "high" before the "blocker" because it sounds scarier, or fix the race before the
+   check says it can happen —
    severity sets urgency, confidence sets whether verification comes first.
 ```
 
@@ -65,17 +67,10 @@ When feedback IS correct:
 ✅ "Fixed. [Brief description of what changed]"
 ✅ "Good catch - [specific issue]. Fixed in [location]."
 ✅ [Just fix it and show in the code]
-
-❌ "You're absolutely right!"
-❌ "Great point!"
-❌ "Thanks for catching that!"
-❌ "Thanks for [anything]"
-❌ ANY gratitude expression
 ```
 
-**Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
-
-**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
+State the fix and where it landed; the change itself shows you heard the feedback, so praise
+and thanks add nothing.
 
 ## Gracefully Correcting Your Pushback
 

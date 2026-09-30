@@ -74,17 +74,16 @@ There is no universal "clean" style — there's _this repo's_ style. Before edit
 - Read the surrounding code and match its idioms (naming, error handling, function shape).
 - Honor `CLAUDE.md` / project rules and any `CONVENTIONS.md` (or the `docs/codebase/` map if
   `onboard-codebase` produced one).
-- Apply the `coding-standards` skill for the cross-cutting baseline (DRY/KISS/YAGNI, naming,
-  magic numbers). For stack-specific patterns, use the narrower skill (`impeccable` for
+- Apply the `coding-standards` skill for the cross-cutting baseline (DRY/KISS/YAGNI, magic
+  numbers). For stack-specific patterns, use the narrower skill (`impeccable` for
   React/UI, `api-security` for endpoints) rather than guessing.
 
 Don't hardcode a language's conventions here — derive them from the code in front of you.
 
 ## Prove behavior is preserved — don't assert it
 
-This is the keystone difference: the official simplifier _claims_ "functionality intact"; you
-**verify** it (see `verification-before-completion` — evidence before claims, always). After
-applying simplifications:
+Verify behavior is preserved rather than asserting it (see `verification-before-completion`).
+After applying simplifications:
 
 1. **Run the checks the repo already has** — the test suite (or the subset covering the touched
    code), the type-checker, the linter. Run them _before_ you start too if you're unsure of the
