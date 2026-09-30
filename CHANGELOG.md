@@ -2,6 +2,66 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.9.0] — 2026-09-29
+
+A refresh for current frontier-model prompting, on Claude Code and Codex alike. A prompt audit
+(Anthropic's `prompt-audit` guide) ran across every skill, command, agent, and hook-injected
+string. Current frontier models follow instructions closely and literally, so the audit targeted
+specific text written for older models rather than length. Three upstream skill sets were reviewed alongside it for ideas.
+
+### Changed
+
+- **Plain rules instead of pressure language.** All-caps `MUST`/`NEVER` lead-ins and
+  banned-phrase lists became plain statements with their reasons (`receiving-code-review`,
+  `systematic-debugging`, `test-driven-development`, the spec-reviewer and implementer prompts,
+  the compaction notice, the instincts banner). The instincts banner now asks for each rule to be
+  weighed by its confidence rather than calling every rule absolute.
+- **Delegation follows the inline-first rule everywhere.** `plan-levels.md` and
+  `dispatching-parallel-agents` no longer default to subagents for small work; current
+  models already delegate readily.
+- **Plans split by shippable subsystem, not task count.** The 2–3-task cap assumed one execution
+  context per plan, which stopped holding once execution dispatched each slice fresh.
+- **Cross-skill hand-offs are explicit:** "load the `<name>` skill", with the Claude Code form
+  (the Skill tool with `keystone:<name>`) alongside, so each harness gets an instruction it can
+  act on.
+- **One review verdict vocabulary:** `/review`, `/ship`, and the code-reviewer agent all use
+  PASS / CONCERNS / FAIL.
+- **Security reviews gained a finding test and a third verdict.** A finding names the principal,
+  the boundary crossed, and the result; best-practice gaps go in a separate hardening list;
+  severity is anchored and capped at demonstrated impact; items that hinge on facts outside the
+  source are marked _needs validation_ with the check that settles them; every report states its
+  coverage. `security-review` also covers classes that sit between OWASP categories (proxy and
+  cache trust, SAML/WebAuthn/account linking, data-lifecycle leaks, resource amplification,
+  chained findings, privileged CI running untrusted code). `llm-security`: injection alone is not
+  a finding, and a prompt guardrail is not a boundary.
+- **`verification-before-completion`** now spells out what counts as a real check (not a
+  syntax-only run or a command that failed to start), for models that report done too early at
+  low effort.
+- **`/handoff` doubles as the end-of-day wrap-up:** it triggers on "wrapping up" and checks for
+  leftover debug probes, running processes, worktrees, and machine-only work.
+- **`/retro`** routes mechanical lessons to a lint rule, hook, or test instead of prose; **`/learn`**
+  prefers an earlier control and gives promoted instincts a retirement condition;
+  **`writing-skills`** adds a labeled routing-test set with a held-out split and warns against
+  single gold examples; **`designing-agent-systems`** compares changes task by task against
+  pre-declared thresholds.
+- `/review` drops its separate "cost-tiered depth" step; the fan-out step above it already
+  carries the tier routing.
+- `coding-standards` drops sections that restated defaults the model already follows;
+  `context-budget` assumes current models' 1M window.
+
+### Fixed
+
+- **`/research-notes` referenced a template that doesn't ship with the plugin**; the structure is
+  inline in the command.
+- **Stale citations and paths:** `plan-levels.md` cited a moved line; template paths now use
+  `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`, which resolves on both harnesses; the unreferenced repo-root `templates/plans` copy is removed.
+- **`using-git-worktrees` and `resolving-merge-conflicts` committed on their own**, contradicting
+  the no-auto-commit rule. Concluding a merge the user asked for is still covered.
+- **`scan.js` flagged its own pattern source.** Reading the scanner or its test fixtures is no
+  longer scanned — an exact two-file list, so a checked-out working tree is still scanned. Quoting
+  an attack still does not hide it; three tests pin both (266 total).
+- **Mermaid in the architecture HTML report** now uses `securityLevel: "strict"`.
+
 ## [0.8.1] — 2026-09-04
 
 Bug fixes in the safety layer, all three found by investigating why keystone's hooks were

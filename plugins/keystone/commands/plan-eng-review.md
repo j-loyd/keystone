@@ -64,7 +64,7 @@ State the strongest case _against_ your own recommendation — what would make t
 alternative, or "rethink," the right call — in 2–3 sentences, then say whether it moved
 you. For HIGH-stakes plans (touches auth/money/data-deletion, a one-way-door migration, or
 a new external dependency), escalate beyond self-critique to an **independent adversarial
-pass**: invoke the `adversarial-review` skill (`/challenge`) — keystone's single home for
+pass**: load the `adversarial-review` skill, the one behind `/challenge` (Claude Code: the Skill tool with `keystone:adversarial-review`) — keystone's single home for
 the fresh-context, zero-authorship-memory adversarial read — carrying your engineering
 lens's question, "what's the strongest reason this approach is wrong." Don't hand-roll a
 parallel `planner` dispatch here; route through that skill so there's one owner of the

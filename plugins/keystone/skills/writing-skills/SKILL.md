@@ -164,6 +164,10 @@ half. It has happened here.
 - **No-op lines** — sentences that change no behavior. Test each one: if deleting it changes
   nothing about what the agent does, delete it.
 - **Duplication** — the same meaning in two skills. Give it one owner and point at it.
+- **A single gold example** — the model copies an example's length, tone, and structure, so one
+  example becomes the template for every output. Use several deliberately varied examples labeled
+  illustrative, or none where the judgment is the model's own; keep a single exact example only
+  when it pins a format-sensitive output.
 - **Restating the model's defaults** — if a capable model already does it, the line is waste.
 - **Caching the environment** — a manifest, a `--help` output, or the code itself is a source of
   truth; a skill that restates one is a cache, and a cache goes stale silently. Cache what the
@@ -185,3 +189,9 @@ Structure checks tell you the file is well-formed, not that the skill is any goo
    unnecessary. A file read on every run belongs in `SKILL.md`.
 5. **Test on the weakest model you ship to.** Guidance calibrated for a top-tier model can be
    too sparse for a cheaper one running the same skill in a subagent.
+6. **Test routing separately from behavior.** Keep a small labeled prompt set for the
+   description: requests that should fire it, paraphrases of those, near-misses that should
+   not, requests a competing skill should win, and "don't use X" requests. Tune the description
+   against part of the set and check it on the rest, so it isn't fitted to the prompts you
+   wrote it from. Run it against the installed plugin, not the source tree — that's the copy
+   users get.

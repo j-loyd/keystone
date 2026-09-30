@@ -58,24 +58,6 @@ The mirror of this applies to what you find while working: defects, design smell
 worthwhile follow-ups get **surfaced separately, with enough context for the user to decide** —
 not folded into the current change, and not swallowed.
 
-## Naming
-
-```ts
-// good — descriptive, verb-noun for functions
-const marketSearchQuery = "election";
-async function fetchMarketData(id: string) {}
-function isValidEmail(e: string): boolean {}
-
-// bad — opaque
-const q = "election";
-function market(id) {}
-```
-
-## Type safety
-
-Use real types; avoid `any`/untyped escapes. Make illegal states unrepresentable where the
-language allows (unions, enums, branded types). In TS, prefer `unknown` + narrowing over `any`.
-
 ## Immutability — where it matters (and where it doesn't)
 
 Immutability is about **shared or observed state**, not a blanket ban on assignment.
@@ -107,14 +89,6 @@ stated as an absolute generates worse code on backend/builder paths — ignore i
 - Don't swallow errors silently; don't leak internals (stack traces, SQL) to callers/users.
 - Validate untrusted input at the boundary (e.g. a schema like Zod) and reject clearly.
 
-## Async
-
-Run independent work concurrently; await sequentially only when there's a real dependency.
-
-```ts
-const [a, b, c] = await Promise.all([getA(), getB(), getC()]); // not three awaits in a row
-```
-
 ## Magic numbers / strings
 
 Name a literal **when the name adds meaning or it's used in more than one place** —
@@ -122,21 +96,11 @@ Name a literal **when the name adds meaning or it's used in more than one place*
 (`* 0.01` for cents) may be clearer inline than behind a constant. Naming + duplication
 together is the signal to extract.
 
-## Function length & nesting
-
-- Split functions that do too much; one clear responsibility each.
-- Prefer **early returns / guard clauses** over deep nesting.
-
-```ts
-if (!user) return;
-if (!user.isAdmin) return;
-// ...happy path at the top indent level
-```
-
 ## Comments & docs
 
 - Comment the **why**, not the what. Don't narrate obvious code.
-- JSDoc/docstrings for public/exported APIs: purpose, params, returns, throws, an example.
+- For exported APIs, follow the file's existing docstring convention; where there is none,
+  document what the signature can't show — what it throws, units, side effects.
 
 ## Documentation & API claims
 
@@ -154,11 +118,6 @@ identically to a fact.
   `UNVERIFIED: option name not confirmed against the pinned version` does not. Carry the
   marker into the PR description too, so the claim is reviewable and not just greppable;
   it's the concrete form of the hedge `verification-before-completion` permits.
-
-## Tests
-
-- **AAA** (Arrange / Act / Assert); one behavior per test.
-- Descriptive names: `returns empty array when no markets match`, not `works`.
 
 ## Dependencies
 
@@ -219,7 +178,7 @@ with **no trigger** is the kind that silently becomes permanent — so always na
 - A new dependency for something the language's standard library already does
 - Names that only make sense from the line they sit on — `d`, `tmp`, `data2`, `handle`
 - A test named after the function rather than the behavior, or named `works`
-- A comment restating the line beneath it, next to an exported function with no docstring
+- A comment restating the line beneath it
 - A change that renames or restructures files the work didn't need to touch
 - A claim about a third-party API with no anchored link, or hedged prose standing in for a checked fact
 - A hand-edited lockfile, or several unrelated packages bumped in one change

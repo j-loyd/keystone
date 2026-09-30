@@ -42,7 +42,7 @@ Reviewer subagent:
     | Task Decomposition | Tasks have clear boundaries, steps are actionable |
     | Buildability | Could an engineer follow this plan without getting stuck? |
     | Risk + Discovery | Every task has a `Risk` tag; every non-LOW task has a non-empty `Verified-behavior` block |
-    | Context Budget | Task/file count is justifiable for one plan (see budget note below) |
+    | Plan Scope | One plan per independently shippable subsystem (see scope note below) |
 
     ## Risk + Discovery Gate (blocking)
 
@@ -61,12 +61,10 @@ Reviewer subagent:
       later", "future enhancement." If such language delivers only a shadow of a requirement the
       spec or a locked decision says to fully deliver, that is scope reduction disguised as
       versioning → **FAIL**. Quote the line and name the requirement it contradicts.
-    - **Context budget breach** → CHALLENGE. A single plan that packs too many tasks or touches
-      too many files exceeds what one execution context can hold reliably. Defaults: **2–3 tasks**
-      is the target, **5+ tasks** or **15+ files** is a breach. Not an automatic FAIL — but the
-      plan must either split, or carry a one-line justification for why these tasks are one
-      indivisible unit (e.g. a mechanical rename across many files). No justification and over the
-      threshold → FAIL with "split this plan."
+    - **Scope breach** → CHALLENGE. A plan that bundles independently shippable subsystems
+      (each could be built and tested on its own) should be split, one plan per subsystem.
+      Task or file count alone is not a breach — execution dispatches per slice, so plan length
+      is not bounded by one context window.
 
     ## Calibration
 

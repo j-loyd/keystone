@@ -22,8 +22,7 @@ This complements, not replaces, the `deep-research` skill (which _does_ the inve
 
 Topic: **$ARGUMENTS** (or the topic of the research just done).
 
-Write to `docs/research/<topic-slug>.md` using the structure in
-`keystone/templates/research/topic.md`:
+Write to `docs/research/<topic-slug>.md` with this structure:
 
 - **Summary** + **Recommendation** — the bottom line and the one-line why; name the chosen
   stack/library + version and the alternatives you rejected.

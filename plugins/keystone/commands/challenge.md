@@ -12,7 +12,7 @@ allowed-tools:
 # Challenge — attack the doc before the code does
 
 Stress-test **$ARGUMENTS**. This is a deliberate entry point into the **`adversarial-review`**
-skill — invoke and follow it. The independence is the whole point: the pass runs in a fresh
+skill — load and follow it (Claude Code: the Skill tool with `keystone:adversarial-review`). The independence is the whole point: the pass runs in a fresh
 context with zero authorship memory (ideally a different model tier), because a model grading its
 own plan just rationalizes it.
 

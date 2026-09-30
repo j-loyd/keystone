@@ -28,9 +28,11 @@ code.
    specific object_ (not just logged-in/some-role)? escaped/parameterized for that sink?
    fails closed? An unbroken untrusted→sink path with no control is a finding.
 4. **Adversarially verify.** Before reporting, construct the concrete exploit and confirm
-   the path is actually reachable and unguarded. If you can't substantiate it, label it
-   _suspected_ and say what you'd need to confirm. Default to skepticism about your own
-   findings — a plausible-but-unreachable bug is noise.
+   the path is actually reachable and unguarded. If the deciding fact isn't in the source
+   (proxy, identity provider, deploy config), mark it _needs validation_ and name the check
+   that would settle it. Default to skepticism about your own findings — a
+   plausible-but-unreachable bug is noise. Apply the `security-review` skill's finding test
+   and severity anchors.
 
 ## When the target is a diff (differential review)
 
@@ -61,6 +63,8 @@ code.
 ## Output
 
 Findings grouped by severity — **critical / high / medium / low** — each with:
-`file:line`, the **traced path** (source → sink), the concrete exploit, confidence
-(confirmed / suspected), and a specific fix. End with the top must-fix-before-ship items.
+`file:line`, the **traced path** (source → sink), the concrete exploit, and a specific fix.
+Then a **needs validation** list (no severity; the missing fact and the check to run), a
+separate **hardening** list, and a coverage statement: what you reviewed, what you deferred,
+what was out of scope. End with the top must-fix-before-ship items.
 **Audit only — never edit, commit, or push.**

@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Write a forward-looking resume note for the current work — what's done, what's next, and the gotchas — so a fresh session (or you, post-compaction) can pick up mid-task without re-deriving everything. Use before pausing, before a context reset, or when handing work to another session. Resume it with /pickup.
+description: Write a forward-looking resume note for the current work — what's done, what's next, and the gotchas — so a fresh session (or you, post-compaction) can pick up mid-task without re-deriving everything. Use before pausing, before a context reset, when handing work to another session, or when the user is wrapping up or done for the day. Resume it with /pickup.
 argument-hint: "[optional: where to write it; defaults to docs/handoffs/<date>.md]"
 allowed-tools:
   - Bash
@@ -53,7 +53,7 @@ Write only what you actually know — don't pad. If a field is empty, say so.
    offer a one-tap `/learn` for each (evidence = what happened this session), so it survives
    beyond the handoff note.
 3. **Update the continuity index** `docs/handoffs/README.md` — the file `/pickup` reads first.
-   Seed it from `plugins/keystone/templates/handoffs/README.md` if it does not exist yet, then
+   Seed it from `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/templates/handoffs/README.md` if it does not exist yet, then
    append (or update) this note's row in the **Handoff notes** table, newest first:
 
    `| <YYYY-MM-DD> | docs/handoffs/<YYYY-MM-DD>.md | open | <one-line Next action> |`
@@ -61,7 +61,12 @@ Write only what you actually know — don't pad. If a field is empty, say so.
    Set Status to **open**. If a previous same-day/same-topic note is now stale, mark its row
    **superseded** rather than leaving two live rows.
 
-4. Tell the user the path. Honor no-auto-commit — leave it for them to commit or discard.
+4. **Leave nothing running or stranded.** Before walking away, check for and report (don't
+   silently fix): tagged debug probes the investigation added but never removed (grep the run's
+   marker), background processes or dev servers you started, worktrees you created, and work
+   that exists only on this machine (uncommitted changes, or a branch with no upstream). List
+   each in **Current state** so the next session isn't surprised by it.
+5. Tell the user the path. Honor no-auto-commit — leave it for them to commit or discard.
 
 To resume: run `/clear`, then a fresh session runs `/pickup`. It reads `docs/handoffs/README.md`
 first, finds the newest **open** row, and continues from **Next action** (marking the row

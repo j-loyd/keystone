@@ -21,7 +21,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
   `plan.md` overview (goal, architecture, **phase index table**, revision log) plus one
   `phase-N-<name>.md` per phase — each phase file is itself a task-based plan (the structure
   below). Use a folder when the work has ~3+ phases or spans multiple subsystems. Templates:
-  `keystone/templates/plans/{README,plan}.md`.
+  `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/templates/plans/{README,plan}.md`.
 - Keep a `docs/plans/README.md` index of active plans + status; move completed plans (file
   or folder) to `docs/plans/archive/`. Versioning is git — record material re-plans in a
   `## Revision log`, not duplicate files.
@@ -401,7 +401,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **1b. Goal-backward:** State the phase goal in one line, then list the 3–5 truths that must hold for it. Point each truth to a task that makes it true. A truth with no covering task — or covered only by a task that creates an artifact without wiring it — is a gap; add the task. (Completeness is not achievement.)
 
-**1c. Context budget:** Count tasks and distinct files in this plan. 2–3 tasks is the target; 5+ tasks or 15+ files means split the plan, or justify in one line why it is one indivisible unit.
+**1c. Plan size:** Execution dispatches per slice, so a plan's length is not bounded by one context window. Split the plan when it spans independently shippable subsystems (see Scope Check), not at a task or file count.
 
 **1d. Lean process:** for each gate, checkpoint, artifact, or review step the plan itself
 adds — what concretely breaks without it? Cut any with no answer: ceremony is debt every

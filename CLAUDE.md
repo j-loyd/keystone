@@ -7,8 +7,7 @@ keystone skills themselves; this file is only for what's specific to keystone-th
 
 keystone carries its version in **three** places that must always move together. The harness's
 plugin-update check reads the **manifests**, not `VERSION` — bumping only `VERSION` makes the
-update check report "already at latest" on a stale number (this bit us: `VERSION` reached 0.27
-while the manifests were stuck at 0.18). On every release, bump all three:
+update check report "already at latest" on a stale number. On every release, bump all three:
 
 1. `VERSION`
 2. `plugins/keystone/.claude-plugin/plugin.json` → `version`

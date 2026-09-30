@@ -5,7 +5,7 @@ description: Grilling session that challenges your plan against the existing dom
 
 <what-to-do>
 
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+Interview me about this plan until we reach a shared understanding. Walk down the branches of the design tree that bear on the decision, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
 
 Before the first question, state your read of the plan in one sentence with a confidence number — and below ~70%, name the missing pieces on the same line (`CONFIDENCE: ~40% — missing: which context owns this, what "settlement" means here`). Update the number as answers land; it's there to keep you honest about how settled the understanding actually is.
 
@@ -56,8 +56,8 @@ Create files lazily — only when you have something to write. If no `CONTEXT.md
 ### The onboarding map, if one exists
 
 If `onboard-codebase` has already run, `docs/codebase/INDEX.md` plus its sibling docs
-(`ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `INTEGRATIONS.md`, `TESTING.md`,
-`CONCERNS.md`) hold a **structural** snapshot — where things live, established patterns, known
+(`STACK.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `INTEGRATIONS.md`,
+`TESTING.md`, `CONCERNS.md`) hold a **structural** snapshot — where things live, established patterns, known
 risk areas. Read it before exploring from scratch; it's a shortcut, not a source of truth.
 Check `INDEX.md`'s `Built at: <sha>` against `HEAD` — if the repo has moved far past that SHA,
 treat the map as directional and verify anything load-bearing against the live code.

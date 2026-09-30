@@ -99,8 +99,8 @@ function buildContext(ranked) {
     .map((i) => `- [${i.confidence}%] ${i.trigger} → ${i.action}`)
     .join("\n");
   return (
-    `⚡ Active rules this session (from INSTINCTS.md — apply these proactively, ` +
-    `they are confirmed preferences, not suggestions):\n${bullets}`
+    `⚡ Active rules this session (from INSTINCTS.md — confirmed preferences; apply each ` +
+    `one when its trigger matches, weighted by its confidence):\n${bullets}`
   );
 }
 

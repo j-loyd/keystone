@@ -19,8 +19,9 @@ flow, never re-prompted per task, never a status enum.
 | **Execute (scaffold)** | none (in-context)                                                  | run-state (resumable, `/pickup`)                                                                                                            | run-state + run-manifest + per-task summary spillover                                                                                                             |
 | **Fits**               | small, reversible, leaf/1-file                                     | real feature, bounded blast radius                                                                                                          | multi-subsystem, high-risk, hard-to-reverse                                                                                                                       |
 
-Subagent-driven execution is the **default at every level**; inline/direct is the narrow
-exception, only for a genuinely trivial single-edit change.
+Subagent-driven execution is the default at Medium and Heavy. At Light, a task you can finish
+in a handful of tool calls runs inline (the inline rung in `dispatching-parallel-agents`);
+dispatch it only when its read volume would swamp your own window.
 
 A level sets **defaults**. An individual task's Risk tag can still escalate its own gates above
 the run default — **ceiling, not average, wins per task**. Gate definitions live in exactly one
@@ -37,7 +38,7 @@ not feel:
 - **# of HIGH / MED Risk tags**
 - **# subsystems / files touched**
 - **safety-surface present** — the six signals: auth / secrets / money / deletion / irreversible
-  / external-facing `[Source: writing-plans/SKILL.md:144]`
+  / external-facing `[Source: writing-plans/SKILL.md, Risk tagging → "HIGH — if ANY"]`
 - **novel-domain / research need**
 - **reversibility**
 
@@ -58,7 +59,7 @@ At plan-finalization, compare declared vs observed:
 - **observed > declared (under-scoped)** ⇒ **advisory** challenge: name the signals, recommend
   the higher level, then proceed at the declared level unless the user re-levels.
 - **the delta crosses a reversibility/security line** — specifically: declared Light/Medium AND
-  any safety-surface signal `[Source: writing-plans/SKILL.md:144]` is present ⇒ **blocking**:
+  any safety-surface signal `[Source: writing-plans/SKILL.md, Risk tagging]` is present ⇒ **blocking**:
   stop and reconfirm before execution. This is the **one** blocking trigger; everything else is
   advisory.
 - **observed < declared (over-scoped)** ⇒ a one-line note, never blocking.

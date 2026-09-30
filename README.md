@@ -56,7 +56,7 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 - **Security (first-class)** — three skills: `security-review` (OWASP 2025, source→sink
   methodology), `api-security` (full OWASP API Top 10:2023 — REST/GraphQL/webhooks), and
   `llm-security` (OWASP LLM Top 10:2025); the `security-reviewer` agent (traces +
-  adversarially verifies, confirmed-vs-suspected), the `/cso` audit, and the always-on
+  adversarially verifies, confirmed / needs validation), the `/cso` audit, and the always-on
   `scan.js` injection tripwire + `guard.js` secret/dangerous-sink blocks. `/review` and the
   reviewer agent are **diff-aware** — git-history regression detection, blast-radius, and
   adaptive scope.

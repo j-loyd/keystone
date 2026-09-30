@@ -95,8 +95,9 @@ fresh isolated context, and return **compressed, ideally schema-constrained resu
 Every dispatch prompt states: **objective** (specific outcome, not a domain), **output format**
 (exact shape), **tool guidance** (which, preferred order), **boundaries** (explicitly out of
 scope). Vague scoping is the top measured failure source in multi-agent systems — workers
-duplicate, gap, and drift. Effort belongs in the prompt too (rough tool-call/token budget per
-worker), not left to worker judgment.
+duplicate, gap, and drift. Set effort on the dispatch too — the worker's effort level where the
+primitive takes one, and a hard budget in the harness where cost matters; a tool-call count
+written into the prompt is a wish, not a control.
 
 ## The harness layers — what you're actually designing
 
@@ -222,6 +223,10 @@ ones.
   binary rubrics, decompose judgments into narrow checks, and validate the judge against
   human-labeled samples before trusting it. Diverse judges beat N copies of one.
 - Trace production runs from day one; evals without transcript-reading is score theater.
+- **Judging a change** (a prompt edit, a model swap, an effort change): run baseline and
+  candidate on the same tasks, repeated, and compare them task by task. Declare the pass
+  threshold before looking at results, report every per-task regression even when the average
+  improves, and treat safety cases as must-pass rather than part of the average.
 
 ## Design note (the deliverable)
 

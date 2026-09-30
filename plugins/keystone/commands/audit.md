@@ -14,7 +14,7 @@ allowed-tools:
 Scan **$ARGUMENTS** (default: the whole tree) for over-engineering and report what to cut.
 This command **reports only** — it applies nothing, so it's safe to run anywhere.
 
-Follow the **`auditing-for-overengineering`** skill for the taxonomy and the boundaries. The
+Load and follow the **`auditing-for-overengineering`** skill (Claude Code: the Skill tool with `keystone:auditing-for-overengineering`) for the taxonomy and the boundaries. The
 short version:
 
 ## Process

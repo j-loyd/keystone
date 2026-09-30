@@ -341,7 +341,8 @@ Before marking work complete:
 - [ ] Tests use real code (mocks only if unavoidable)
 - [ ] Edge cases and errors covered
 
-Can't check all boxes? You skipped TDD. Start over.
+A box you can't check needs a stated reason (see _When it applies_); otherwise close the gap
+before calling the work done.
 
 ## In keystone's Crew Workflow
 
@@ -378,7 +379,8 @@ next crew member acts on.
 
 Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix and prevents regression.
 
-Never fix bugs without a test.
+A bug fix ships with a test that fails against the old code — or, where no correct seam exists,
+a written note saying so (see _Before RED - Agree the Seam_).
 
 ## TDD for LLM and Agent Code
 

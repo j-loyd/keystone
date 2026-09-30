@@ -28,11 +28,11 @@ Tests must verify real behavior, not mock behavior. Mocks are a means to isolate
 
 ## The core rules
 
-```
-1. NEVER test mock behavior
-2. NEVER add test-only methods to production classes
-3. NEVER mock without understanding dependencies
-```
+1. Test the real behavior, not the mock — an assertion about a mock passes whether or not the
+   code works.
+2. Keep test-only methods out of production classes; put them in test utilities.
+3. Understand what a dependency does before mocking it — a mock that drops a side effect the
+   test relies on makes the test lie.
 
 ## Anti-Pattern 1: Testing Mock Behavior
 

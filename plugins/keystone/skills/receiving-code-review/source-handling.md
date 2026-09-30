@@ -45,10 +45,10 @@ triage:
   definition; a **CONCERNS** item is the orchestrator's call to accept or loop — you don't get to
   unilaterally drop it, but you can make the case with verification.
 - **Sage (`security-reviewer` / `/cso`)** — findings grouped **critical / high / medium / low**,
-  each carrying an explicit **confidence: confirmed / suspected**, and, for confirmed findings,
-  the traced source→sink path and concrete exploit. Sage already defaults to skepticism about her
-  own findings — a `suspected` label means she tried and couldn't build the exploit, not that she
-  didn't look.
+  each with the traced source→sink path and concrete exploit, plus a separate **needs
+  validation** list (no severity) and a **hardening** list. Sage already defaults to skepticism
+  about her own findings — a needs-validation item means the deciding fact isn't visible in the
+  source, not that she didn't look; run the check it names before acting on it.
 - **The user, inline** — no severity system at all. Treat every item per Handling
   Unclear Feedback above, not as a pre-triaged queue.
 

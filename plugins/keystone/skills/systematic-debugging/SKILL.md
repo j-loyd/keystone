@@ -25,8 +25,6 @@ without a reproduction is a hunch, and Phase 3 will happily "confirm" it.
 
 ### Phase 1: Root Cause Investigation
 
-**BEFORE attempting ANY fix:**
-
 **Standing rule for the whole investigation — tag every probe you add.** Pick one marker for
 the run (`[DEBUG-a4f2]`; a random suffix is fine) and prefix every log, print, or temporary
 assertion the investigation adds with it. Removing them later is then a single grep rather
@@ -144,9 +142,8 @@ survive, tagged logs die. The Phase 4 checklist greps for this marker.
 
 5. **Gather Evidence in Multi-Component Systems**
 
-   **WHEN system has multiple components (CI → build → signing, API → service → database):**
-
-   **BEFORE proposing fixes, add diagnostic instrumentation:**
+   When the failure crosses components (CI → build → signing, API → service → database),
+   instrument each boundary before proposing a fix:
 
    ```
    For EACH component boundary:
@@ -184,9 +181,7 @@ survive, tagged logs die. The Phase 4 checklist greps for this marker.
 
 6. **Trace Data Flow**
 
-   **WHEN error is deep in call stack:**
-
-   See `root-cause-tracing.md` in this directory for the complete backward tracing technique.
+   When the error is deep in the call stack, see `root-cause-tracing.md` in this directory for the complete backward tracing technique.
 
    **Quick version:**
    - Where does bad value originate?
@@ -203,9 +198,8 @@ survive, tagged logs die. The Phase 4 checklist greps for this marker.
    - What works that's similar to what's broken?
 
 2. **Compare Against References**
-   - If implementing pattern, read reference implementation COMPLETELY
-   - Don't skim - read every line
-   - Understand the pattern fully before applying
+   - If you're adapting a pattern, read the reference implementation in full before applying
+     it — the difference that matters is usually in the part a skim skips.
 
 3. **Identify Differences**
    - What's different between working and broken?
@@ -263,7 +257,7 @@ survive, tagged logs die. The Phase 4 checklist greps for this marker.
    - Automated test if possible
    - One-off test script if no framework
    - MUST have before fixing
-   - Use the `test-driven-development` skill for writing proper failing tests
+   - Load the `test-driven-development` skill (Claude Code: the Skill tool with `keystone:test-driven-development`) for writing proper failing tests
    - **Pin it at a seam that exercises the real bug pattern.** A test placed too shallow —
      one caller where the bug needs several, a unit boundary that can't reproduce the chain
      that triggered it — goes green without proving anything, and that's worse than no test:

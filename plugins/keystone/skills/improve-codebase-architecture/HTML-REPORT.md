@@ -23,7 +23,7 @@ The architectural review is rendered as a single self-contained HTML file in the
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "strict" });
     </script>
     <style>
       /* small custom layer for things Tailwind doesn't cover cleanly:

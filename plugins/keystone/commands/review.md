@@ -11,8 +11,8 @@ allowed-tools:
 
 # Review — is this safe to merge?
 
-This is keystone's **one** code reviewer (it replaces the various overlapping
-reviewers). It reviews the diff in **$ARGUMENTS** (default: current branch vs. its base).
+This is keystone's **one** code reviewer. It reviews the diff in **$ARGUMENTS** (default:
+current branch vs. its base).
 
 > Prefer dispatching the **`code-reviewer`** agent through this harness's subagent-dispatch
 > primitive (Claude Code's Task tool, or the equivalent elsewhere) so the review runs in a
@@ -145,20 +145,13 @@ your own prior findings while you do it. Tag its output `ADVERSARIAL:` and merge
 verdict the same way as the specialist findings. If it turns up nothing, say so plainly —
 that's a real result, not a skipped step.
 
-### 5. Cost-tiered depth
-
-Scale effort to the diff. Small/mechanical diff → review inline yourself. Large or
-high-risk diff → fan out per-file at the **cheap tier** to flag candidates, escalate only
-the flagged spots to the **mid tier**, and reserve the **high tier** for genuinely
-ambiguous calls — with the **top tier** held for adjudication seats only, per
-`designing-agent-systems`. Don't burn the big model on boilerplate.
-
-### 6. Verdict
+### 5. Verdict
 
 Group findings by severity (**blocker / should-fix / nit**) with `file:line` refs, each
 with its blast radius and (for security findings) the attack path. **State your coverage
 honestly** — what you reviewed deeply, what you sampled, and your confidence. End with
-**PASS** or **FAIL** and the must-fix list. If the author wants to act on the feedback,
+**PASS**, **CONCERNS** (should-fixes only — ship if accepted), or **FAIL** (blockers) and
+the must-fix list. If the author wants to act on the feedback,
 point them at the `receiving-code-review` skill.
 
 Do not commit or push anything (see the no-auto-commit rule).

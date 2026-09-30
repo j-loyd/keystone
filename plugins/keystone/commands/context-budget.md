@@ -113,8 +113,8 @@ Produce a footprint table, sorted by estimated cost (biggest first):
 | settings / hooks             |          … |            … | —                     |
 
 `% of window = est tokens ÷ the session model's context window` — state which window you used
-in the table caption. Use 200k unless you know the session runs a 1M-context model; on a
-1M window the percentages shrink 5x but the
+in the table caption. Use the session model's actual window — current frontier models
+commonly run 1M; use 200k only for a smaller-context model. The percentages differ 5x between the two, but the
 _ranking_ — and the always-loaded-vs-lazy-loaded distinction — matters exactly the same, since
 every always-on token is still paid on every single turn. Under each row, name the specific
 offenders the bash blocks surfaced. The point is the ranking, not the decimals.

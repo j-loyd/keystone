@@ -29,7 +29,7 @@ Work these in order:
 5. **Write design doc** — save to `docs/specs/YYYY-MM-DD-<topic>-design.md` (leave it uncommitted — the no-auto-commit rule applies here too)
 6. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 7. **User reviews written spec** — ask user to review the spec file before proceeding
-8. **Transition to implementation** — invoke writing-plans skill to create implementation plan. If the spec implies crypto/auth/date-tz/money/parsing or a new dependency, flag it so the plan's anti-reinvention gate picks it up.
+8. **Transition to implementation** — load the `writing-plans` skill (Claude Code: the Skill tool with `keystone:writing-plans`) to create the implementation plan. If the spec implies crypto/auth/date-tz/money/parsing or a new dependency, flag it so the plan's anti-reinvention gate picks it up.
 
 ## Process Flow
 
@@ -58,7 +58,7 @@ digraph brainstorming {
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is invoking writing-plans.** Implementation skills come after the plan exists, not straight out of the design — skipping the plan skips the task breakdown and the anti-reinvention gate.
 
 ## The Process
 
@@ -194,8 +194,7 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 **Implementation:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
-- Do NOT invoke any other skill. writing-plans is the next step.
+- Load the `writing-plans` skill (Claude Code: the Skill tool with `keystone:writing-plans`) to create a detailed implementation plan
 
 ## When talking it out isn't enough — build a throwaway
 

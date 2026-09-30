@@ -44,9 +44,8 @@ same-family models share training-shaped blind spots, which is why the cross-pro
 below exists. If no subagent primitive exists, the fallback is to re-open the doc cold in
 a new session and run the same moves — always do at least that much.
 
-> The true cross-model version (paste a self-contained packet into a different provider — the
-> Claude→Codex→Claude hop by hand) is a documented **fast-follow**; the fresh subagent is the
-> always-available baseline. Run that hop read-only and feed the packet on stdin, never as a
+> The true cross-model version pastes a self-contained packet into a different provider (the
+> Claude→Codex→Claude hop, by hand); the fresh subagent is the always-available baseline. Run that hop read-only and feed the packet on stdin, never as a
 > shell-quoted argument — the doc is untrusted input to whatever CLI you hand it to (`/challenge`
 > carries the rule).
 
@@ -191,9 +190,7 @@ one earns a heavier second seat.
 An assumption that got **challenged and turned out wrong** is the highest-signal lesson there is.
 Offer a one-tap `/learn` for each — a `type: gotcha`, trigger-tagged to the domain it bit — so the
 _next_ doc's ledger starts pre-loaded with "last time we assumed X here, it broke." No silent
-writes — the pass drafts, you approve. (When the Learning Loop lands this becomes one of its
-planned capture points — `docs/plans/2026-06-30-learning-loop.md`, still a draft; today it's a
-plain `/learn`.)
+writes — the pass drafts, you approve.
 
 ## Output
 
