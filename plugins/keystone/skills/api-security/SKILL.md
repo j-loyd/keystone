@@ -1,36 +1,26 @@
 ---
 name: api-security
-description: Security review for APIs — the full OWASP API Security Top 10 (2023), with patterns for REST (Next.js route handlers, Hono on Cloudflare Workers), GraphQL, and webhooks / third-party consumption. Use when building or reviewing any endpoint, resolver, webhook receiver, or outbound API call. Stack-neutral principles; examples are illustrative. Pairs with security-review (web) and llm-security (agent).
+description: Security review for APIs — the OWASP API Security Top 10 (2023) for REST, GraphQL, and webhooks / third-party consumption, with the idempotency, SSRF, and inventory details reviews usually miss. Use when building or reviewing any endpoint, resolver, webhook receiver, or outbound API call. Pairs with security-review (web) and llm-security (agent).
 ---
 
 # API Security
 
 APIs fail differently from web pages — the top risks are **authorization** (per-object,
 per-property, per-function) and **abuse of legitimate endpoints**, not classic injection.
-This skill is the full OWASP API Security Top 10 (2023) applied to the REST / GraphQL /
-webhook stack. Trace every endpoint: **who is calling, which object, which fields, how
-often, and do they consume an untrusted upstream?**
+This skill maps the OWASP API Security Top 10 (2023) onto REST / GraphQL / webhooks. Trace
+every endpoint: **who is calling, which object, which fields, how often, and do they consume
+an untrusted upstream?** Method, verdicts (confirmed / rejected / needs validation), severity
+anchors, and refusal-aware dispatch are in `security-review`; label each confirmed finding with
+its API category. For a full-codebase audit, the user runs `/cso`.
 
 ## OWASP API Top 10 : 2023
 
 ### API1 Broken Object Level Authorization (BOLA / IDOR) — #1 cause of breaches
 
 Every object access must verify the caller may access **that specific id** — not just
-"authenticated" or "has a role."
-
-```typescript
-// FAIL: trusts the id from the request
-const doc = await db.document.findUnique({ where: { id: params.id } });
-
-// PASS: scope to the caller (or enforce via RLS)
-const doc = await db.document.findFirst({
-  where: { id: params.id, ownerId: session.user.id },
-});
-if (!doc) return Response.json({ error: "not found" }, { status: 404 }); // 404, not 403
-```
-
-Test every endpoint with another user's id. Use random/UUID ids (not sequential) as
-defense-in-depth, never as the control itself. Enforce at the data layer (Supabase RLS, or an
+"authenticated" or "has a role." Scope the query to the caller (`id AND owner_id`), and return
+404, not 403, on a miss so ids can't be enumerated. Test every endpoint with another user's id.
+Random/UUID ids are defense-in-depth, never the control itself. Enforce at the data layer (Supabase RLS, or an
 explicit owner/tenant filter in the handler/query for Hono/D1/Databricks).
 
 ### API2 Broken Authentication
@@ -55,15 +45,8 @@ Two halves — guard both:
 - **Excessive data exposure (output):** return only fields the caller may see. Never
   `select('*')` an object to the client; serialize through an explicit allowlist DTO.
 - **Mass assignment (input):** never spread `req.body` into a write — whitelist updatable
-  fields with a Zod schema so `role`, `ownerId`, `isAdmin`, `balance` can't be set.
-
-```typescript
-const Patch = z
-  .object({ name: z.string().max(100), bio: z.string().max(500) })
-  .strict();
-const data = Patch.parse(await req.json()); // strict() rejects unknown keys
-const Public = (u) => ({ id: u.id, name: u.name }); // never leak email/role/hash
-```
+  fields with a strict schema (Zod `.strict()` rejects unknown keys) so `role`, `ownerId`,
+  `isAdmin`, `balance` can't be set.
 
 ### API4 Unrestricted Resource Consumption
 
@@ -223,10 +206,7 @@ to a sink (DB/HTML/shell) unescaped. A compromised upstream shouldn't become you
 - [ ] Auth: JWT alg/exp/aud verified; API keys hashed/scoped; auth endpoints rate-limited
 - [ ] Resource caps: rate limits via a durable store (serverless/edge-appropriate), max pagination, payload size, timeouts
 - [ ] Function-level authz server-side per route; default deny
-- [ ] Sensitive business flows have anti-automation friction + idempotency
-- [ ] Idempotency keys derive from the intent (not the attempt) and are claimed atomically via a uniqueness constraint on `(principal, key)`, not look-up-then-write on the key alone
-- [ ] Same key + different payload is rejected via a stored payload hash, not replayed
-- [ ] Idempotency key retention outlives the longest replay / dead-letter window
+- [ ] Sensitive business flows have anti-automation friction + idempotency: keys derived from the intent, claimed atomically on `(principal, key)`, payload-hash checked, retained past the longest replay window
 - [ ] User-supplied URLs allowlisted + private ranges blocked; connection made to the validated address (pinned IP or egress proxy), re-checked on each redirect (SSRF)
 - [ ] Headers + CORS allowlist; no verbose errors; consistent 401/403/404
 - [ ] Endpoint + version inventory; no debug/non-prod routes or introspection in prod
@@ -237,25 +217,19 @@ to a sink (DB/HTML/shell) unescaped. A compromised upstream shouldn't become you
 
 | Rationalization | Reality |
 | --- | --- |
-| "Authorization is handled in the middleware" | Middleware knows the caller is authenticated; it rarely knows which object this handler is about to load. The object-level check belongs where the id is resolved — and a route registered outside the group has no middleware at all. |
-| "The id is a UUID, nobody's guessing it" | Unguessable isn't unauthorized. Ids leak through exports, shared links, referrer headers, logs, and support tickets, and the ownership predicate costs one clause. |
-| "The client won't send that field" | Your client won't. The request is a document anyone can compose; the schema is the only thing deciding what the handler accepts. |
-| "It's an internal service calling, so the caller is trusted" | An internal caller is an unauthenticated caller with a friendlier name until something verifies it — and it forwards whatever a user handed it, so its requests carry untrusted content even when the service itself is honest. |
-| "We'll add rate limits later" | Later tends to arrive as the incident. An unbounded endpoint gets found by whoever is scanning, on their schedule rather than yours. |
-| "Rate limiting is the gateway's job" | Worth confirming rather than assuming, and it only covers request counts. Per-business-action limits — signups, resets, coupons, expensive exports — are shaped by logic the gateway can't see. |
-| "This is read-only, so authorization matters less" | Exfiltration doesn't need a write. Reads are what most breaches consist of. |
-| "Returning the whole record is simpler — the UI only renders two fields" | The response is the API; what the UI renders is a display choice, and the next consumer reads the rest. Serialize through an allowlist. |
-| "That vendor's API is fine, we've consumed it for years" | Trust in the vendor isn't validation of the response. A compromised — or merely changed — upstream sends its output straight into your database, your HTML, or your shell. |
+| "Authorization is handled in the middleware" | Middleware knows the caller is authenticated; it rarely knows which object this handler is about to load. The object-level check belongs where the id is resolved. |
+| "The id is a UUID, nobody's guessing it" | Unguessable isn't unauthorized. Ids leak through exports, shared links, referrers, logs, and support tickets. |
+| "It's an internal service calling, so the caller is trusted" | It forwards whatever a user handed it, so its requests carry untrusted content even when the service itself is honest. |
+| "Rate limiting is the gateway's job" | It only covers request counts. Per-business-action limits (signups, resets, coupons, exports) need logic the gateway can't see. |
+| "That vendor's API is fine, we've consumed it for years" | Trust in the vendor isn't validation of the response. A compromised or merely changed upstream writes straight into your database, HTML, or shell. |
 
 ## Red flags
 
 - A handler that takes an id from the request and queries it with no owner or tenant predicate
 - Object-level authorization asserted only in middleware, or only by which links the UI renders
-- A whole ORM entity or `select('*')` result returned to a client
-- A write assembled by spreading the request body
+- A whole ORM entity or `select('*')` result returned to a client, or a write assembled by spreading the request body
 - A list or search endpoint with no maximum page size, or an export with no cap
 - An in-memory rate limiter on a runtime with no long-lived process
-- An endpoint whose auth requirement nobody can state without reading the handler
 - An older API version still serving traffic that no team claims to own
 - Debug routes, seeded test endpoints, or GraphQL introspection reachable in production
 - A webhook handler that parses the body before verifying the signature, or verifies against a re-serialized copy of it
@@ -266,3 +240,5 @@ to a sink (DB/HTML/shell) unescaped. A compromised upstream shouldn't become you
 
 - [OWASP API Security Top 10:2023](https://owasp.org/API-Security/editions/2023/en/0x11-t10/)
 - Pairs with `security-review` (web/OWASP 2025) and `llm-security` (LLM Top 10).
+- [Cloudflare security-audit](https://github.com/cloudflare/security-audit-skill) — optional
+  companion for full-audit methodology (keystone marketplace entry `security-audit`).

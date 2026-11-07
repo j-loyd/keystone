@@ -59,21 +59,21 @@ test("clusterEntries does not group on the type tag alone (domain terms only)", 
   assert.deepStrictEqual(clusterEntries(entries), []);
 });
 
-test("missContext is a one-line /learn nudge", () => {
+test("missContext is a one-line /wrap nudge", () => {
   const msg = missContext("my-repo");
-  assert.match(msg, /\/learn/);
+  assert.match(msg, /\/wrap/);
   assert.match(msg, /No lessons banked/i);
   assert.match(msg, /my-repo/);
   assert.ok(!msg.includes("\n"), "miss nudge stays a single line");
 });
 
-test("SessionStart in a git repo with no banked lessons emits the /learn nudge, not bare {}", () => {
+test("SessionStart in a git repo with no banked lessons emits the /wrap nudge, not bare {}", () => {
   const store = mkTmp("ks-empty-store-"); // fresh, so no <slug>.md exists
   try {
     const out = runSessionStart("{}", { cwd: __dirname, learningsDir: store });
     assert.notStrictEqual(out.trim(), "{}", "must not fall back to bare {}");
     const ctx = JSON.parse(out).hookSpecificOutput.additionalContext;
-    assert.match(ctx, /\/learn/);
+    assert.match(ctx, /\/wrap/);
     assert.match(ctx, /No lessons banked/i);
   } finally {
     fs.rmSync(store, { recursive: true, force: true });

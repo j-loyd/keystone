@@ -1,7 +1,8 @@
 ---
 name: debt
-description: Harvest deliberate-shortcut markers (keystone: comments) into a ledger and flag the ones with no revisit trigger — the kind that silently become permanent. Reports only; optionally persists.
+description: Harvest deliberate-shortcut markers (keystone comments) into a ledger and flag the ones with no revisit trigger — the kind that silently become permanent. Reports only; optionally persists. Use when the user runs /debt.
 argument-hint: "[optional: 'save' to write the ledger to a file]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
@@ -13,7 +14,7 @@ allowed-tools:
 
 Collect the deliberate shortcuts left in the code into one ledger, so a deferral can't quietly
 become permanent. Deliberate shortcuts are marked `keystone: <ceiling>, <upgrade trigger>`
-(the convention in `agents/implementer.md`). This command **reports only** unless asked to save.
+(the convention in `agents/implementer.md`). This skill **reports only** unless asked to save.
 
 ## Process
 

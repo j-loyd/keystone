@@ -84,20 +84,20 @@ test("validate-skills.js exits non-zero on a bad skill", () => {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, "SKILL.md"),
-    "---\nname: a-skill\ndescription: Formats numbers.\nallowed-tools: Bash\n---\n",
+    "---\nname: a-skill\ndescription: Formats numbers.\nmodel: opus\n---\n",
   );
 
   const { code, stdout } = run("validate-skills.js", ["--root", root]);
   assert.strictEqual(code, 1);
-  assert.match(stdout, /allowed-tools/);
+  assert.match(stdout, /"model"/);
   assert.match(stdout, /trigger/i);
 });
 
 test("validate-skills.js prints every exemption with its reason", () => {
   const { stdout } = run("validate-skills.js", ["--verbose"]);
   assert.match(stdout, /impeccable/);
-  assert.match(stdout, /Plugin-root exemptions/);
-  assert.match(stdout, /writing-plans\/SKILL\.md \(default form\) — Deleted in 1\.0/);
+  assert.match(stdout, /Plugin-root exemptions \(0\)/);
+  assert.match(stdout, /security-audit/);
   assert.match(stdout, /clear/);
 });
 

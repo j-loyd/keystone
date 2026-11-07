@@ -1,7 +1,8 @@
 ---
 name: handoff
-description: Write a forward-looking resume note for the current work — what's done, what's next, and the gotchas — so a fresh session (or you, post-compaction) can pick up mid-task without re-deriving everything. Use before pausing, before a context reset, when handing work to another session, or when the user is wrapping up or done for the day. Resume it with /pickup.
+description: Write a forward-looking resume note for the current work — what's done, what's next, and the gotchas — so a fresh session can pick up mid-task without re-deriving everything. Use when the user runs /handoff before pausing, a context reset, or handing work to another session. Resume it with /pickup.
 argument-hint: "[optional: where to write it; defaults to docs/handoffs/<date>.md]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
@@ -19,14 +20,12 @@ reconstructing state from scratch.
 You aim a note, wipe the context on purpose, then rehydrate cleanly. Compaction is only the
 harness's lossy fallback for when you _didn't_ hand off.
 
-This is **forward-looking and task-state-oriented** — distinct from `/learn` and `/retro`, which
-capture _durable, backward-looking lessons_. A handoff is "the half-finished refactor is in
-file X, do Y next"; it's disposable once resumed.
+This is **forward-looking and task-state-oriented** — distinct from `/wrap`, which captures
+_durable, backward-looking lessons_ when a session's work is done. A handoff is "the
+half-finished refactor is in file X, do Y next"; it's disposable once resumed.
 
-Resume it later with `/pickup` — it reads the newest handoff note and continues from **Next
-action**. An active `subagent-driven-development` run already writes its structured per-task
-run-state file continuously; `/pickup` resumes either kind (run-state first, otherwise the
-newest handoff note).
+Resume it later with `/pickup` — it reads the newest open handoff note (and any open tickets)
+and continues from **Next action**.
 
 ## What to capture
 
@@ -50,8 +49,8 @@ Write only what you actually know — don't pad. If a field is empty, say so.
    ```
 2. Write the four sections. Lead with the branch and `git status -s` reality so the next
    session trusts it. Any **gotcha** you just wrote that will outlive this task is a lesson —
-   offer a one-tap `/learn` for each (evidence = what happened this session), so it survives
-   beyond the handoff note.
+   mention that `/wrap` can bank it once the work is done, so it survives beyond the handoff
+   note.
 3. **Update the continuity index** `docs/handoffs/README.md` — the file `/pickup` reads first.
    If it does not exist yet, seed it from the plugin template:
    `R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/templates/handoffs/README.md" ] || R="${PLUGIN_ROOT}"; mkdir -p docs/handoffs && cp "$R/templates/handoffs/README.md" docs/handoffs/README.md`. Then
@@ -71,5 +70,4 @@ Write only what you actually know — don't pad. If a field is empty, say so.
 
 To resume: run `/clear`, then a fresh session runs `/pickup`. It reads `docs/handoffs/README.md`
 first, finds the newest **open** row, and continues from **Next action** (marking the row
-resumed). An active `subagent-driven-development` run records its structured run-state in
-the same index's **Active run-state** section.
+resumed).

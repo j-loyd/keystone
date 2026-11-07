@@ -1,7 +1,8 @@
 ---
 name: ship
-description: Prepare a change to ship — run tests, review the diff, bump VERSION, update CHANGELOG, and draft the PR. STOPS before committing; commits/pushes only on explicit go-ahead.
+description: Prepare a change to ship — run tests, review the diff, bump VERSION, update CHANGELOG, and draft the PR. Stops before committing; commits/pushes only on explicit go-ahead. Use when the user runs /ship.
 argument-hint: "[optional: what's shipping]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
@@ -14,7 +15,7 @@ allowed-tools:
 
 Prepare the current work to ship: **$ARGUMENTS**.
 
-> **Hard rule (the no-auto-commit rule):** this command does **NOT** commit, push,
+> **Hard rule (the no-auto-commit rule):** this skill does **NOT** commit, push,
 > or open the PR on its own. It does everything _up to_ the commit, then stops and asks.
 > Staging (`git add`) is fine. Committing/pushing/`gh pr create` happen only after the
 > user explicitly says go.
@@ -91,7 +92,7 @@ Prepare the current work to ship: **$ARGUMENTS**.
 
 ## Watch window — hand these to whoever deploys
 
-This command stops at the commit, so the deploy happens after you. Put the rollout
+This skill stops at the commit, so the deploy happens after you. Put the rollout
 thresholds in the hand-off anyway, so "did it work?" has an answer that isn't a vibe.
 These are **defaults to tune per service**, not gospel — a nightly batch job and a
 checkout API deserve different numbers.

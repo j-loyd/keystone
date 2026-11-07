@@ -189,7 +189,7 @@ one earns a heavier second seat.
 ## Capture
 
 An assumption that got **challenged and turned out wrong** is the highest-signal lesson there is.
-Offer a one-tap `/learn` for each — a `type: gotcha`, trigger-tagged to the domain it bit — so the
+Offer `/wrap` to bank each one as a lesson (a **Surprise**, trigger-tagged to the domain it bit), so the
 _next_ doc's ledger starts pre-loaded with "last time we assumed X here, it broke." No silent
 writes — the pass drafts, you approve.
 

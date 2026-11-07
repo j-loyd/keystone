@@ -45,8 +45,8 @@ surface the conflict, then resolve it by what each source is _authoritative for_
   loosely, fix the usage, not the definition.
 - **`docs/codebase/`'s map is a snapshot, never authoritative.** It was true at the SHA it was
   built from and doesn't get a vote when it conflicts with code, an ADR, or `GLOSSARY.md`. If the
-  map disagrees with one of the other three, the map is stale; that's a signal to re-run
-  `onboard-codebase`, not to resolve the conflict in the map's favor.
+  map disagrees with one of the other three, the map is stale; that's a signal to suggest the user
+  re-run `/onboard-codebase`, not to resolve the conflict in the map's favor.
 
 After resolving, **update the losing doc** (or open an ADR if the conflict reveals an undocumented
 decision) so the next reader doesn't hit the same contradiction.

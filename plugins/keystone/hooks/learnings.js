@@ -8,7 +8,7 @@
  *      hookSpecificOutput.additionalContext — so past lessons for THIS repo auto-apply.
  *      Matcher: startup|resume|clear|compact
  *   2. `--path` CLI: print the learnings file path for the current repo (creating nothing).
- *      Used by the /learn and /retro commands to know where to append.
+ *      Used by the /wrap skill to know where to append.
  *
  * Storage is OUTSIDE the repo (so client/work repos stay clean), keyed by the repo's
  * git remote (fallback: toplevel path):
@@ -19,7 +19,7 @@
  *   KEYSTONE_LEARNINGS_MAX   max entries injected at SessionStart (default 8)
  *
  * Fail-open, but NOT silent-on-empty: a git repo with no banked lessons emits a one-line
- * visible nudge (📓 … /learn) so "working but empty" is distinguishable from "broken." Outside
+ * visible nudge (📓 … /wrap) so "working but empty" is distinguishable from "broken." Outside
  * a git repo, or on any error, it still fails silently -> "{}" (or empty path for --path).
  */
 
@@ -130,7 +130,8 @@ function clusterTokens(entry) {
 /**
  * Group `## `-headed entries that share ≥1 domain token (single-link). Keeps groups of
  * size ≥2; each cluster carries a `key` = the token shared by the most entries. Exported
- * for /retro's Evolve step and for tests. Pure — no I/O.
+ * for the `--cluster` CLI (no shipped caller since /retro was folded into /wrap in 1.0;
+ * kept for ad-hoc use) and for tests. Pure — no I/O.
  */
 function clusterEntries(entries) {
   if (!Array.isArray(entries) || entries.length < 2) return [];
@@ -180,7 +181,7 @@ function buildContext(entries, name) {
   const body = entries.join("\n\n");
   return (
     `📓 Lessons learned in this repo (${name}) — keystone surfaced these from past ` +
-    `sessions. Apply what's relevant; capture new ones with /learn:\n\n${body}`
+    `sessions. Apply what's relevant; capture new ones with /wrap:\n\n${body}`
   );
 }
 
@@ -191,8 +192,8 @@ function buildContext(entries, name) {
  */
 function missContext(name) {
   return (
-    `📓 No lessons banked yet for this repo (${name}) — capture one with /learn when you hit ` +
-    `a reusable gotcha, decision, or pattern (or run /retro to sweep the session).`
+    `📓 No lessons banked yet for this repo (${name}) — run /wrap at the end of a session to ` +
+    `bank a reusable gotcha, decision, or pattern.`
   );
 }
 
@@ -215,7 +216,7 @@ function runHook() {
       const data = JSON.parse(input || "{}");
       const info = repoFile(data.cwd || process.cwd());
       if (info) {
-        // In a git repo: surface banked lessons if any, else a visible /learn nudge.
+        // In a git repo: surface banked lessons if any, else a visible /wrap nudge.
         const entries = fs.existsSync(info.file)
           ? recentEntries(fs.readFileSync(info.file, "utf8"), MAX)
           : [];

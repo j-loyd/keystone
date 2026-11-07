@@ -45,7 +45,7 @@ test("isInside: nested true; sibling and escape false", () => {
 });
 
 // ── Guard state file: direct manipulation asks; protection-removing toggles ask ──
-// The user-run /unfreeze executes through the same Bash tool the model uses, so a hook
+// The user-run /guard off executes through the same Bash tool the model uses, so a hook
 // cannot tell who initiated it. Removing protection therefore always needs a human "yes".
 const os = require("node:os");
 const path = require("node:path");
@@ -131,41 +131,67 @@ test("guard-state: an allowed form does not launder the rest of the command", ()
 test("guard-state: reading the script by its test-file name is not an invocation", () =>
   assert.equal(decide(bash("node --test hooks/guard-state.test.js"), FROZEN), "allow"));
 
-// The shipped command files, as the harness expands them, must route as intended:
-// protection-adding commands run unprompted, /unfreeze asks.
+// The shipped /guard skill, as the harness expands it, must route as intended:
+// protection-adding modes run unprompted, lifting or widening asks.
 const fs = require("node:fs");
 // Claude Code substitutes ${CLAUDE_PLUGIN_ROOT}; Codex leaves it empty and the two-step
 // fallback picks up $PLUGIN_ROOT — both expansions must route the same way.
 const ROOTS = { claude: "/Users/u/.claude/plugins/cache/keystone/9.9.9", codex: "" };
-function commandBash(name, args, root = ROOTS.claude) {
-  const md = fs.readFileSync(path.join(__dirname, "..", "commands", `${name}.md`), "utf8");
-  const block = md.match(/```bash\n([\s\S]*?)```/)[1].trim();
-  return block.split("${CLAUDE_PLUGIN_ROOT}").join(root).split("$ARGUMENTS").join(args);
+const GUARD_SKILL = path.join(__dirname, "..", "skills", "guard", "SKILL.md");
+// Each mode's fenced block, keyed by the guard-state.js verb it runs.
+function guardBlocks() {
+  const md = fs.readFileSync(GUARD_SKILL, "utf8");
+  const blocks = {};
+  for (const m of md.matchAll(/```bash\n([\s\S]*?)```/g)) {
+    const verb = m[1].match(/guard-state\.js" ([a-z]+(?: (?:on|off))?)/);
+    if (verb) blocks[verb[1]] = m[1].trim();
+  }
+  return blocks;
 }
+// The model replaces <dir> with the user's directory, or deletes it for the cwd.
+function modeBash(verb, dir, root = ROOTS.claude) {
+  const block = guardBlocks()[verb];
+  assert.ok(block, `no /guard block runs guard-state.js ${verb}`);
+  return block.split("${CLAUDE_PLUGIN_ROOT}").join(root).split(" <dir>").join(dir ? ` ${dir}` : "");
+}
+test("/guard ships one block per guard-state.js verb", () =>
+  assert.deepStrictEqual(Object.keys(guardBlocks()).sort(), [
+    "careful off",
+    "careful on",
+    "freeze",
+    "guard",
+    "status",
+    "unfreeze",
+  ]));
 for (const harness of Object.keys(ROOTS))
-for (const [name, args, state, want] of [
+for (const [verb, dir, state, want] of [
   ["freeze", "", {}, "allow"],
   ["freeze", "/tmp/safe", {}, "allow"],
+  ["freeze", "'/tmp/my dir'", {}, "allow"],
   ["guard", "", {}, "allow"],
-  ["careful", "", FROZEN, "allow"],
+  ["careful on", "", FROZEN, "allow"],
+  ["status", "", FROZEN, "allow"],
   ["freeze", "/", FROZEN, "ask"],
   ["guard", "", FROZEN, "ask"],
+  ["careful off", "", CAREFUL_ON, "ask"],
   ["unfreeze", "", FROZEN, "ask"],
 ])
-  test(`command file /${name} ${JSON.stringify(args)} (${harness}) routes to ${want}`, () =>
-    assert.equal(decide(bash(commandBash(name, args, ROOTS[harness])), state), want));
+  test(`/guard block "${verb}" ${JSON.stringify(dir)} (${harness}) routes to ${want}`, () =>
+    assert.equal(decide(bash(modeBash(verb, dir, ROOTS[harness])), state), want));
 
-test("guard command files are user-only and use the two-harness plugin-root fallback", () => {
-  for (const name of ["careful", "freeze", "unfreeze", "guard"]) {
-    const md = fs.readFileSync(path.join(__dirname, "..", "commands", `${name}.md`), "utf8");
-    const fm = md.split("---")[1];
-    assert.match(fm, /^disable-model-invocation: true$/m, name);
+test("/guard is user-only on both harnesses and uses the two-harness plugin-root fallback", () => {
+  const md = fs.readFileSync(GUARD_SKILL, "utf8");
+  const fm = md.split("---")[1];
+  assert.match(fm, /^disable-model-invocation: true$/m);
+  const yaml = fs.readFileSync(path.join(path.dirname(GUARD_SKILL), "agents", "openai.yaml"), "utf8");
+  assert.match(yaml, /allow_implicit_invocation: false/);
+  for (const block of Object.values(guardBlocks())) {
     assert.ok(
-      md.includes('R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/guard.js" ] || R="${PLUGIN_ROOT}"\nnode "$R/hooks/guard-state.js"'),
-      name,
+      block.startsWith('R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/guard.js" ] || R="${PLUGIN_ROOT}"\nnode "$R/hooks/guard-state.js"'),
+      block,
     );
-    assert.doesNotMatch(md, /keystone-guard\.json|printf/, name);
   }
+  assert.doesNotMatch(md, /keystone-guard\.json|printf/);
 });
 
 // ── readState: only a MISSING file means "no state"; anything else unreadable fails closed ─
@@ -233,16 +259,16 @@ test("corrupt state: guard-state status runs; any write through it asks (boundar
   assert.equal(decide(bash(`${GS} freeze /tmp/safe`), CORRUPT), "ask");
   assert.equal(decide(bash(`${GS} careful on`), CORRUPT), "ask");
 });
-test("unreadable state path: the ask reason says to fix it by hand, not via /freeze", () => {
+test("unreadable state path: the ask reason says to fix it by hand, not via /guard", () => {
   const why = guard.evaluate("Write", { file_path: "/tmp/a" }, {}, "", {
     careful: true,
     corrupt: "unreadable (EISDIR)",
   }).why;
   assert.match(why, /by hand/);
-  assert.doesNotMatch(why, /\/freeze/);
+  assert.doesNotMatch(why, /\/guard/);
 });
 test("corrupt state: the ask reason says how to repair", () =>
   assert.match(
     guard.evaluate("Write", { file_path: "/tmp/a" }, {}, "", CORRUPT).why,
-    /guard-state\.js status|\/freeze/,
+    /\/guard (?:freeze|on|off|status)/,
   ));
