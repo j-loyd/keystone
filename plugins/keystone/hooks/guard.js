@@ -42,8 +42,8 @@ const SECRET_EXFIL = true;
 const SECRET_FILES = true;
 const SQL_GUARD = true;
 // DATABRICKS_GUARD is opt-in (stack-specific) — read from env at call time, off by default.
-// Layer 0 (freeze / careful) is opt-in per machine via the /freeze, /careful, /guard
-// commands, which write ~/.claude/keystone-guard.json. Absent file ⇒ baseline behavior.
+// Layer 0 (freeze / careful) is opt-in per machine via the user-only /guard skill
+// (/guard freeze|careful|on|off), which writes ~/.claude/keystone-guard.json. Absent file ⇒ baseline behavior.
 const GUARD_STATE_FILE =
   process.env.KEYSTONE_GUARD_FILE ||
   path.join(os.homedir(), ".claude", "keystone-guard.json");
@@ -414,7 +414,7 @@ const SQL_DESTRUCTIVE = [
 
 // ── Layer 0b: "careful mode" Bash commands → ASK (only when careful is enabled) ─
 // Legitimate-but-destructive operations that guard.js does NOT block by default, but
-// escalates to a confirmation prompt while careful mode is on (via /careful or /guard).
+// escalates to a confirmation prompt while careful mode is on (via /guard careful on or /guard on).
 const CAREFUL = [
   {
     id: "rm-recursive",
@@ -475,8 +475,8 @@ function neutralizeAllowlisted(cmd) {
 }
 
 // ── Guard state integrity: the model must not quietly lift its own fence ─────
-// /freeze, /careful, /guard, /unfreeze all run through the model's Bash tool, so the hook
-// cannot tell a user-typed /unfreeze from a model-initiated one. Rule: anything that could
+// Every /guard mode runs guard-state.js through the model's Bash tool, so the hook
+// cannot tell a user-typed /guard off from a model-initiated one. Rule: anything that could
 // REMOVE or WIDEN protection asks a human; forms that only ADD protection pass.
 // keystone: string matching only — obfuscated access (globs like keystone-g*, variables
 // built at runtime, interpreter one-liners that assemble the name, a copied script) is not
@@ -612,7 +612,7 @@ function readState(file = GUARD_STATE_FILE) {
 function corruptStateHint(reason) {
   return /^unreadable/.test(String(reason))
     ? `fix or remove ${GUARD_STATE_FILE} by hand (guard-state.js cannot rewrite a path it cannot read)`
-    : "run `/freeze` or `/guard` to rewrite it, `/unfreeze` to clear it, or `guard-state.js status` to inspect it";
+    : "run `/guard freeze` or `/guard on` to rewrite it, `/guard off` to clear it, or `/guard status` (guard-state.js status) to inspect it";
 }
 
 /** True if `target` resolves inside `dir`. Both should be absolute-ish paths. */
@@ -645,31 +645,6 @@ function output(decision, why) {
       permissionDecisionReason: `${emoji} [guard] ${why}.${tail}`,
     },
   };
-}
-
-// Risk-scaled pre-edit discovery gate (stateless). The executor declares the current task's
-// risk + discovery facts via env carriers (KEYSTONE_TASK_RISK / KEYSTONE_TASK_FACTS). This
-// gate fires ONLY when a MED/HIGH risk is declared WITHOUT facts — it never bricks ordinary
-// edits (no signal ⇒ allow). It is declaration-only: it checks facts were stated, not that
-// they are correct (the plan-reviewer owns correctness). KEYSTONE_FACT_FORCE=off disables it.
-function needsDiscovery(env) {
-  if (!env || env.KEYSTONE_FACT_FORCE === "off") return false;
-  const risk = String(env.KEYSTONE_TASK_RISK || "")
-    .trim()
-    .toLowerCase();
-  if (risk !== "med" && risk !== "high") return false;
-  return String(env.KEYSTONE_TASK_FACTS || "").trim() === "";
-}
-
-function discoveryGateMsg(risk) {
-  const dims =
-    risk === "high"
-      ? "importers/callers, contract shape, side-effects, and test coverage"
-      : "blast radius and error handling";
-  return (
-    `declare discovery facts before this ${risk.toUpperCase()} edit (${dims}) in ` +
-    `KEYSTONE_TASK_FACTS — declaration only; the plan-reviewer checks correctness`
-  );
 }
 
 /**
@@ -725,7 +700,7 @@ function evaluate(
     if (bashTouchesStateFile(raw, env)) {
       return {
         decision: "ask",
-        why: "this command touches the keystone guard state file directly (it holds the freeze/careful settings). Use /freeze, /careful, or /unfreeze instead",
+        why: "this command touches the keystone guard state file directly (it holds the freeze/careful settings). Use /guard (freeze, careful, on, off) instead",
       };
     }
     if (!guardStateCallsAreProtective(raw, state)) {
@@ -784,15 +759,9 @@ function evaluate(
       if (!isInside(state.freeze, abs)) {
         return {
           decision: "deny",
-          why: `freeze active: edits restricted to ${state.freeze} (this targets outside it). Run /unfreeze to lift`,
+          why: `freeze active: edits restricted to ${state.freeze} (this targets outside it). Run /guard off to lift`,
         };
       }
-    }
-
-    // Risk-scaled pre-edit discovery gate — after secret + freeze (those win), before allow.
-    if (WRITE_TOOLS.includes(toolName) && needsDiscovery(env)) {
-      const risk = String(env.KEYSTONE_TASK_RISK).trim().toLowerCase();
-      return { decision: "deny", why: discoveryGateMsg(risk) };
     }
 
     // Corrupt state file (fail closed) — the freeze boundary is unknown, so confirm every
@@ -808,7 +777,7 @@ function evaluate(
     if (WRITE_TOOLS.includes(toolName) && fp && isStateFilePath(fp, cwd, env)) {
       return {
         decision: "ask",
-        why: "this edits the keystone guard state file directly (it holds the freeze/careful settings). Use /freeze, /careful, or /unfreeze instead",
+        why: "this edits the keystone guard state file directly (it holds the freeze/careful settings). Use /guard (freeze, careful, on, off) instead",
       };
     }
     return null;
@@ -872,7 +841,5 @@ if (require.main === module) {
     isStateFilePath,
     guardStateCallsAreProtective,
     isInside,
-    needsDiscovery,
-    discoveryGateMsg,
   };
 }

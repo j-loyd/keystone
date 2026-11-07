@@ -1,30 +1,29 @@
 ---
 name: qa
-description: Systematically QA a running web app in a real browser — execute test scenarios, find bugs, and (optionally) fix them. Drives the Chrome MCP tools.
+description: Systematically QA a running web app in a real browser — execute test scenarios, find bugs, grade the result, and (optionally) fix them. Use when the user runs /qa with a URL and what to exercise.
 argument-hint: "[URL to test + what to exercise]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
   - Grep
-  - mcp__chrome-devtools__navigate_page
-  - mcp__chrome-devtools__take_snapshot
-  - mcp__chrome-devtools__take_screenshot
-  - mcp__chrome-devtools__click
-  - mcp__chrome-devtools__fill
-  - mcp__chrome-devtools__fill_form
-  - mcp__chrome-devtools__list_console_messages
-  - mcp__chrome-devtools__list_network_requests
-  - mcp__chrome-devtools__wait_for
+  - mcp__claude-in-chrome__tabs_context_mcp
+  - mcp__claude-in-chrome__tabs_create_mcp
   - mcp__claude-in-chrome__navigate
+  - mcp__claude-in-chrome__read_page
+  - mcp__claude-in-chrome__find
   - mcp__claude-in-chrome__get_page_text
+  - mcp__claude-in-chrome__computer
+  - mcp__claude-in-chrome__form_input
   - mcp__claude-in-chrome__read_console_messages
+  - mcp__claude-in-chrome__read_network_requests
 ---
 
 # QA — exercise it like a user, find what breaks
 
-QA the app at **$ARGUMENTS** using a real browser via the Chrome MCP tools
-(`chrome-devtools` preferred for headless automation; `claude-in-chrome` when driving the
-user's live Chrome). **No external browse daemon** — use the MCP tools directly.
+QA the app at **$ARGUMENTS** in a real browser through the Claude in Chrome MCP tools
+(`mcp__claude-in-chrome__*`). Another browser-automation MCP server works too if that's what
+is connected; its tools just aren't pre-approved here. **No external browse daemon.**
 
 ## Boundaries
 
@@ -41,15 +40,16 @@ user's live Chrome). **No external browse daemon** — use the MCP tools directl
 1. **Plan scenarios.** From the target, derive the key user flows to exercise: happy
    path, the obvious error paths, empty/loading states, and boundary inputs. List them
    before you start clicking.
-2. **Drive the browser.** Navigate, snapshot the page to get element refs, then
-   interact (click/fill/submit). After each meaningful step, check:
-   - **Console** (`list_console_messages` / `read_console_messages`) for errors/warnings.
-   - **Network** (`list_network_requests`) for failed or surprising requests.
-   - **Visual** — screenshot when something looks off.
+2. **Drive the browser.** Open a tab (`tabs_create_mcp`), `navigate`, read the page
+   (`read_page` / `find`) to get element refs, then interact (`computer` to click and type,
+   `form_input` to fill). After each meaningful step, check:
+   - **Console** (`read_console_messages`) for errors/warnings.
+   - **Network** (`read_network_requests`) for failed or surprising requests.
+   - **Visual** — a `computer` screenshot when something looks off.
 3. **Log bugs** as you find them: what you did → what happened → what should happen →
    evidence (console line / screenshot / failing request). **Severity each one** (table
    below) — a bug report without a severity isn't triaged, it's just noise.
-4. **Fix (only if asked to).** This command defaults to **report-only**. If the user
+4. **Fix (only if asked to).** This skill defaults to **report-only**. If the user
    asked you to fix, default to fixing **critical + high** only (mark medium/low
    "deferred") unless the user asks for **exhaustive** (fix everything) or **quick**
    (critical only). Apply minimal targeted fixes, then re-run the failing scenario to

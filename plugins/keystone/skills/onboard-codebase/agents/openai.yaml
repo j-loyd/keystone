@@ -1,0 +1,5 @@
+interface:
+  display_name: "Onboard Codebase"
+  short_description: "Map an unfamiliar repo into docs/codebase/"
+policy:
+  allow_implicit_invocation: false

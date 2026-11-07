@@ -1,0 +1,5 @@
+interface:
+  display_name: "Debt"
+  short_description: "Ledger of deliberate-shortcut markers, flagging ones with no trigger"
+policy:
+  allow_implicit_invocation: false

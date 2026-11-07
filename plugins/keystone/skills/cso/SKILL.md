@@ -1,7 +1,8 @@
 ---
 name: cso
-description: Chief Security Officer audit — infrastructure-first review covering secrets, supply chain, OWASP Top 10, LLM/agent security, and a STRIDE threat model. Use before shipping anything sensitive.
+description: Chief Security Officer audit — infrastructure-first review covering secrets, supply chain, OWASP Top 10, LLM/agent security, and a STRIDE threat model. Use when the user runs /cso before shipping anything sensitive.
 argument-hint: "[scope: repo, service, feature, or diff]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
@@ -15,7 +16,7 @@ Comprehensive security audit of **$ARGUMENTS**, anchored to OWASP Top 10 (2025),
 Security Top 10 (2023), and the LLM Top 10 (2025). This is the deep, deliberate pass; the
 `security-review` skill (web/OWASP) and `llm-security` skill (agent/LLM) carry the full
 category lists, and `scan.js` (PostToolUse hook) is the always-on injection tripwire. This
-command ties them together into an audit.
+skill ties them together into an audit.
 
 > Prefer dispatching the **`security-reviewer`** agent (via this harness's subagent-dispatch
 > primitive — Claude Code's Task tool, or the equivalent elsewhere; run the audit inline if
@@ -24,6 +25,35 @@ command ties them together into an audit.
 > findings. Frame each dispatch as what it is — an authorized defensive audit of code the user
 > owns — and apply `security-review`'s model-refusal handling: a declined pass is re-framed or
 > re-run a tier down, and reported as NOT RUN rather than "no findings."
+
+## Optional: hand the methodology to the Cloudflare companion
+
+keystone's marketplace lists Cloudflare's `security-audit` skill as an optional, SHA-pinned
+companion (`/plugin install security-audit@keystone`). It is not part of keystone and is never
+auto-enabled. If it is installed and the user wants a **full audit** with report artifacts (its
+coverage ledger, independent verification, and schema-validated `findings.json`), offer its
+full-audit mode instead of running the phases below by hand. If it isn't installed, run the
+phases below; keystone stands on its own.
+
+When you hand off, keystone's rules still apply on top of it:
+
+- **The main session is its parent.** The parent coordinates the run and is the only writer of
+  the shared run files. Its hunter and verifier roles go to general-purpose subagents.
+  `security-reviewer` stays a diff and finding reviewer, and isn't used as one of those roles.
+- **Add what it leaves out:** a STRIDE pass per trust boundary (phase 6), an OWASP Top 10 / API
+  Top 10 / LLM Top 10 label on every confirmed finding, rotate-first handling for any leaked
+  secret (phase 1), and the scanner sweep below. It runs offline, so it does no CVE lookup.
+- **Override: third-party skills, plugins, and MCP servers are in scope as a trust boundary.**
+  Its supply-chain doctrine treats intended installation of same-user plugins as not a privilege
+  boundary. keystone's doesn't. A skill or MCP tool description is text the model reads and
+  acts on (`llm-security`, LLM03 tool poisoning), so audit what each one can make the agent do.
+- **Expect friction from keystone's guard.** A freeze (`/guard freeze` or `/guard on`) denies
+  Edit/Write to its default output directory under `~/security-audit-skill/`. Lift the freeze
+  for the run (`/guard off`), or have the user pick an output directory inside the target that
+  git ignores, which its rules allow. guard.js also denies reads of `.env`, `.npmrc`, and other
+  secret files. Record those as needs-validation, never as clean. Without an OS-enforced sandbox
+  its rules forbid running target code, so expect most behavioral checks to land in
+  `needs_validation`.
 
 ## Audit phases (infrastructure-first)
 
@@ -40,7 +70,7 @@ command ties them together into an audit.
 2. **Supply chain.** Use the **Trail of Bits `supply-chain-risk-auditor`** skill if
    installed (else `npm audit` + manual review): known CVEs (by reachability), lockfile
    integrity, postinstall scripts, typosquat/dependency-confusion, pinning/provenance, and
-   untrusted MCP servers or skills.
+   untrusted MCP servers, skills, and plugins (in scope, per the override above).
 3. **CI/CD & config.** Over-broad tokens, secrets in CI logs, deploy steps that run
    untrusted code, mutable infra from local machines.
 4. **OWASP Top 10 (2025)** against the application code — apply the full `security-review`
@@ -57,8 +87,8 @@ command ties them together into an audit.
    introspection off in prod. Webhooks: signature + replay + idempotency.
 5. **LLM / agent security** — if a model is in the loop, apply the full `llm-security`
    skill (OWASP LLM Top 10): indirect prompt injection, model-output-to-sink, excessive
-   agency / missing HITL, secrets/cross-user data in context, RAG retrieval authz,
-   memory/instinct poisoning, unbounded consumption.
+   agency / missing HITL, action/approval binding, secrets/cross-user data in context, RAG
+   retrieval authz, MCP identity, memory/instinct poisoning, unbounded consumption.
 6. **STRIDE threat model.** For each trust boundary: Spoofing, Tampering, Repudiation,
    Information disclosure, Denial of service, Elevation of privilege. Note which are
    mitigated and which are open.
@@ -68,9 +98,9 @@ command ties them together into an audit.
 ## Output
 
 A findings report grouped by severity (**critical / high / medium / low**), each with:
-location (`file:line`), the concrete attack, and a specific fix — severity per the
-`security-review` skill's anchors. Items whose deciding fact isn't in the source go in a
-**needs validation** list with the check that would settle them; best-practice gaps with no
+location (`file:line`), the concrete attack, its OWASP label, and a specific fix — severity
+per the `security-review` skill's anchors. Items whose deciding fact isn't in the source go in
+a **needs validation** list with the check that would settle them; best-practice gaps with no
 attack path go in a **hardening** list. Close with a coverage statement (reviewed / deferred /
 out of scope) and the top 3 must-fix-before-ship items. Verify exploitability where you can —
 don't report theoretical issues as confirmed. Report-only: do not change code unless

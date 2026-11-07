@@ -1,0 +1,5 @@
+interface:
+  display_name: "CSO"
+  short_description: "Infrastructure-first security audit with STRIDE and OWASP labels"
+policy:
+  allow_implicit_invocation: false

@@ -1,7 +1,7 @@
 "use strict";
 /**
  * plugin-config.test.js — config-lint for the plugin/marketplace manifests, version sync,
- * and skill/command frontmatter. Turns the manual plugin schema audit into a regression guard.
+ * and skill frontmatter. Turns the manual plugin schema audit into a regression guard.
  *
  * Lives in hooks/ only because that's where `node --test` already discovers the suite; it
  * validates the whole plugin, reaching up to the repo root via relative paths.
@@ -73,13 +73,28 @@ test("marketplace.json has required keys and a resolvable source", () => {
     Array.isArray(m.plugins) && m.plugins.length,
     "marketplace.json missing plugins[]",
   );
+  const names = new Set();
   for (const p of m.plugins) {
     assert.ok(p.name, "plugin entry missing name");
-    assert.ok(
-      fs.existsSync(path.join(ROOT, p.source)),
-      `plugin source does not resolve: ${p.source}`,
-    );
+    assert.ok(!names.has(p.name), `duplicate plugin name: ${p.name}`);
+    names.add(p.name);
+    if (typeof p.source === "string") {
+      assert.ok(p.source.startsWith("./"), `relative source must start with ./: ${p.source}`);
+      assert.ok(
+        fs.existsSync(path.join(ROOT, p.source)),
+        `plugin source does not resolve: ${p.source}`,
+      );
+    } else {
+      // External companions are pinned: a git-subdir source with a full commit SHA, so an
+      // upstream push can't change what a keystone user installs.
+      assert.strictEqual(p.source.source, "git-subdir", `${p.name}: unexpected source type`);
+      assert.match(p.source.url, /^https:\/\//, `${p.name}: source url`);
+      assert.ok(p.source.path, `${p.name}: git-subdir source needs a path`);
+      assert.match(p.source.sha, /^[0-9a-f]{40}$/, `${p.name}: sha must be a full 40-char commit`);
+      assert.ok(p.description, `${p.name}: external entry needs a description`);
+    }
   }
+  assert.ok(names.has("keystone"), "marketplace must list the keystone plugin");
 });
 
 test("every skill has frontmatter with name matching its directory and a description", () => {
@@ -99,21 +114,9 @@ test("every skill has frontmatter with name matching its directory and a descrip
   }
 });
 
-test("every command has a description and (when present) a name matching its filename", () => {
-  const cmdDir = path.join(PLUGIN, "commands");
-  for (const file of fs.readdirSync(cmdDir)) {
-    if (!file.endsWith(".md")) continue;
-    const fm = frontmatter(path.join(cmdDir, file));
-    assert.ok(fm, `command ${file} has no frontmatter`);
-    assert.ok(fm.description, `command ${file} missing description`);
-    if (fm.name) {
-      assert.strictEqual(
-        fm.name,
-        file.replace(/\.md$/, ""),
-        `command name "${fm.name}" != filename "${file}"`,
-      );
-    }
-  }
+test("the plugin ships no commands/ directory (every workflow is a skill since 1.0)", () => {
+  assert.ok(!fs.existsSync(path.join(PLUGIN, "commands")), "plugins/keystone/commands/ exists");
+  assert.ok(!("commands" in readJSON(PLUGIN_JSON)), "plugin.json still declares commands");
 });
 
 test("explicit ./ sibling .md references in SKILL.md files resolve", () => {

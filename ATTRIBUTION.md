@@ -25,11 +25,13 @@ section below.
 | Formerly `coding-standards` | [affaan-m/ECC](https://github.com/affaan-m/ECC) — Affaan Mustafa        | MIT     | Copied and adapted; cross-references retargeted to keystone/impeccable. **Removed in 1.0** as generic knowledge; its deliberate-shortcut marker convention and `UNVERIFIED:` marker live on in `agents/implementer.md` (and `/debt`). The former `cost-aware-llm-pipeline` skill came from the same source and was **removed in 0.6.0** — its tier-ladder and cache-economics content was rehomed into `designing-agent-systems` and its budget-ceiling/circuit-breaker content into `long-running-agents`, both rewritten in keystone's voice. |
 | `security-review`                                                                                                                                                                                                                                                                                                  | [affaan-m/ECC](https://github.com/affaan-m/ECC) — Affaan Mustafa        | MIT     | `SKILL.md` began as ECC's and was **substantially rewritten** for keystone (OWASP Top 10 2025 + API Top 10 2023 source→sink methodology). The sibling `cloud-infrastructure-security.md` remains largely ECC's (lightly edited). Treated as keystone-maintained.                                                                                                                               |
 
-### Commands
+### Commands (skills since 1.0)
+
+keystone 1.0 converted every command into a skill (`skills/<name>/SKILL.md`); the provenance below is unchanged by the move.
 
 | Component(s)                                                                                                                                          | Source                                                                  | License | Relationship                                                                                                                               |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `qa`, `cso`, `ship`, `retro`, `investigate`, `freeze`, `careful`, `guard`, `unfreeze` (formerly also `office-hours`, `plan-ceo-review`, `plan-eng-review`, `review`) | [garrytan/gstack](https://github.com/garrytan/gstack) — Garry Tan       | MIT     | Re-authored for keystone (gstack-specific infra removed; adapted to keystone's conventions and the Chrome MCP tools). Not verbatim copies. **In 1.0**, `review` was folded into the `code-reviewer` agent, `plan-ceo-review` / `plan-eng-review` were removed (the latter's lean-process rubric row lives on in `challenge`), `office-hours` was removed in favor of `/spec`, and `investigate` was rewritten as a short standalone command (it no longer loads a debugging skill). |
+| `qa`, `cso`, `ship`, `investigate`, `guard` (formerly also `retro`, `freeze`, `careful`, `unfreeze`, `office-hours`, `plan-ceo-review`, `plan-eng-review`, `review`) | [garrytan/gstack](https://github.com/garrytan/gstack) — Garry Tan       | MIT     | Re-authored for keystone (gstack-specific infra removed; adapted to keystone's conventions and the Chrome MCP tools). Not verbatim copies. **In 1.0**, `review` was folded into the `code-reviewer` agent, `plan-ceo-review` / `plan-eng-review` were removed (the latter's lean-process rubric row lives on in `challenge`), `office-hours` was removed in favor of `/spec`, and `investigate` was rewritten as a short standalone command (it no longer loads a debugging skill). Also in 1.0, `freeze`, `careful`, and `unfreeze` were merged into the single `guard` skill (`/guard freeze|careful|on|off|status`), and `retro` was folded into the keystone-original `wrap` skill (only its "mechanical lesson → propose a check" rule survives; the co-change/Evolve step was dropped). |
 | Idea folds (formerly also the `to-issues`, `to-prd` commands) | [mattpocock/skills](https://github.com/mattpocock/skills) — Matt Pocock | MIT     | Re-authored; `to-issues` retargeted from GitHub issues to Linear. Both commands were **removed in 1.0** as unused. **In 0.6.0**, further idea-only folds from the same source were rewritten for keystone: reproduction **minimisation**, the reproduction-*rate* framing, tagged debug instrumentation with a cleanup gate, the loop-construction ladder, and "no correct seam is itself the finding" into `systematic-debugging` (from `diagnosing-bugs`; removed with that skill in 1.0, except the secret-redaction rule, which `/investigate` adapts from the same upstream skill); **leading words**, the clarity/demand split in completion criteria, and environment-as-cache into `writing-skills` (from `writing-for-agents`); the **fog-or-task test** into `writing-plans` (from `wayfinder`), the **wide-refactor exception** into `writing-plans` (from `to-tickets`), and **agree-the-seam-before-RED** into `test-driven-development` (from `tdd`) — those three skills were removed in 1.0; the wide-refactor exception and the seam sketch now arrive directly in the adapted `to-tickets` and `spec`. **In 0.9.0**, two more idea-only folds: cross-skill hand-offs name the skill explicitly rather than relying on `/name` prose (from upstream's invocation convention), and `/retro` routes mechanical lessons to deterministic checks instead of written rules (from `retro`). |
 
 ### Harness hooks
@@ -42,7 +44,9 @@ here are original and intentionally lean (markdown files, no daemon).
 ### keystone-original components
 
 Written for keystone (not vendored): the `onboard-codebase`, `llm-security`, `api-security`,
-`audit` (named `auditing-for-overengineering` before 1.0), and `challenge` skills, and the
+`audit` (named `auditing-for-overengineering` before 1.0), `challenge`, and `wrap` skills (`wrap`, new in 1.0, replaces the `/learn` and `/retro` commands;
+its "one question before closing" flow is idea-only from end-of-session tools and written from
+scratch), and the
 `code-reviewer`, `implementer`, and `security-reviewer` agents. Removed in 1.0: the `git-workflow` skill (its version-bump
 and changelog rules now live in `/ship`), the `simplifying-code` skill and `/simplify` command
 (superseded by the built-in `/simplify`; behavior-preservation moved into
@@ -62,13 +66,20 @@ original wording — no text or code was copied from these sources:
 - **AI Engineering from Scratch** ([`rohitg00/ai-engineering-from-scratch`](https://github.com/rohitg00/ai-engineering-from-scratch),
   Rohit Ghumare, MIT): the labeled routing-test set with a held-out split in `writing-skills`,
   task-by-task change comparison with pre-declared thresholds in `designing-agent-systems`, and
-  earliest-control-first plus retirement conditions for promoted instincts in `/learn`.
+  earliest-control-first plus retirement conditions for promoted instincts (formerly in `/learn`, now in `wrap`).
 - **Cloudflare security-audit-skill** ([`cloudflare/security-audit-skill`](https://github.com/cloudflare/security-audit-skill),
   MIT): the _needs validation_ verdict, severity capped at demonstrated impact with anchored
   levels, the finding test that separates hardening from findings, and the coverage statement
   in `security-review` / `security-reviewer` / `/cso`; the between-category vulnerability
   classes in `security-review`; and "injection alone is not a finding; a prompt guardrail is
-  not a boundary" in `llm-security`.
+  not a boundary" in `llm-security`. **In 1.0**, two more idea-only folds from its
+  `AI-AND-LLM.md`, rewritten in keystone's words: action/approval binding (authorization is
+  not intent; bind an approval to the exact normalized action) and the MCP identity classes
+  (route by authenticated connection, peer metadata is never policy, delegation narrows
+  authority) in `llm-security`. Separately, keystone's marketplace lists the unmodified skill
+  as an optional, SHA-pinned companion entry (`security-audit`, commit
+  `c1c8a8c1471069fb0e188eeaff69b8e8db6564a8`); it is fetched from Cloudflare's repo at install
+  time, not vendored, and stays under Cloudflare's MIT license.
 - **BehiSec VibeSec** ([`BehiSecc/VibeSec-Skill`](https://github.com/BehiSecc/VibeSec-Skill),
   Apache-2.0): three `security-review` additions (XXE hardening, open-redirect / IDN-homograph
   guarding, account/session lifecycle revocation), reimplemented original.

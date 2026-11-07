@@ -1,12 +1,15 @@
 ---
 name: investigate
-description: Root-cause a bug, test failure, or unexpected behavior before proposing any fix — reproduce, confirm the cause, then fix with a regression test. Escalates to an architecture question after three failed fixes.
+description: Root-cause a bug, test failure, or unexpected behavior before proposing any fix — reproduce, confirm the cause, then fix with a regression test. Escalates to an architecture question after three failed fixes. Use when the user runs /investigate with a symptom.
 argument-hint: "[the bug / failure / symptom]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
   - Read
   - Grep
   - Glob
+  - Edit
+  - Write
 ---
 
 # Investigate — root cause before fix
@@ -47,6 +50,6 @@ before trying again: it's a design decision now, not a debugging one.
 
 ## Bank the root cause
 
-A confirmed root cause is a paid-for lesson. Draft it in `/learn`'s format (usually type
-**Surprise** or **Lesson**, evidence = the reproduction) and offer to bank it. The next session
-shouldn't have to re-discover this.
+A confirmed root cause is a paid-for lesson. Offer `/wrap` to bank it (usually a **Surprise** or
+**Lesson**, with the reproduction as evidence), so the next session doesn't have to re-discover
+it.

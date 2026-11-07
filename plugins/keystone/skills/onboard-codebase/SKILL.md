@@ -1,6 +1,7 @@
 ---
 name: onboard-codebase
-description: Orient in a codebase on first contact and leave a durable map behind. Use when starting work in an unfamiliar repo and when the user says "what is this codebase" or "map this repo". Detects greenfield vs. brownfield and writes a committed docs/codebase/ map plus seeded domain docs — more than a one-file summary.
+description: Orient in a codebase on first contact and leave a durable map behind — detects greenfield vs. brownfield and writes a docs/codebase/ map plus seeded domain docs. Use when the user runs /onboard-codebase in an unfamiliar repo.
+disable-model-invocation: true
 ---
 
 # Onboard to a codebase
@@ -70,7 +71,7 @@ The map is _structure_; these are _language_ and _decisions_, and they build on 
 
 ### 6. Surface risks
 
-`CONCERNS.md` is your risk register. Its entries are the first candidates for `/learn` and for
+`CONCERNS.md` is your risk register. Its entries are the first candidates for `/wrap` and for
 `improve-codebase-architecture`; route serious security findings through `security-review`.
 
 **Keep `CONCERNS.md` out of a public repo — it is local-by-default.** A risk register enumerates
@@ -92,5 +93,5 @@ to commit; the risk register is not.
 ## Hand off
 
 End with a short orientation summary: what this repo is, its shape, where to start, and the
-open questions. Point at the map (`docs/codebase/`) as the durable reference, and offer to
-capture durable findings with `/learn`.
+open questions. Point at the map (`docs/codebase/`) as the durable reference, and offer `/wrap`
+to bank durable findings.

@@ -4,9 +4,10 @@ description: Resume interrupted work — read the newest open /handoff note and 
 argument-hint: "[optional: path to a handoff note or a feature's tickets; defaults to the newest open note]"
 allowed-tools:
   - Read
-  - Bash
-  - Write
   - Glob
+  - Grep
+  - Bash(git status *)
+  - Bash(git log *)
 ---
 
 # Pickup — rehydrate interrupted work
@@ -42,8 +43,8 @@ It reads both and **continues, never restarts**.
    - **An open handoff note** → resume it (step 3). If it names a feature with open tickets, the
      note's Next action wins; the tickets are the Remaining work.
    - **No open note, but open tickets** → summarize the feature, which tickets are done, and the
-     current frontier (tickets not done whose blockers are all done), then offer `/implement`,
-     which resumes from the frontier.
+     current frontier (tickets not done whose blockers are all done), then tell the user to run
+     `/implement`, which resumes from the frontier.
    - **Neither** → nothing to resume; say so and stop.
 
 3. **Resume a handoff note.**

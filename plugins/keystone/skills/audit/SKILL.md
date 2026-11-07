@@ -88,7 +88,7 @@ net: -180 lines, -1 dep possible.
 ## Boundaries
 
 - **Over-engineering only.** Correctness bugs → the `code-reviewer` agent. Security holes → `security-review`
-  / `/cso`. Performance → out of scope. Route them; don't fold them in here.
+  (or suggest the user run `/cso`). Performance → out of scope. Route them; don't fold them in here.
 - **Tests are not bloat.** A smoke test or an `assert`-based self-check is the minimum, not
   excess — never flag it for deletion. (Missing tests are the reviewer's problem, not this pass's.)
 - **Lists, applies nothing.** One-shot. To act on the findings, the user runs the built-in `/simplify`

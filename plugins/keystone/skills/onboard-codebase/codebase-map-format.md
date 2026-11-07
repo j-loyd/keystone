@@ -101,7 +101,7 @@ The risk register — the most valuable doc for a newcomer or a reviewer.
 - Performance risks (N+1s, unbounded loops/queries, hot paths without caching).
 - Surprising or undocumented behavior; footguns.
 - Mark each with a rough severity so it can be triaged. These are the first candidates for
-  `/learn` entries and `improve-codebase-architecture`.
+  `/wrap` lessons and `improve-codebase-architecture`.
 - **Verify before you flag.** Reproduce a concern (run the regex, run the command, read the
   test) before listing it — and never assign a high severity to something you haven't
   reproduced. If you can't verify, say "unverified — needs checking" rather than asserting it.

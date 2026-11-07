@@ -16,11 +16,11 @@ const {
   hasTriggerClause,
   lintCatalog,
   lintSkill,
+  parseAllowedTools,
 } = require("./skill-lint.js");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SKILLS_DIR = path.join(ROOT, "plugins", "keystone", "skills");
-const COMMANDS_DIR = path.join(ROOT, "plugins", "keystone", "commands");
 
 const frontmatter = (fields) =>
   `---\n${Object.entries(fields).map(([k, v]) => `${k}: ${v}`).join("\n")}\n---\n\n# Body\n`;
@@ -97,9 +97,9 @@ test("missing frontmatter is an error", () => {
 
 test("a third frontmatter key is an error", () => {
   const source = good();
-  const withExtra = source.replace("---\n\n# Body", "allowed-tools: Bash\n---\n\n# Body");
+  const withExtra = source.replace("---\n\n# Body", "model: opus\n---\n\n# Body");
   const result = lintSkill("zoom-out", withExtra);
-  assert.match(result.errors.join("\n"), /allowed-tools/);
+  assert.match(result.errors.join("\n"), /model/);
 });
 
 test("disable-model-invocation: true is allowed (user-only skills)", () => {
@@ -174,7 +174,7 @@ test("an over-long description warns rather than errors", () => {
 test("the length threshold sits above every description in the catalog today", () => {
   // Chosen from the real distribution, not invented: it is a ratchet on the
   // observed ceiling, so it warns on growth rather than on the status quo.
-  const result = lintCatalog({ skillsDir: SKILLS_DIR, commandsDir: COMMANDS_DIR });
+  const result = lintCatalog({ skillsDir: SKILLS_DIR });
   const longest = Math.max(...result.skills.map((s) => s.descriptionLength));
   assert.ok(
     DESCRIPTION_WARN_CHARS > longest,
@@ -330,20 +330,21 @@ test("lintCatalog fails on plugin-root misuse in any shipped .md, not only skill
 });
 
 test("an exempted file is not reported for its exempted form, but is for others", () => {
-  const { file } = PLUGIN_ROOT_EXEMPTIONS[0];
+  const file = "skills/legacy/SKILL.md";
+  const pluginRootExemptions = [{ file, form: "default", reason: "fixture exemption for the test" }];
   const root = catalogFixture({
     "skills/zoom-out/SKILL.md": good(),
     [file]: `${DEFAULTED}/a.md\nnode "${UNBRACED}/x.js"\n`,
   });
-  const errors = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.filter((e) =>
-    e.startsWith(file),
-  );
+  const errors = lintCatalog({ skillsDir: path.join(root, "skills"), pluginRootExemptions })
+    .errors.filter((e) => e.startsWith(file));
   assert.strictEqual(errors.length, 1, errors.join("\n"));
   assert.match(errors[0], /unbraced/);
 });
 
 test("every plugin-root exemption names a file and form and carries a written reason", () => {
-  assert.ok(PLUGIN_ROOT_EXEMPTIONS.length > 0);
+  // The list may be empty; any entry added later must still be fully specified.
+  assert.ok(Array.isArray(PLUGIN_ROOT_EXEMPTIONS));
   for (const entry of PLUGIN_ROOT_EXEMPTIONS) {
     assert.ok(typeof entry.file === "string" && entry.file.endsWith(".md"), JSON.stringify(entry));
     assert.ok(["unbraced", "default"].includes(entry.form), JSON.stringify(entry));
@@ -395,7 +396,7 @@ test("an openai.yaml with only an interface block is fine on a model-invocable s
 // ---------- the real catalog ----------
 
 test("the real keystone catalog passes every rule", () => {
-  const result = lintCatalog({ skillsDir: SKILLS_DIR, commandsDir: COMMANDS_DIR });
+  const result = lintCatalog({ skillsDir: SKILLS_DIR });
   assert.deepStrictEqual(result.errors, []);
   // Sanity floor (the lint found the real tree, not an empty dir), not a catalog census.
   assert.ok(result.skills.length >= 15, `only ${result.skills.length} skills found`);
@@ -410,4 +411,72 @@ test("a SKILL.md over the line budget warns but does not error", () => {
 
 test("a SKILL.md within the line budget does not warn", () => {
   assert.deepStrictEqual(lintSkill("zoom-out", good()).warnings, []);
+});
+
+// ---------- allowed-tools on model-invocable skills ----------
+
+const withTools = (tools, extra = {}) =>
+  frontmatter({
+    name: "zoom-out",
+    description: "Step back. Use when the user says are we off track.",
+    ...extra,
+    "allowed-tools": tools,
+  });
+
+for (const tools of [
+  "Bash",
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "NotebookEdit",
+  "Read, Bash",
+  "Bash(*)",
+  "Bash(rm *)",
+  "Bash(git status; rm -rf x)",
+  "Bash(git log * | sh)",
+  "Bash(git branch *)",
+  "Edit(src/**)",
+  "mcp__claude-in-chrome__navigate",
+  "WebFetch",
+  "\n  - Read\n  - Write",
+])
+  test(`model-invocable skill may not pre-approve ${JSON.stringify(tools)}`, () => {
+    const result = lintSkill("zoom-out", withTools(tools));
+    assert.match(result.errors.join("\n"), /allowed-tools/, JSON.stringify(result.errors));
+  });
+
+for (const tools of [
+  "Read",
+  "Read, Grep, Glob",
+  "Read Grep Glob",
+  "\n  - Read\n  - Glob",
+  "Bash(git status *)",
+  "Bash(git log:*)",
+  "Read Bash(git log *) Bash(git diff *) Bash(ls *)",
+])
+  test(`model-invocable skill may pre-approve ${JSON.stringify(tools)}`, () => {
+    assert.deepStrictEqual(lintSkill("zoom-out", withTools(tools)).errors, []);
+  });
+
+test("a user-only skill may keep broad allowed-tools grants", () => {
+  const result = lintSkill(
+    "zoom-out",
+    withTools("\n  - Bash\n  - Write\n  - Edit\n  - mcp__claude-in-chrome__navigate", {
+      "disable-model-invocation": "true",
+    }),
+  );
+  assert.deepStrictEqual(result.errors, []);
+});
+
+test("parseAllowedTools keeps scoped Bash patterns with spaces as one tool", () => {
+  assert.deepStrictEqual(parseAllowedTools("- Read - Bash(git log *) - Glob"), [
+    "Read",
+    "Bash(git log *)",
+    "Glob",
+  ]);
+  assert.deepStrictEqual(parseAllowedTools("Read, Bash(git status *), Grep"), [
+    "Read",
+    "Bash(git status *)",
+    "Grep",
+  ]);
 });

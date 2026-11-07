@@ -9,7 +9,7 @@ capability** across four layers:
 - **Build pipeline** — `/spec` → tickets → `/implement`, with an integrate-first rule and an
   over-engineering gut check; worktrees, verification, review.
 - **Domain language** — a GLOSSARY.md glossary + ADRs, grilling, deep-module design vocabulary.
-- **Explicit workflows** — challenge, qa, cso, investigate, ship, retro.
+- **Explicit workflows** — challenge, qa, cso, investigate, ship, wrap.
 - **Harness & judgment** — tiered model routing, security review, and the
   instinct/memory/security-hook harness.
 
@@ -23,24 +23,37 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      23 skills: 19 model-invocable (verification + agent/loop design + domain language + security + challenge/audit + onboarding/git)
-│                and 4 user-only (spec, to-tickets, implement, setup — no context cost until you run them)
-├── commands/    13 explicit /commands (qa, cso, investigate, debt, ship, retro, continuity, learn, safety)
+├── skills/      32 skills: 20 model-invocable (verification + agent/loop design + domain language + security +
+│                challenge/audit + git + wrap/pickup) and 12 user-only (spec, to-tickets, implement, setup, ship,
+│                qa, cso, investigate, debt, handoff, guard, onboard-codebase — no context cost until you run them)
 ├── agents/      the crew: Mason (implementer) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
 templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
 ```
 
-### Commands
+### Slash commands
 
-| Group       | Commands                                                                                                                                        |
+Every workflow is a skill (there is no `commands/` directory since 1.0). The user-only ones load
+nothing into context until you type them; the model can't start them on its own.
+
+| Group       | Skills                                                                                                                                          |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Build       | `/spec` (idea → spec → tickets) · `/to-tickets` · `/implement` (tickets → integration branch) · `/setup` (tracker + domain docs, once per repo) · `/challenge` (fresh-eyes assumption red-team) |
-| Review & QA | `/qa` · `/cso` · `/investigate` · `/debt` (deferred-shortcut ledger) · `/audit` (whole-repo over-engineering scan) |
-| Ship        | `/ship` (never auto-commits; dispatches the `code-reviewer` agent as its review gate) · `/retro`                                                |
-| Continuity  | `/handoff` (resume note) · `/pickup` (resume) — the blessed `/handoff` → `/clear` → `/pickup` flow                                              |
-| Memory      | `/learn` (per-repo lessons)                                                                                                                     |
-| Safety      | `/freeze` · `/careful` · `/guard` · `/unfreeze`                                                                                                 |
+| Review & QA | `/qa` · `/cso` · `/investigate` · `/debt` (deferred-shortcut ledger) · `/audit` (whole-repo over-engineering scan) · `/onboard-codebase` |
+| Ship        | `/ship` (never auto-commits; dispatches the `code-reviewer` agent as its review gate)                                                           |
+| Continuity  | `/handoff` (resume note, mid-task) · `/pickup` (resume) — the blessed `/handoff` → `/clear` → `/pickup` flow                                   |
+| Wrap-up     | `/wrap` — end of a session: one question, a candidate list, you pick what to save (repo lessons, decisions, corrections, drops). The model may offer it at natural stopping points. |
+| Safety      | `/guard` — see below                                                                                                                            |
+
+`/guard` modes (one skill; it replaces the separate freeze, careful, and unfreeze commands from 0.x):
+
+| Run | Effect |
+| --- | --- |
+| `/guard` or `/guard on [dir]` | fence Edit/Write to `dir` (default: current directory) **and** confirm destructive shell commands |
+| `/guard freeze [dir]` | fence edits only |
+| `/guard careful [on\|off]` | destructive-command confirmation only |
+| `/guard off` | lift both (always asks first) |
+| `/guard status` | show the current state |
 
 ### How to build a feature: `/spec`
 
@@ -72,7 +85,7 @@ templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
   note before any agent code), and `long-running-agents` (iteration contract, stuck
   detection, budget enforcement on top of the harness's `/goal` / `/loop` / `/schedule`) —
   harness-neutral and model-agnostic.
-- **Chrome MCP** — `/qa` drives `chrome-devtools` / `claude-in-chrome`, no browse daemon.
+- **Chrome MCP** — `/qa` drives the Claude in Chrome MCP tools, no browse daemon.
 - **Security (first-class)** — three skills: `security-review` (OWASP 2025, source→sink
   methodology), `api-security` (full OWASP API Top 10:2023 — REST/GraphQL/webhooks), and
   `llm-security` (OWASP LLM Top 10:2025); the `security-reviewer` agent (traces +
@@ -92,8 +105,8 @@ templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
   elsewhere). `docs/handoffs/README.md` is _this repo's_ task-state; `MEMORY.md` is your
   personal cross-project index.
 - **Per-repo memory** — _surfacing_ is automatic (SessionStart `learnings.js` prints a 📓
-  banner of this repo's banked lessons, or a one-line nudge to `/learn` when none are banked
-  yet); _capture_ is manual (`/learn` for a single lesson, `/retro` to sweep a session). Stored
+  banner of this repo's banked lessons, or a one-line nudge to `/wrap` when none are banked
+  yet); _capture_ goes through `/wrap`, and you pick what is saved. Stored
   outside the repo (`~/.claude/keystone/learnings/<slug>.md`), so client repos stay clean.
 - **Durable codebase map** — `onboard-codebase` (brownfield) writes a committed
   `docs/codebase/` map (stack, architecture, structure, conventions, integrations, testing,
@@ -133,7 +146,27 @@ skills and double-firing hooks:
 `INSTINCTS.md` still lives at `~/.claude/INSTINCTS.md` (per-machine); the copy in
 `templates/` is just a seed for new machines.
 
-## Companion plugins (Trail of Bits)
+## Companion plugins
+
+### Cloudflare security-audit (optional, in keystone's marketplace)
+
+keystone's marketplace lists Cloudflare's [`security-audit`](https://github.com/cloudflare/security-audit-skill)
+skill (MIT) as a second, separate entry, pinned to a fixed commit. It is never installed or
+enabled with keystone:
+
+```bash
+/plugin install security-audit@keystone
+```
+
+It brings a source-first **full-audit mode**: a coverage ledger, independent verification of
+every finding, and schema-validated `findings.json` / `REPORT.md` artifacts. `/cso` offers to hand
+off to it when it's installed, and adds what it leaves out: STRIDE, OWASP labels, rotate-first
+secret handling, and the scanner sweep. keystone's rules override its supply-chain doctrine,
+so third-party skills, plugins, and MCP servers stay in scope as a trust boundary. While a
+`/guard` freeze is on, its default output directory (`~/security-audit-skill/`) is fenced off,
+so lift the freeze for the run or pick a git-ignored directory inside the repo.
+
+### Trail of Bits
 
 keystone owns the **judgment layer** — stack-tuned + LLM security knowledge
 (`security-review`, `api-security`, `llm-security`, `variant-analysis`) and the integration
@@ -167,7 +200,7 @@ off-domain (smart contracts, C/C++, firmware, crypto) — skip them.
 
 ## Updating
 
-Edit skills/commands in place and bump `VERSION` + `CHANGELOG.md`. The skills here are
+Edit skills in place and bump `VERSION` + `CHANGELOG.md`. The skills here are
 intentionally curated — change them directly rather than re-syncing from anywhere.
 
 **The glossary is now `GLOSSARY.md`** (formerly `CONTEXT.md`). In a repo that still has
