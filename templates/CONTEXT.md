@@ -3,7 +3,7 @@
 > A pure glossary of the domain terms used in this project, with their precise,
 > agreed meanings. Implementation-agnostic: describe what a term _means in the
 > domain_, not how it's coded. This is the shared vocabulary the team (and the
-> agent) speak. The `grill-with-docs` and `zoom-out` skills read and update this file.
+> agent) speak. The `grill-with-docs` skill reads and updates this file.
 >
 > Rules:
 >

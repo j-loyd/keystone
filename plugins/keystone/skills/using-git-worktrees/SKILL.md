@@ -28,7 +28,7 @@ BRANCH=$(git branch --show-current)
 git rev-parse --show-superproject-working-tree 2>/dev/null
 ```
 
-**If `GIT_DIR != GIT_COMMON` (and not a submodule):** You are already in a linked worktree. Skip to Step 3 (Project Setup). Do NOT create another worktree.
+**If `GIT_DIR != GIT_COMMON` (and not a submodule):** You are already in a linked worktree. Skip to Step 2 (baseline). Do NOT create another worktree.
 
 Report with branch state:
 
@@ -41,7 +41,7 @@ Has the user already indicated their worktree preference in your instructions? I
 
 > "Would you like me to set up an isolated worktree? It protects your current branch from changes."
 
-Honor any existing declared preference without asking. If the user declines consent, work in place and skip to Step 3.
+Honor any existing declared preference without asking. If the user declines consent, work in place and skip to Step 2.
 
 ## Step 1: Create Isolated Workspace
 
@@ -49,7 +49,7 @@ Honor any existing declared preference without asking. If the user declines cons
 
 ### 1a. Native Worktree Tools (preferred)
 
-The user has asked for an isolated workspace (Step 0 consent). Do you already have a way to create a worktree? It might be a tool with a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use it and skip to Step 3.
+The user has asked for an isolated workspace (Step 0 consent). Do you already have a way to create a worktree? It might be a tool with a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use it and skip to Step 2.
 
 Native tools handle directory placement, branch creation, and cleanup automatically. Using `git worktree add` when you have a native tool creates phantom state your harness can't see or manage.
 
@@ -95,8 +95,8 @@ Follow this priority order. Explicit user preference always beats observed files
 git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
 ```
 
-**If it isn't ignored:** add it to `.gitignore` and stage that change — commit only if the user asks
-(see `git-workflow`) — then proceed.
+**If it isn't ignored:** add it to `.gitignore` and stage that change (leave committing it to
+the user), then proceed.
 
 **Why critical:** Prevents accidentally committing worktree contents to repository.
 
@@ -115,47 +115,17 @@ git worktree add "$path" -b "$BRANCH_NAME"
 cd "$path"
 ```
 
-**Sandbox fallback:** If `git worktree add` fails with a permission error (sandbox denial), tell the user the sandbox blocked worktree creation and you're working in the current directory instead. Then run setup and baseline tests in place.
+**Sandbox fallback:** If `git worktree add` fails with a permission error (sandbox denial), tell the user the sandbox blocked worktree creation and you're working in the current directory instead. Then run the baseline (Step 2) in place.
 
-## Step 3: Project Setup
+## Step 2: Verify a Clean Baseline
 
-Auto-detect and run appropriate setup:
+A fresh worktree has none of the main checkout's installed dependencies. Install them with the
+project's own package manager and lockfile (whatever its README or CI uses), then run its
+test command so the workspace starts from a known state:
 
-```bash
-# Node.js
-if [ -f package.json ]; then npm install; fi
-
-# Rust
-if [ -f Cargo.toml ]; then cargo build; fi
-
-# Python
-if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-if [ -f pyproject.toml ]; then poetry install; fi
-
-# Go
-if [ -f go.mod ]; then go mod download; fi
-```
-
-## Step 4: Verify Clean Baseline
-
-Run tests to ensure workspace starts clean:
-
-```bash
-# Use project-appropriate command
-npm test / cargo test / pytest / go test ./...
-```
-
-**If tests fail:** Report failures, ask whether to proceed or investigate.
-
-**If tests pass:** Report ready.
-
-### Report
-
-```
-Worktree ready at <full-path>
-Tests passing (<N> tests, 0 failures)
-Ready to implement <feature-name>
-```
+- **Tests pass:** report `Worktree ready at <full-path> — <N> tests, 0 failures`.
+- **Tests fail:** report the failures and ask whether to proceed or investigate. Without a
+  green baseline you can't tell new bugs from pre-existing ones.
 
 ## Quick Reference
 
@@ -165,59 +135,16 @@ Ready to implement <feature-name>
 | In a submodule                 | Treat as normal repo (Step 0 guard)                |
 | Native worktree tool available | Use it (Step 1a)                                   |
 | No native tool                 | Git worktree fallback (Step 1b)                    |
-| `.worktrees/` exists           | Use it (verify ignored)                            |
-| `worktrees/` exists            | Use it (verify ignored)                            |
-| Both exist                     | Use `.worktrees/`                                  |
+| Both `.worktrees/` and `worktrees/` exist | Use `.worktrees/`                       |
 | Neither exists                 | Check instruction file, then default `.worktrees/` |
-| Global path exists             | Use it (backward compat)                           |
-| Directory not ignored          | Add to .gitignore + commit                         |
+| Directory not ignored          | Add to `.gitignore` and stage it                   |
 | Permission error on create     | Sandbox fallback, work in place                    |
 | Tests fail during baseline     | Report failures + ask                              |
-| No package.json/Cargo.toml     | Skip dependency install                            |
-
-## Common Mistakes
-
-### Fighting the harness
-
-- **Problem:** Using `git worktree add` when the platform already provides isolation
-- **Fix:** Step 0 detects existing isolation. Step 1a defers to native tools.
-
-### Skipping detection
-
-- **Problem:** Creating a nested worktree inside an existing one
-- **Fix:** Always run Step 0 before creating anything
-
-### Skipping ignore verification
-
-- **Problem:** Worktree contents get tracked, pollute git status
-- **Fix:** Always use `git check-ignore` before creating project-local worktree
-
-### Assuming directory location
-
-- **Problem:** Creates inconsistency, violates project conventions
-- **Fix:** Follow priority: existing > global legacy > instruction file > default
-
-### Proceeding with failing tests
-
-- **Problem:** Can't distinguish new bugs from pre-existing issues
-- **Fix:** Report failures, get explicit permission to proceed
 
 ## Red Flags
 
-**Never:**
-
-- Create a worktree when Step 0 detects existing isolation
-- Use `git worktree add` when you have a native worktree tool (e.g., `EnterWorktree`). This is the #1 mistake — if you have it, use it.
-- Skip Step 1a by jumping straight to Step 1b's git commands
-- Create worktree without verifying it's ignored (project-local)
-- Skip baseline test verification
-- Proceed with failing tests without asking
-
-**Always:**
-
-- Run Step 0 detection first
-- Prefer native tools over git fallback
-- Follow directory priority: existing > global legacy > instruction file > default
-- Verify directory is ignored for project-local
-- Auto-detect and run project setup
-- Verify clean test baseline
+- Creating a worktree when Step 0 detects existing isolation (nested worktrees)
+- Using `git worktree add` when you have a native worktree tool (e.g. `EnterWorktree`) — the
+  harness can't see or clean up what you made by hand
+- Creating a project-local worktree without verifying it's ignored
+- Skipping the baseline, or proceeding past a failing one without asking

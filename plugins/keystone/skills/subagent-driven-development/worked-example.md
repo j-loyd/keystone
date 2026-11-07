@@ -75,7 +75,7 @@ Mason -> Quinn (QA gate) -> Riley spec -> Riley quality -> Sage (safety surface)
 [Dispatch final code-reviewer over the whole implementation]
 Final reviewer: All requirements met, ready to merge
 
-[finishing-a-development-branch Step 7: tally the gates before retiring the run-state]
+[finishing-a-development-branch Step 5: tally the gates before retiring the run-state]
 Gate tally: Riley 6 dispatches over 4 tasks / 1 FAIL · Quinn 1 / 1 PASS · Sage 1 / 1 PASS
   (task 3 was LOW — no Riley; task 4 was HIGH — Quinn + spec + quality + Sage; task 2 took a re-review)
   -> Quinn ran once and caught nothing: one run is a data point, not a verdict. Sage is

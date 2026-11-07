@@ -9,6 +9,7 @@ const path = require("node:path");
 const {
   DESCRIPTION_WARN_CHARS,
   REFERENCE_EXEMPTIONS,
+  SKILL_LINES_WARN,
   findSkillReferences,
   findPluginRootMisuse,
   PLUGIN_ROOT_EXEMPTIONS,
@@ -345,5 +346,17 @@ test("every plugin-root exemption names a file and form and carries a written re
 test("the real keystone catalog passes every rule", () => {
   const result = lintCatalog({ skillsDir: SKILLS_DIR, commandsDir: COMMANDS_DIR });
   assert.deepStrictEqual(result.errors, []);
-  assert.ok(result.skills.length >= 30, `only ${result.skills.length} skills found`);
+  // Sanity floor (the lint found the real tree, not an empty dir), not a catalog census.
+  assert.ok(result.skills.length >= 15, `only ${result.skills.length} skills found`);
+});
+
+test("a SKILL.md over the line budget warns but does not error", () => {
+  const long = good() + "\nline".repeat(SKILL_LINES_WARN);
+  const result = lintSkill("zoom-out", long);
+  assert.deepStrictEqual(result.errors, []);
+  assert.match(result.warnings.join("\n"), /line budget/);
+});
+
+test("a SKILL.md within the line budget does not warn", () => {
+  assert.deepStrictEqual(lintSkill("zoom-out", good()).warnings, []);
 });

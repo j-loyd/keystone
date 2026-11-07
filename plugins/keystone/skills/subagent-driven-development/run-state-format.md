@@ -76,7 +76,7 @@ decision, not a question.
 
 > **The first task that is unchecked, or checked with no summary block, is where to resume.**
 
-`/pickup`, `/pause`, and the orchestrator all read this same line. Quote it; don't re-invent it.
+`/pickup` and the orchestrator both read this same line. Quote it; don't re-invent it.
 
 ## Liveness & retirement — a finished run must not shadow a newer handoff
 
@@ -107,5 +107,5 @@ A Heavy run may also have a sibling **run-manifest** that indexes the run's arti
 
 The run-state is a plain markdown file on disk. Any harness — Claude Code, Codex CLI, or another
 — reads and writes it with its ordinary file tools. Nothing here depends on a harness-only
-primitive; `/pickup` and `/pause` are command prose that any harness with file access can
+primitive; `/pickup` is command prose that any harness with file access can
 execute. Tools named anywhere in this doc are instances, not requirements.

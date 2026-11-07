@@ -69,4 +69,3 @@ current workspace.
   reads it, not this conversation.
 - Honor the no-commit rule: planning and execution prepare work; commits happen only when you
   explicitly say so.
-- For a multi-issue plan, `/to-issues` can turn the plan into Linear Backlog tickets instead.

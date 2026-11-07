@@ -9,10 +9,6 @@ Execute a plan by dispatching a fresh subagent per **slice** of it, with review 
 
 **Core principle:** Fresh context per **slice** of the plan + review gated to each task's risk = high quality, fast iteration
 
-For how to construct a dispatch — what goes in a self-contained context packet, when delegation
-beats working inline, and the cross-harness fallbacks — see the `dispatching-parallel-agents`
-skill. This skill covers the execution loop that sits on top of it.
-
 **Continuous execution:** Don't stop between tasks to ask whether to keep going. The user asked
 you to execute the plan; execute it. Stop only for a BLOCKED status you can't resolve, ambiguity
 that genuinely prevents progress, or completion. Ending a turn on "should I continue?" or on a
@@ -44,8 +40,7 @@ the files it touches fit comfortably in one worker window. Defaults:
   thins out across the later tasks, means the slice was too big. Split and re-dispatch.
 
 Why not always one-per-task: each dispatch re-pays its own cold start (system prompt + tool
-definitions — ~4x overhead for even a two-way split; `dispatching-parallel-agents` has the
-mechanics), and a coherent multi-file change is exactly the work that suffers most from being
+definitions — ~4x overhead for even a two-way split), and a coherent multi-file change is exactly the work that suffers most from being
 cut into fragments that each rediscover the same context. **Tasks remain the tracking unit** —
 run-state checkboxes, the resume heuristic, and AC tracing are all per task, and a slice's
 worker returns per-task evidence.
@@ -104,7 +99,6 @@ crew members (registered agents) and route their results. Subagents can't talk t
 
 | Member    | Agent type          | Does                                      | Edits code?          |
 | --------- | ------------------- | ----------------------------------------- | -------------------- |
-| **Pat**   | `planner`           | turns a spec into the plan/handoff packet | no                   |
 | **Mason** | `implementer`       | builds one task, TDD                      | **yes — only Mason** |
 | **Quinn** | `qa`                | risk/coverage/trace/NFR → graded gate     | no                   |
 | **Riley** | `code-reviewer`     | production-readiness review               | no                   |
@@ -124,12 +118,12 @@ Build it from the plan; pass it in the dispatch prompt, not as
 "go read the plan file." The packet is a **hard ceiling, not a starting point** — a subagent
 that has to read the plan file or wander the tree to orient is a packet you under-built. If it's
 missing a fact, fix the packet, don't tell the subagent to go find it. Every packet ends with
-the standard footer from `dispatching-parallel-agents/patterns.md` — the worker runs
+the standard footer (the "Running unattended" rules in `agents/implementer.md`) — the worker runs
 unattended, batches its independent calls, stays inside the packet, and returns a result, not
 a transcript. The implementer and reviewer templates below carry it; for any other dispatch
 (Quinn, Sage, a one-off), append it yourself.
 
-**The chain:** Pat (plan) → **Mason** (implement) → **Riley** (review; at HIGH, **Quinn**'s QA
+**The chain:** the plan → **Mason** (implement) → **Riley** (review; at HIGH, **Quinn**'s QA
 gate runs first) → **Sage** (security, if a sensitive surface is in scope). Read the Risk table
 below for which gates actually fire. Quinn and Riley are **advisory** — they return a graded
 verdict (PASS / CONCERNS / FAIL; **WAIVED is yours**, not theirs — a gate reports, only you
@@ -280,7 +274,7 @@ per-task ceiling — they don't conflict.
 **Why MED is one seat.** A second reviewer on the same diff costs a dispatch for marginal
 findings we have **no measurement of** — this is the stacked-verification shape
 `designing-agent-systems` names as over-delegation, and the gate tally
-(`finishing-a-development-branch` Step 7) is how to find out whether the seat earns its cost. Until it says
+(`finishing-a-development-branch` Step 5) is how to find out whether the seat earns its cost. Until it says
 otherwise, spend the seat where blast radius justifies it. So at MED, Riley's single pass takes
 over Quinn's
 mechanical work — she runs the suite, reads Mason's RED→GREEN evidence, audits test *quality*,
@@ -374,7 +368,7 @@ or the ability to finish the task?**
 - **No → note and defer.** Tangential improvements, "while I'm here" refactors, unrelated debt.
   Record them (a `/learn` candidate or a `keystone:` marker) and move on. One carve-out: a
   **boy-scout cleanup** inside lines the task already edits — a misleading name, a magic number,
-  code the diff orphaned — is part of doing the task well. `coding-standards` has the
+  code the diff orphaned — is part of doing the task well. `agents/implementer.md` has the
   three-part boundary.
 
 Most deviations are a fix or a deferral; only the genuinely consequential ones should interrupt.
@@ -400,7 +394,7 @@ reflexive "no."
 
 Offer it at a boundary where you'd be stopping anyway — task completion that ends the run, or a
 blocker you're already surfacing — never as a mid-run interruption that ends a turn on a question.
-(The complementary capture is the gate tally at run end: `finishing-a-development-branch` Step 7
+(The complementary capture is the gate tally at run end: `finishing-a-development-branch` Step 5
 turns "this gate ran N times and caught nothing" into a lesson too. Lessons record what the
 gates *found*; the tally records what they *cost*.)
 
@@ -455,7 +449,7 @@ passing the template as the task prompt plus the handoff packet:
 
 - **using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **writing-plans** - Creates the plan this skill executes
-- **`./code-reviewer-prompt.md`** - Reviewer dispatch template (also used by `/review`)
+- **`./code-reviewer-prompt.md`** - Reviewer dispatch template
 - **finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**

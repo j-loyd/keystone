@@ -116,6 +116,20 @@ Two different bars, and a task is done only when both are met.
 Both must hold. Where a project has no written Definition of Done, name the standing checks you
 applied rather than reading the absence as "no bar."
 
+## "No behavior change" claims
+
+A refactor, cleanup, or simplification pass (including the built-in `/simplify`) claims that
+behavior is unchanged. That is a claim like any other, and it needs a before-and-after:
+
+1. **Baseline first.** Run the tests / type-checker / linter *before* editing and note what's
+   green, so a pre-existing failure isn't blamed on the change.
+2. **Re-run after** — it must be as green as the baseline. If no test covers the touched path,
+   say so and reason through the call sites by hand; an unrelated green suite proves nothing.
+3. **Diff your own change hunk by hunk** and revert any hunk you can't show is
+   behavior-neutral. Messages, error types, log fields, and return shapes are behavior.
+4. **Report what you left alone on purpose** — anything that looked cleanable but you judged
+   intentional or behavior-bearing — so the reviewer knows it was a decision, not an oversight.
+
 ## Reporting honestly
 
 When verification fails or was not possible, say so plainly and specifically — which command,

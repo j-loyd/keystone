@@ -20,7 +20,7 @@ something loads it.
 ```yaml
 description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded
   dependencies, abstractions with one caller. Use when the user says "audit this codebase",
-  "what can I delete", or "/audit". Scope boundary — code and dependencies, not UI or design.
+  "what can I delete", or "audit for over-engineering". Scope boundary — code and dependencies, not UI or design.
 ```
 
 - **Quote the phrases a user actually types.** "Use when implementing a feature" describes a

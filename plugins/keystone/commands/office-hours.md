@@ -24,7 +24,7 @@ this command when the problem is big or fuzzy enough to deserve a real interroga
 - Explore the codebase for what already exists in this area. Reuse beats build — name
   the existing functions/modules/patterns you find.
 - If a `CONTEXT.md` glossary or `docs/adr/` exists, read them and speak the project's
-  language. (Pairs with the `grill-with-docs` and `zoom-out` skills.)
+  language. (Pairs with the `grill-with-docs` skill.)
 
 ### 2. Six forcing questions
 

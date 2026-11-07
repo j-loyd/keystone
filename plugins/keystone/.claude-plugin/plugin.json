@@ -22,7 +22,6 @@
   "skills": "./skills/",
   "commands": "./commands/",
   "agents": [
-    "./agents/planner.md",
     "./agents/implementer.md",
     "./agents/qa.md",
     "./agents/code-reviewer.md",

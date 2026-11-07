@@ -5,66 +5,28 @@ description: Decide how to land completed work — merge, PR, or discard. Use wh
 
 # Finishing a Development Branch
 
-## Overview
+**Core principle:** verify tests → detect the workspace → present options → execute the choice
+→ clean up only what you own.
 
-Guide completion of development work by presenting clear options and handling chosen workflow.
+### Step 1: Verify tests, detect the workspace
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
-
-## The Process
-
-### Step 1: Verify Tests
-
-**Before presenting options, verify tests pass:**
-
-```bash
-# Run project's test suite
-npm test / cargo test / pytest / go test ./...
-```
-
-**If tests fail:**
-
-```
-Tests failing (<N> failures). Must fix before completing:
-
-[Show failures]
-
-Cannot proceed with merge/PR until tests pass.
-```
-
-Stop. Don't proceed to Step 2.
-
-**If tests pass:** Continue to Step 2.
-
-### Step 2: Detect Environment
-
-**Determine workspace state before presenting options:**
+Run the project's test suite first (`verification-before-completion` — read the whole output).
+Failing → show the failures and stop; don't offer merge or PR on a red suite.
 
 ```bash
 GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
 GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+MAIN_ROOT=$(git -C "$GIT_COMMON/.." rev-parse --show-toplevel)
+git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null  # base branch
 ```
-
-This determines which menu to show and how cleanup works:
 
 | State                                  | Menu                         | Cleanup                         |
 | -------------------------------------- | ---------------------------- | ------------------------------- |
-| `GIT_DIR == GIT_COMMON` (normal repo)  | Standard 4 options           | No worktree to clean up         |
-| `GIT_DIR != GIT_COMMON`, named branch  | Standard 4 options           | Provenance-based (see Step 6)   |
-| `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 3 options (no merge) | No cleanup (externally managed) |
+| `GIT_DIR == GIT_COMMON` (normal repo)  | 4 options                    | No worktree to clean up         |
+| `GIT_DIR != GIT_COMMON`, named branch  | 4 options                    | Ownership check (Step 4)        |
+| `GIT_DIR != GIT_COMMON`, detached HEAD | 3 options (no local merge)   | None (externally managed)       |
 
-### Step 3: Determine Base Branch
-
-```bash
-# Try common base branches
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
-```
-
-Or ask: "This branch split from main - is that correct?"
-
-### Step 4: Present Options
-
-**Normal repo and named-branch worktree — present exactly these 4 options:**
+### Step 2: Present exactly these options
 
 ```
 Implementation complete. What would you like to do?
@@ -73,78 +35,39 @@ Implementation complete. What would you like to do?
 2. Push and create a Pull Request
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
-
-Which option?
 ```
 
-**Detached HEAD — present exactly these 3 options:**
+On a detached HEAD, drop option 1 (option 2 becomes "push as a new branch and open a PR").
+Keep the options terse; don't add explanation. Nothing here runs until the user picks.
 
-```
-Implementation complete. You're on a detached HEAD (externally managed workspace).
+### Step 3: Execute the choice
 
-1. Push as new branch and create a Pull Request
-2. Keep as-is (I'll handle it later)
-3. Discard this work
+**Option 1 — merge locally.** Where the merge happens depends on the workspace:
 
-Which option?
-```
+- **Normal repo** (`GIT_DIR == GIT_COMMON`): this checkout is the session's own. With a clean
+  tree, `git switch <base-branch>`, `git pull`, `git merge <feature-branch>`, run the test suite
+  on the merged result, then `git branch -d <feature-branch>`.
+- **Worktree:** the merge happens in the main checkout, which belongs to the user. Address it
+  with `git -C "$MAIN_ROOT"` rather than `cd` — under native worktree isolation the session may
+  not be allowed to leave its worktree, and a `cd` there doesn't persist reliably. Before
+  touching it, check the main checkout is **clean and already on the base branch**
+  (`git -C "$MAIN_ROOT" status --porcelain` empty, `branch --show-current` = base). If either
+  fails, stop and ask — never check out a different branch over someone's work-in-progress.
 
-**Don't add explanation** - keep options concise.
+  ```bash
+  git -C "$MAIN_ROOT" pull
+  git -C "$MAIN_ROOT" merge <feature-branch>
+  # run the test suite in $MAIN_ROOT on the merged result; only then clean up (Step 4)
+  git -C "$MAIN_ROOT" branch -d <feature-branch>   # only once the worktree is removed
+  ```
 
-### Step 5: Execute Choice
+**Option 2 — push and open a PR.** `git push -u origin <feature-branch>`, then
+`gh pr create` with a summary and a test plan. **Keep the worktree** — the user needs it to
+iterate on review feedback.
 
-#### Option 1: Merge Locally
+**Option 3 — keep as-is.** Report the branch and worktree path. Touch nothing.
 
-```bash
-# Get main repo root for CWD safety
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-
-# Merge first — verify success before removing anything
-git checkout <base-branch>
-git pull
-git merge <feature-branch>
-
-# Verify tests on merged result
-<test command>
-
-# Only after merge succeeds: cleanup worktree (Step 6), then delete branch
-```
-
-Then: Cleanup worktree (Step 6), then delete branch:
-
-```bash
-git branch -d <feature-branch>
-```
-
-#### Option 2: Push and Create PR
-
-```bash
-# Push branch
-git push -u origin <feature-branch>
-
-# Create PR
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
-EOF
-)"
-```
-
-**Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
-
-#### Option 3: Keep As-Is
-
-Report: "Keeping branch <name>. Worktree preserved at <path>."
-
-**Don't cleanup worktree.**
-
-#### Option 4: Discard
-
-**Confirm first:**
+**Option 4 — discard. Confirm first:**
 
 ```
 This will permanently delete:
@@ -155,45 +78,29 @@ This will permanently delete:
 Type 'discard' to confirm.
 ```
 
-Wait for exact confirmation.
+Wait for the exact word. Then: in a normal repo, `git switch <base-branch>` first (git won't
+delete the checked-out branch); in a worktree, clean up (Step 4). Then
+`git -C "$MAIN_ROOT" branch -D <feature-branch>`.
 
-If confirmed:
+### Step 4: Clean up only what you own (options 1 and 4)
 
-```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-```
+Options 2 and 3 always preserve the worktree. For 1 and 4:
 
-Then: Cleanup worktree (Step 6), then force-delete branch:
+- **`GIT_DIR == GIT_COMMON`:** normal repo, no worktree to clean up.
+- **Worktree under `.worktrees/`, `worktrees/`, or `~/.config/keystone/worktrees/`:** keystone
+  created it, so keystone owns cleanup. Remove it from outside itself, then delete the branch
+  (a branch still checked out in a worktree can't be deleted):
 
-```bash
-git branch -D <feature-branch>
-```
+  ```bash
+  git -C "$MAIN_ROOT" worktree remove "$(git rev-parse --show-toplevel)"
+  git -C "$MAIN_ROOT" worktree prune
+  ```
 
-### Step 6: Cleanup Workspace
+- **Anywhere else:** the harness owns this workspace. Do **not** remove it — use the platform's
+  workspace-exit tool if it has one, otherwise leave it in place. The feature branch is still
+  checked out there, so skip the branch deletion and say so (or let the workspace exit do it).
 
-**Only runs for Options 1 and 4.** Options 2 and 3 always preserve the worktree.
-
-```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-WORKTREE_PATH=$(git rev-parse --show-toplevel)
-```
-
-**If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
-
-**If worktree path is under `.worktrees/`, `worktrees/`, or `~/.config/keystone/worktrees/`:** keystone created this worktree — we own cleanup.
-
-```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-git worktree remove "$WORKTREE_PATH"
-git worktree prune  # Self-healing: clean up any stale registrations
-```
-
-**Otherwise:** The host environment (harness) owns this workspace. Do NOT remove it. If your platform provides a workspace-exit tool, use it. Otherwise, leave the workspace in place.
-
-### Step 7: Retire the run-state (subagent-driven-development runs only)
+### Step 5: Retire the run-state (subagent-driven-development runs only)
 
 **Skip this step for non-run work** — a plain `/handoff` note is disposable and is already marked
 `resumed` by `/pickup`; it needs no retirement.
@@ -226,10 +133,13 @@ A completed run-state that lingers will **shadow every newer `/handoff`** at `/p
    from the **Active run-state** table (or mark it `superseded`). This is what guarantees a
    completed run can never shadow a newer handoff note.
 
-## Going deeper
+## Red flags
 
-- [`reference.md`](reference.md) — command quick-reference, common mistakes, and the red
-  flags that mean the branch is not actually ready to land.
+- Merging or opening a PR on a failing suite, or skipping the test run on the merged result
+- Deleting work without the typed `discard` confirmation
+- Checking out a branch in the main checkout over uncommitted work
+- Removing a worktree before the merge is confirmed, or one you didn't create
+- Force-pushing without an explicit request
 
 ## If the merge conflicts
 

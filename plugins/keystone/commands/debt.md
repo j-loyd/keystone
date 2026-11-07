@@ -13,7 +13,7 @@ allowed-tools:
 
 Collect the deliberate shortcuts left in the code into one ledger, so a deferral can't quietly
 become permanent. Deliberate shortcuts are marked `keystone: <ceiling>, <upgrade trigger>`
-(see the `coding-standards` skill). This command **reports only** unless asked to save.
+(the convention in `agents/implementer.md`). This command **reports only** unless asked to save.
 
 ## Process
 
@@ -37,6 +37,17 @@ become permanent. Deliberate shortcuts are marked `keystone: <ceiling>, <upgrade
 3. **Flag the rot risk.** Any marker that names **no upgrade trigger** gets a `no-trigger` tag —
    those are the ones that silently rot. End with `<N> markers, <M> with no trigger.`
    Nothing found → `No deferred shortcuts marked. Clean ledger.`
+
+   **Feature flags are debt from the day they ship.** Until the flag and its losing branch are
+   deleted, that code path is two code paths. A flag's definition should carry the same marker
+   with a cleanup trigger (a date, or a condition like "once every consumer is off v1"):
+
+   ```py
+   # keystone: both write paths live while this flag exists; remove the flag and the legacy
+   # write once the backfill finishes and reads have baked a week on the new column.
+   ```
+
+   A flag marker with no trigger gets the `no-trigger` tag like any other.
 
 4. **Persist only if asked.** If `$ARGUMENTS` is `save`, write the ledger to `DEBT.md` at the
    repo root (confirm the path first). Otherwise leave it in the reply. Do not commit or push

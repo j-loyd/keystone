@@ -36,10 +36,10 @@ IF conflicts with the user's prior decisions:
 Feedback arrives in a few known shapes depending on who produced it — read the shape before you
 triage:
 
-- **Riley (`code-reviewer` / `/review`)** — findings grouped **blocker / should-fix / nit**, each
-  with a `file:line` and a suggested fix. No confidence field: severity alone doesn't tell you
-  whether the finding is demonstrated or theorized — verify it yourself before treating it as
-  confirmed.
+- **Riley (`code-reviewer` agent)** — findings grouped **blocker / should-fix / nit**, each
+  with a `file:line`, a suggested fix, and a 1–10 confidence score. The score is the reviewer's
+  own: a 9–10 means it quoted the causing line, not that the finding is proven — verify it
+  yourself before treating it as confirmed.
 - **Quinn (`qa` gate)** — a graded verdict (**PASS / CONCERNS / FAIL / WAIVED**) plus per-issue
   `file:line`, severity, the finding, and a suggested action. A **FAIL** item is a must-fix by
   definition; a **CONCERNS** item is the orchestrator's call to accept or loop — you don't get to
