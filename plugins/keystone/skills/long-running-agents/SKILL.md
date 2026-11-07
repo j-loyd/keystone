@@ -63,8 +63,8 @@ likely to pause on a genuinely ambiguous step. (The "Running unattended" section
 - **Progress file** — the running state: item checklist, current status, next action,
   blockers. The continuity primitive is a **structured handoff file, not a conversation
   summary** — summaries decay and bloat; a state file stays exact. (keystone's
-  `/handoff` → `/pickup` flow and `subagent-driven-development`'s run-state file are this
-  pattern; reuse them, don't invent a third format.)
+  `/handoff` → `/pickup` flow and `/implement`'s ticket files are this pattern; reuse them,
+  don't invent a third format.)
 - **Failure log** — a persistent "what didn't work and why" file every iteration reads before
   acting. Without it, iteration N cheerfully retries what iteration N-3 already proved
   broken. Highest-value lines: the exact command/approach that failed and the observed error.
@@ -131,7 +131,7 @@ agent degrades one run rather than the whole budget.
   compaction point; mid-derivation is not. Threshold-triggered auto-compaction that fires
   mid-task is how runs lose the thread.
 - **Don't re-absorb verbosity.** Carry results (status, files, findings) forward, not
-  transcripts — the same rule `subagent-driven-development` applies to subagent returns.
+  transcripts — the same rule `/implement` applies to implementer returns.
 
 ## When NOT to loop
 
@@ -139,15 +139,15 @@ agent degrades one run rather than the whole budget.
 - **The task needs deep, evolving judgment of one codebase** — a loop's per-iteration
   cold-start re-pays the orientation cost every cycle; a single long session with resets
   does better.
-- **A plan already exists with independent tasks** — that's `subagent-driven-development`
-  (orchestrated, gated), not an autonomous loop. Loops are for work you _can't_ fully plan
+- **A spec already exists with independent tickets** — that's `/implement` (orchestrated,
+  one final review), not an autonomous loop. Loops are for work you _can't_ fully plan
   up front or that must run unattended.
 - **The loop exists to avoid writing a spec.** A loop amplifies its spec's quality in both
   directions; garbage spec, confidently iterated garbage.
 
 ## Cross-references
 
-- `subagent-driven-development` — run-state format, orchestrator discipline, review gates.
+- `/implement` — ticket graph, frontier, per-ticket implementers, the final review.
 - `/handoff` + `/pickup` — the session-boundary handoff this skill's progress file feeds.
 - `llm-security` — denial-of-wallet and unbounded consumption as an abuse class, when the
   runaway burn is adversarial rather than accidental.

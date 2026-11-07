@@ -102,6 +102,16 @@ test("a third frontmatter key is an error", () => {
   assert.match(result.errors.join("\n"), /allowed-tools/);
 });
 
+test("disable-model-invocation: true is allowed (user-only skills)", () => {
+  const source = good().replace("---\n\n# Body", "disable-model-invocation: true\n---\n\n# Body");
+  assert.deepStrictEqual(lintSkill("zoom-out", source).errors, []);
+});
+
+test("disable-model-invocation with any value but true is an error", () => {
+  const source = good().replace("---\n\n# Body", "disable-model-invocation: false\n---\n\n# Body");
+  assert.match(lintSkill("zoom-out", source).errors.join("\n"), /disable-model-invocation/);
+});
+
 test("a missing description is an error", () => {
   const result = lintSkill("zoom-out", frontmatter({ name: "zoom-out" }));
   assert.match(result.errors.join("\n"), /description/);
@@ -131,7 +141,7 @@ test("a description with no trigger clause is an error", () => {
 
 test("a skill cannot exempt itself through frontmatter", () => {
   // Exemptions live in this validator, never in the artifact being validated.
-  // The name+description-only rule is what makes that airtight.
+  // The closed frontmatter key list is what makes that airtight.
   const source = good().replace(
     "---\n\n# Body",
     "exempt-references: deep-research\nvalidator-skip: true\n---\n\n# Body",
@@ -339,6 +349,47 @@ test("every plugin-root exemption names a file and form and carries a written re
     assert.ok(["unbraced", "default"].includes(entry.form), JSON.stringify(entry));
     assert.ok(typeof entry.reason === "string" && entry.reason.length > 20, JSON.stringify(entry));
   }
+});
+
+// ---------- user-only parity across harnesses ----------
+
+const USER_ONLY = frontmatter({
+  name: "zoom-out",
+  description: "Step back. Use when the user runs /zoom-out.",
+  "disable-model-invocation": "true",
+});
+const CODEX_POLICY = "interface:\n  display_name: \"Zoom Out\"\npolicy:\n  allow_implicit_invocation: false\n";
+
+test("a user-only skill with a matching Codex policy passes", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": USER_ONLY,
+    "skills/zoom-out/agents/openai.yaml": CODEX_POLICY,
+  });
+  assert.deepStrictEqual(lintCatalog({ skillsDir: path.join(root, "skills") }).errors, []);
+});
+
+test("a user-only skill without agents/openai.yaml is an error", () => {
+  const root = catalogFixture({ "skills/zoom-out/SKILL.md": USER_ONLY });
+  const text = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.join("\n");
+  assert.match(text, /zoom-out/);
+  assert.match(text, /allow_implicit_invocation/);
+});
+
+test("a Codex no-implicit policy on a model-invocable skill is an error", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": good(),
+    "skills/zoom-out/agents/openai.yaml": CODEX_POLICY,
+  });
+  const text = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.join("\n");
+  assert.match(text, /disable-model-invocation/);
+});
+
+test("an openai.yaml with only an interface block is fine on a model-invocable skill", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": good(),
+    "skills/zoom-out/agents/openai.yaml": "interface:\n  display_name: \"Zoom Out\"\n",
+  });
+  assert.deepStrictEqual(lintCatalog({ skillsDir: path.join(root, "skills") }).errors, []);
 });
 
 // ---------- the real catalog ----------

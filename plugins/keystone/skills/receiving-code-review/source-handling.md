@@ -40,10 +40,6 @@ triage:
   with a `file:line`, a suggested fix, and a 1–10 confidence score. The score is the reviewer's
   own: a 9–10 means it quoted the causing line, not that the finding is proven — verify it
   yourself before treating it as confirmed.
-- **Quinn (`qa` gate)** — a graded verdict (**PASS / CONCERNS / FAIL / WAIVED**) plus per-issue
-  `file:line`, severity, the finding, and a suggested action. A **FAIL** item is a must-fix by
-  definition; a **CONCERNS** item is the orchestrator's call to accept or loop — you don't get to
-  unilaterally drop it, but you can make the case with verification.
 - **Sage (`security-reviewer` / `/cso`)** — findings grouped **critical / high / medium / low**,
   each with the traced source→sink path and concrete exploit, plus a separate **needs
   validation** list (no severity) and a **hardening** list. Sage already defaults to skepticism
@@ -52,7 +48,7 @@ triage:
 - **The user, inline** — no severity system at all. Treat every item per Handling
   Unclear Feedback above, not as a pre-triaged queue.
 
-When a finding doesn't carry an explicit confidence label (Riley's and Quinn's formats don't by
+When a finding doesn't carry an explicit confidence label (Riley's format doesn't by
 default), treat it as **suspected until you verify it** — the absence of "confirmed" isn't a
 signal the finding is weak, it just means the verification step is still yours to do.
 

@@ -2,7 +2,7 @@
 
 The durable map `onboard-codebase` writes to `docs/codebase/` in the target repo. Seven docs,
 each one focused file. The map records **facts about the code as it is** — not opinions, not a
-plan, not domain vocabulary (that's `CONTEXT.md`) and not decisions (those are ADRs).
+plan, not domain vocabulary (that's `GLOSSARY.md`) and not decisions (those are ADRs).
 
 ## Contents
 

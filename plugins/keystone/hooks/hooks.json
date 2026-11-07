@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Session started. If in-flight work exists in this repo, read docs/handoffs/README.md (the continuity index: newest handoff note plus any active run-state) or run /pickup to resume where you left off. docs/handoffs/README.md is this repo task-state; MEMORY.md is your personal cross-project index.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Session started. If in-flight work exists in this repo, read docs/handoffs/README.md (the continuity index: newest handoff note) or run /pickup to resume where you left off. docs/handoffs/README.md is this repo task-state; MEMORY.md is your personal cross-project index.\"}}'",
             "timeout": 5,
             "statusMessage": "Checking for in-flight work..."
           }

@@ -227,6 +227,32 @@ ones.
   threshold before looking at results, report every per-task regression even when the average
   improves, and treat safety cases as must-pass rather than part of the average.
 
+### Testing model-backed code
+
+Code that calls a model is two layers, and they test differently:
+
+- **The deterministic shell** (parsing, retries, routing, schema validation, tool-call
+  dispatch, budget tracking, prompt assembly) is ordinary code. Write the failing test first,
+  watch it fail, make it pass. Stub the model call at this layer's boundary: mock the boundary
+  you don't own, not the logic you do.
+- **The model call itself** can return a different string on every run. You cannot test toward
+  one exact output; test for what a _correct_ output must satisfy instead:
+  - Assert **structure, not string equality**: valid against the output schema, required fields
+    present, no forbidden tool/field, within a length/cost/latency budget.
+  - Assert **a property over a golden set** ("for this input class, the output always contains
+    X"), run against a small, versioned set of real inputs, not one hand-typed example.
+  - Treat **flakiness as data, not noise**. A property that passes 8 of 10 seeded runs isn't
+    proven: tighten the prompt/contract until it's ~10/10, or make the tolerance explicit in the
+    test (`passes >= 9 of 10 seeds`) instead of quietly re-running until green.
+  - **Watch a real failure first.** Run the golden set against the current prompt/behavior
+    before changing it, confirm the property genuinely fails (not an eval-harness bug), then
+    change it and re-run. A prompt tweak with no failing-then-passing eval run is a
+    tested-after claim you just can't see.
+- **Keep the fast suite fast.** Unit-test the shell against a stubbed model response on every
+  run; reserve the slower real-model golden-set eval for changes that touch prompt/behavior.
+  State which tier a change was verified against: stubbed shell tests aren't evidence for a
+  prompt-behavior claim.
+
 ## Design note (the deliverable)
 
 ```
@@ -283,7 +309,7 @@ Seed tasks · rubric · end-state assertions
 
 ## Integration
 
-- Before `writing-plans` — the design note feeds the plan.
+- Before `/spec`: the design note feeds the spec.
 - `long-running-agents` — loop modes, iteration contract, stuck detection, budget enforcement.
 - `llm-security` — the agent attack surface (prompt injection, tool trust, excessive agency).
 - `challenge` — stress-test the design note itself before building from it.

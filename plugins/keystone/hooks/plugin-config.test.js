@@ -127,7 +127,7 @@ test("explicit ./ sibling .md references in SKILL.md files resolve", () => {
     const refs = new Set(body.match(/\.\/[\w./-]+\.md/g) || []);
     for (const ref of refs) {
       // A "./" ref may target a sibling file in this skill's own dir, or a cross-skill
-      // file under skills/ (e.g. ./grill-with-docs/CONTEXT-FORMAT.md). Accept either base.
+      // file under skills/ (e.g. ./domain-modeling/GLOSSARY-FORMAT.md). Accept either base.
       const resolves =
         fs.existsSync(path.join(dir, ref)) ||
         fs.existsSync(path.join(skillsDir, ref));

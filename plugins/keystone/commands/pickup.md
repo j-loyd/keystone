@@ -1,7 +1,7 @@
 ---
 name: pickup
-description: Resume interrupted work — read the newest resume artifact (a /handoff note, or a subagent-driven-development run-state file) and continue from where it stopped, without restarting. Use after a compaction, crash, or a deliberate /handoff. (Named pickup, not resume, to avoid colliding with the harness's built-in conversation /resume.)
-argument-hint: "[optional: path to a handoff or run-state file; defaults to the newest of either]"
+description: Resume interrupted work — read the newest open /handoff note and the open tickets, reconcile them with git, and continue from where it stopped, without restarting. Use after a compaction, crash, or a deliberate /handoff. (Named pickup, not resume, to avoid colliding with the harness's built-in conversation /resume.)
+argument-hint: "[optional: path to a handoff note or a feature's tickets; defaults to the newest open note]"
 allowed-tools:
   - Read
   - Bash
@@ -11,76 +11,49 @@ allowed-tools:
 
 # Pickup — rehydrate interrupted work
 
-`/pickup` is the single resume command. Two kinds of artifact can be waiting for it:
+`/pickup` is the single resume command. Two things can be waiting for it:
 
-- A **handoff note** from `/handoff` (freeform, four-field — `docs/handoffs/<date>.md`), for
-  ad-hoc or non-run work. This is the common case.
-- A **run-state file** from a `subagent-driven-development` run (structured, per-task — see
-  `../skills/subagent-driven-development/run-state-format.md`). Written continuously by the
-  orchestrator.
+- A **handoff note** from `/handoff` (four fields, `docs/handoffs/<date>.md`): the state of
+  whatever you were doing and the literal next action.
+- **Open tickets** from `/spec` → `/to-tickets` → `/implement`: the task graph itself is the
+  progress record. Local tickets live at `.scratch/<feature>/issues/`; a remote tracker is
+  configured in `docs/agents/issue-tracker.md`.
 
-It reads whichever applies and **continues, never restarts**.
+It reads both and **continues, never restarts**.
 
 ## How
 
-1. **Read the continuity index first.** `docs/handoffs/README.md` is the deterministic,
-   recency-aware source of truth — its **Handoff notes** table (newest first) and its **Active
-   run-state** section tell you what is open without guessing from the filesystem.
+1. **Find what's open.** If **$ARGUMENTS** names a file or feature, use it and skip the search.
 
    ```bash
-   test -f docs/handoffs/README.md && cat docs/handoffs/README.md
+   test -f docs/handoffs/README.md && cat docs/handoffs/README.md        # continuity index
+   ls -t docs/handoffs/[0-9]*.md 2>/dev/null | head -1                   # fallback: newest note
+   grep -L '^\*\*Status:\*\* done' .scratch/*/issues/*.md 2>/dev/null     # local tickets not done
+   test -f docs/agents/issue-tracker.md && cat docs/agents/issue-tracker.md
    ```
 
-   If **$ARGUMENTS** names a specific file, use it and skip the search. If the index is
-   **missing or stale**, fall back to directory globs (exclude the index itself):
+   The index's **Handoff notes** table (newest first) is the source of truth for notes; ignore
+   rows marked `resumed` or `superseded`. For a remote tracker, list open issues labelled
+   `ready-for-agent` (or the configured equivalent) as its doc describes, skipping the spec issue
+   itself and any ticket that already carries a `merged into <branch>` comment (`/implement`
+   counts those as done and closes them at the end).
 
-   ```bash
-   shopt -s globstar 2>/dev/null   # so docs/plans/**/ matches nested plan folders
-   runstate=$(ls -t docs/plans/**/RUN-STATE.md docs/plans/*.run-state.md 2>/dev/null | head -1)
-   handoff=$(ls -t docs/handoffs/[0-9]*.md 2>/dev/null | head -1)   # date-named notes, not README.md
-   printf 'run-state: %s\nhandoff:   %s\n' "${runstate:-none}" "${handoff:-none}"
-   ```
+2. **Pick the target.**
+   - **An open handoff note** → resume it (step 3). If it names a feature with open tickets, the
+     note's Next action wins; the tickets are the Remaining work.
+   - **No open note, but open tickets** → summarize the feature, which tickets are done, and the
+     current frontier (tickets not done whose blockers are all done), then offer `/implement`,
+     which resumes from the frontier.
+   - **Neither** → nothing to resume; say so and stop.
 
-2. **Choose the resume target — recency + liveness, not mere existence.** A run-state wins
-   **only if it is demonstrably live**: it has at least one task that is _unchecked_, or _checked
-   with no summary block_ (the resume heuristic in
-   `../skills/subagent-driven-development/run-state-format.md`). A **completed** run — every task
-   checked with a summary — is _not_ a resume target even if its `RUN-STATE.md` still exists on
-   disk; a finished run that lingers must never shadow a newer handoff. So:
-
-   - **Live run-state exists** → resume the run (step 4).
-   - **Otherwise** → resume the newest handoff row whose Status is **open** (step 3). Ignore rows
-     already marked `resumed` or `superseded`.
-   - **Neither** → nothing to resume; tell the user and stop.
-
-   Confirm liveness by actually reading the run-state's task log before trusting it — do not
-   pick it just because the file is present.
-
-3. **If it's a handoff note** — resume the freeform work (the usual path):
-
-   1. Read the note's four fields (Current state / Next action / Remaining work / Decisions &
-      gotchas).
-   2. Reconcile **Current state** against reality first — `git status -s` and the current branch
-      — so you trust the note before acting on it. If they disagree, surface that, don't barrel
-      ahead.
+3. **Resume a handoff note.**
+   1. Read its four fields (Current state / Next action / Remaining work / Decisions & gotchas).
+   2. Reconcile **Current state** against reality first (`git status -s`, the current branch,
+      `git log --oneline -5`) so you trust the note before acting on it. If they disagree, surface
+      that; don't barrel ahead.
    3. Carry **Decisions & gotchas** forward so they're not relitigated.
    4. Start from the literal **Next action**, then work the **Remaining work** in order.
-   5. Mark the consumed row **resumed** in `docs/handoffs/README.md` so a later `/pickup` does
-      not re-consume it.
+   5. Mark the consumed row **resumed** in `docs/handoffs/README.md` so a later `/pickup` doesn't
+      re-consume it.
 
-4. **If it's a run-state file** — rehydrate the structured run:
-
-   1. Read the run-state file and the `Plan:` it names, to rebuild each task's handoff packet
-      from recorded facts, not the lost chat.
-   2. Find the resume point, verbatim from the format doc:
-
-      > **The first task that is unchecked, or checked with no summary block, is where to resume.**
-
-      A checked task with a summary block is done — skip it.
-
-   3. Re-read **Locked decisions** and **Open blockers** so they carry forward, not relitigated.
-   4. Hand back to `subagent-driven-development` at the resume-point task — dispatch the
-      implementer with its packet and run the normal per-task loop forward. Do not re-run
-      completed tasks.
-
-Honor no-auto-commit — resuming continues the work, it does not commit unless the user asks.
+Resuming continues the work; it doesn't push or merge anything the user hasn't asked for.

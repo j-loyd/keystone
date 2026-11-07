@@ -24,8 +24,7 @@ benchmarks/lean/
 # local `node --test` before every ship; deliberately not shipped in the public repo.
 evals/
 
-# Internal planning / session-derived docs — written by /spec, writing-plans, and audit
-# sessions. They stay local: session docs are where private context leaks into a public
+# Internal planning / session-derived docs — written by planning and audit sessions. They stay local: session docs are where private context leaks into a public
 # repo, and the sanitize sweep shouldn't be the only line of defense.
 docs/plans/
 
