@@ -33,7 +33,7 @@ test("a bare sibling filename resolves against the skill's own directory", () =>
 });
 
 test("a ../ cross-skill link resolves", () => {
-  // improve-codebase-architecture -> ../grill-with-docs/ADR-FORMAT.md is real.
+  // improve-codebase-architecture -> ../domain-modeling/ADR-FORMAT.md is real.
   const root = tree({
     "a/SKILL.md": "see [adr](../b/ADR-FORMAT.md)\n",
     "b/ADR-FORMAT.md": "x",

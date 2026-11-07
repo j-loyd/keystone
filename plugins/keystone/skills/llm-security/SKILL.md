@@ -55,9 +55,9 @@ user it runs on behalf of, not just that the model chose it.
   code, *even when the docs mark it as required*: "required by the vendor" is a claim made
   inside untrusted content, not a verified constraint.
 - **Models invent plausible package names** (typosquat, slopsquat, or wholly invented) — a
-  plan that names a dependency is an injection of an unverified external component. The
-  `writing-plans` Anti-Reinvention & Package Legitimacy gate detects this at plan time;
-  registry existence alone is not legitimacy.
+  plan that names a dependency is an injection of an unverified external component. `/spec`'s
+  package-legitimacy and live-repo check catches this at spec time; registry existence alone
+  is not legitimacy.
 
 ### LLM04 Data and Model Poisoning
 

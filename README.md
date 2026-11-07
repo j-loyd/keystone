@@ -6,9 +6,10 @@
 keystone is a single installable Claude Code plugin that bundles **one winner per
 capability** across four layers:
 
-- **Process discipline** — TDD, debugging, plans, worktrees, verification.
-- **Domain language** — a CONTEXT.md glossary + ADRs, grill.
-- **Explicit workflows** — office-hours, challenge, qa, cso, ship, retro.
+- **Build pipeline** — `/spec` → tickets → `/implement`, with an integrate-first rule and an
+  over-engineering gut check; worktrees, verification, review.
+- **Domain language** — a GLOSSARY.md glossary + ADRs, grilling, deep-module design vocabulary.
+- **Explicit workflows** — challenge, qa, cso, investigate, ship, retro.
 - **Harness & judgment** — tiered model routing, security review, and the
   instinct/memory/security-hook harness.
 
@@ -22,23 +23,44 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      21 auto-invoked skills (process discipline + agent/loop design + domain language + security + challenge + onboarding/git)
-├── commands/    15 explicit /commands (spec, office-hours, qa, cso, investigate, debt, ship, retro, continuity, learn, safety)
-├── agents/      the crew: Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
+├── skills/      23 skills: 19 model-invocable (verification + agent/loop design + domain language + security + challenge/audit + onboarding/git)
+│                and 4 user-only (spec, to-tickets, implement, setup — no context cost until you run them)
+├── commands/    13 explicit /commands (qa, cso, investigate, debt, ship, retro, continuity, learn, safety)
+├── agents/      the crew: Mason (implementer) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
-templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (README + plan.md)
+templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
 ```
 
 ### Commands
 
 | Group       | Commands                                                                                                                                        |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plan        | `/spec` (spec→plan→subagent execute) · `/office-hours` · `/challenge` (skill: fresh-eyes assumption red-team)                                   |
-| Review & QA | `/qa` · `/cso` · `/investigate` · `/debt` (deferred-shortcut ledger) · `auditing-for-overengineering` (skill: whole-repo over-engineering scan) |
+| Build       | `/spec` (idea → spec → tickets) · `/to-tickets` · `/implement` (tickets → integration branch) · `/setup` (tracker + domain docs, once per repo) · `/challenge` (fresh-eyes assumption red-team) |
+| Review & QA | `/qa` · `/cso` · `/investigate` · `/debt` (deferred-shortcut ledger) · `/audit` (whole-repo over-engineering scan) |
 | Ship        | `/ship` (never auto-commits; dispatches the `code-reviewer` agent as its review gate) · `/retro`                                                |
 | Continuity  | `/handoff` (resume note) · `/pickup` (resume) — the blessed `/handoff` → `/clear` → `/pickup` flow                                              |
 | Memory      | `/learn` (per-repo lessons)                                                                                                                     |
 | Safety      | `/freeze` · `/careful` · `/guard` · `/unfreeze`                                                                                                 |
+
+### How to build a feature: `/spec`
+
+`/spec <idea>` is the one entry point. It pauses for your OK between steps:
+
+1. **Understand** — if the idea is fuzzy, a grilling interview (answers are written into the spec
+   as they arrive, so a compaction loses nothing). On a project already underway it first reads
+   the docs and history, then opens with contradicting decisions and never-decided areas.
+2. **Write the spec** — including a section titled _"Integrate and be creative where possible;
+   build where necessary"_: per capability, the package or service to integrate (legitimacy- and
+   live-repo-checked), how existing pieces combine, or why it has to be built. Plus the security
+   questions that apply.
+3. **Over-engineering gut check** — six one-line answers; whatever fails gets cut. Bigger specs
+   get offered `/challenge`.
+4. **Tickets** — tracer-bullet slices with blocking edges, as local files under
+   `.scratch/<feature>/issues/` by default (GitHub, GitLab, or Linear via `/setup`).
+5. **`/implement`** — an integration branch, one implementer subagent per unblocked ticket in its
+   own worktree, merge as each lands, one final `code-reviewer` pass. It never pushes or merges to
+   main unasked. Without subagents it works the tickets one at a time; re-running it resumes from
+   the frontier.
 
 ### Workflow defaults baked in
 
@@ -46,9 +68,6 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 - **Cost tiers** — reviewer and challenge seats scale cheap → mid → high tiers, with the top
   tier reserved for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
   how to resolve current IDs/prices at build time live in `designing-agent-systems`.
-- **The loop closes** — SDD task completion harvests what the gates caught into per-repo
-  lessons (fatigue-gated, one-tap, never silent), and each task packet carries the matching
-  lessons back in — so runs compound instead of re-paying for known mistakes.
 - **Agent & loop design (first-class)** — `designing-agent-systems` (the design rubric +
   note before any agent code), and `long-running-agents` (iteration contract, stuck
   detection, budget enforcement on top of the harness's `/goal` / `/loop` / `/schedule`) —
@@ -68,7 +87,7 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
   (deliberate, _not_ compaction-driven). `/handoff` writes a four-field resume note to
   `docs/handoffs/<date>.md` and appends a row to `docs/handoffs/README.md`, the repo continuity
   index; `/pickup` reads that index _first_ (recency + liveness aware) to resume the newest
-  **open** handoff or a still-live `subagent-driven-development` run-state. It is all plain files, so it works on Claude Code and Codex CLI alike —
+  **open** handoff, and lists open tickets with their frontier. It is all plain files, so it works on Claude Code and Codex CLI alike —
   the SessionStart hook only adds a Claude-Code-only nudge after `/clear` (graceful degradation
   elsewhere). `docs/handoffs/README.md` is _this repo's_ task-state; `MEMORY.md` is your
   personal cross-project index.
@@ -80,17 +99,15 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
   `docs/codebase/` map (stack, architecture, structure, conventions, integrations, testing,
   concerns) via parallel mappers (optionally backed by a code-graph index), so a repo's shape
   is captured once instead of re-derived every session.
-- **Named rigor techniques** — planning has SPIDR task-splitting; verification has a
-  test-quality audit + wired/stub ladder (a green suite that proves nothing won't pass);
-  debugging forces a falsifiable prediction before each test; discovery draws on a
-  domain-probe cheatsheet; `challenge` applies a pre-mortem, an assumption ledger, and a
-  survivability score.
-- **A named crew** — `subagent-driven-development` dispatches a virtual team and carries the
-  baton between them: the plan → **Mason** implements (TDD; the only one who edits code)
-  → **Quinn** runs a QA gate on HIGH-risk work (risk/coverage/trace/NFR →
-  **PASS/CONCERNS/FAIL/WAIVED**, advisory)
-  → **Riley** reviews → **Sage** audits security. Each gets a self-contained handoff packet;
-  the orchestrator owns the ship decision. Reviewers report, never edit.
+- **Named rigor techniques** — verification has a test-quality audit + wired/stub ladder (a
+  green suite that proves nothing won't pass); `/investigate` forces a falsifiable prediction
+  before each check and escalates to an architecture question after three failed fixes; `/spec`
+  runs a package-legitimacy check and an over-engineering gut check; `challenge` applies a
+  pre-mortem, an assumption ledger, and a survivability score.
+- **A named crew** — `/implement` dispatches **Mason** (the `implementer` agent; the only one who
+  edits code, failing test first) per ticket, then **Riley** (`code-reviewer`) reviews the whole
+  integration branch once, with **Sage** (`security-reviewer`) added for sensitive surfaces.
+  Reviewers report, never edit.
 
 ## Install
 
@@ -105,8 +122,8 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 keystone carries its own skills and harness hooks. After installing, to avoid duplicate
 skills and double-firing hooks:
 
-1. **Uninstall any standalone plugin whose skills keystone now carries**, so the same
-   skill isn't loaded twice.
+1. **Uninstall any standalone plugin whose skills keystone now carries** — in particular
+   `mattpocock-skills` and `superpowers` — so the same skill isn't loaded twice.
 2. **Remove the hook entries from `~/.claude/settings.json`** that point at
    `~/.claude/hooks/{instincts,guard,scan,notify}.js` — keystone's `hooks.json` now
    provides them via `${CLAUDE_PLUGIN_ROOT}`. Leaving both wired makes the hooks fire twice.
@@ -152,6 +169,10 @@ off-domain (smart contracts, C/C++, firmware, crypto) — skip them.
 
 Edit skills/commands in place and bump `VERSION` + `CHANGELOG.md`. The skills here are
 intentionally curated — change them directly rather than re-syncing from anywhere.
+
+**The glossary is now `GLOSSARY.md`** (formerly `CONTEXT.md`). In a repo that still has
+`CONTEXT.md`, keystone treats it as the glossary and offers the rename:
+`git mv CONTEXT.md GLOSSARY.md` (and `CONTEXT-MAP.md` → `GLOSSARY-MAP.md`).
 
 **Restart open sessions after a plugin update.** Harnesses resolve the plugin root at session
 start; an update that swaps the installed version directory leaves already-open sessions

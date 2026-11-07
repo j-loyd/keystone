@@ -26,7 +26,7 @@ implementer's reasoning. You report findings; you **never edit** (fixes go back 
      unescaped?; irreversible side effects behind weak conditions.
    - **Reuse & over-engineering** — duplicates a utility, reinvents stdlib/the platform, or
      ships an abstraction with one caller? Name the replacement (the
-     `auditing-for-overengineering` lens at diff scope:
+     `audit` lens at diff scope:
      `delete/stdlib/native/yagni/shrink/defend`). `defend:` is error handling or validation for
      a state that cannot occur — but **never at a trust boundary**, where validation is
      load-bearing however unlikely the bad case looks (a separate service, process, or agent is

@@ -90,7 +90,7 @@ Force each surviving assumption to become explicit where plans actually break:
 - **Acceptance criteria** — observable and fixed, not elastic.
 
 Stress them against the **real codebase**, don't theorize — this is what `grill-with-docs` does
-(challenge the plan against `CONTEXT.md`/ADRs/running code). Compose it; don't restate it. When
+(challenge the plan against `GLOSSARY.md`/ADRs/running code). Compose it; don't restate it. When
 the code contradicts the doc, that contradiction _is_ a finding.
 
 ### 2b. Challenge the approach, not just the assumptions
@@ -100,10 +100,10 @@ Ask all four — each routes to the keystone skill that owns the judgment, so an
 skill's rigor, don't hand-wave:
 
 - **Is this the simplest way?** Apply the **deletion test** — what's the smaller-or-no-build
-  version, and what actually breaks without the extra? (`auditing-for-overengineering`.) Deferring difficulty is not simplifying it.
+  version, and what actually breaks without the extra? (`audit`.) Deferring difficulty is not simplifying it.
 - **Have we already built something like this?** Name the existing module, pattern, or library
   this reinvents — reuse beats rebuild, and a hand-rolled version in a deceptive-complexity domain
-  (crypto/auth/date/money/parsing) is a liability. (`writing-plans` anti-reinvention +
+  (crypto/auth/date/money/parsing) is a liability. (`/spec`'s integrate-first and package-legitimacy checks +
   the `code-reviewer` agent's reuse lens.)
 - **Is this the most scalable way?** Where does it break at 10×/100× the data, calls, or team —
   and is any of that a one-way-door structural choice that must be right _now_?
@@ -179,9 +179,7 @@ told the doc carries.
   second independent seat** (a different lens, or a heavier model tier — where the harness takes a
   per-dispatch model override, the tier above the session model — and prefer a genuinely
   different lens or model family over a same-family re-run: correlated seats mostly re-vote
-  the same biases, and a second vote is signal to check against the doc, not proof). For a bounded
-  replan-until-converged loop, hand off to `writing-plans/plan-convergence-loop.md` (owned by
-  writing-plans — don't re-implement it here). This skill **is** keystone's independent-pass
+  the same biases, and a second vote is signal to check against the doc, not proof). This skill **is** keystone's independent-pass
   mechanism, so there's no deeper independence tier to reach for: depth here means more seats,
   not more machinery.
 
@@ -199,7 +197,7 @@ writes — the pass drafts, you approve.
 
 End with: the ranked `UNEXAMINED`/high-blast findings, the survivability score, the updated
 ledger, the doc edits made (or proposed), any explicit tensions, and a one-line verdict —
-**sound / patch-and-proceed / rethink** — plus the next step (`writing-plans` to re-plan, `improve-codebase-architecture` for a
+**sound / patch-and-proceed / rethink** — plus the next step (`/spec` to revise the spec, `improve-codebase-architecture` for a
 structural rethink, or back to scoping).
 
 Honor the no-commit rule — the pass updates the doc, not the code.

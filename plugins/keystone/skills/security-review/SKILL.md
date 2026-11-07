@@ -125,9 +125,9 @@ const csp = `default-src 'self'; base-uri 'self'; object-src 'none';
 
 - `npm audit` clean; lock file committed; `npm ci` in CI (not `install`).
 - Pin/verify dependencies; review postinstall scripts; watch typo-squats.
-- **Supply-chain risk is also a plan-time concern** — see the `writing-plans` skill's
-  Anti-Reinvention & Package Legitimacy gate, which catches hallucinated/typosquatted
-  dependencies and forbidden hand-rolling at plan-write time, before code review.
+- **Supply-chain risk is also a spec-time concern** — `/spec`'s integrate-first and
+  package-legitimacy checks catch hallucinated/typosquatted dependencies and risky hand-rolling
+  before any code is written.
 - **Untrusted MCP servers and skills are supply chain too** — vet tool descriptions.
 - **CI that runs untrusted code with privileges** — e.g. a `pull_request_target` workflow that
   checks out the PR's code while holding secrets or a write token.

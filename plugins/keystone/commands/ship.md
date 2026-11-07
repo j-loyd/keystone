@@ -33,7 +33,7 @@ Prepare the current work to ship: **$ARGUMENTS**.
    explicitly accepts the risk in writing (record what was accepted and why in the
    hand-off summary in step 7). A PASS, or a CONCERNS the user has acknowledged, clears
    the gate.
-4. **Plan completion gate.** If a plan file exists for this work (from `writing-plans`,
+4. **Plan completion gate.** If a spec or plan exists for this work (from `/spec`,
    or one the user points you at), cross-check its action items / acceptance criteria
    against the diff. Classify each as **DONE** (clear evidence in the diff), **PARTIAL**,
    **NOT DONE**, or **UNVERIFIABLE** (can't be proven from this repo's diff — e.g.
@@ -41,7 +41,7 @@ Prepare the current work to ship: **$ARGUMENTS**.
    approval gate**: stop and ask the user to decide, per item — fix it now, ship anyway
    and track it as a follow-up, or confirm it was intentionally dropped. Don't
    blanket-approve the whole list in one ask — a "yes to all" where the user hasn't
-   actually read each item defeats the point of the gate. No plan file found → skip this
+   actually read each item defeats the point of the gate. No spec or plan found → skip this
    step and say so plainly.
 5. **Version + changelog.** If the repo has a `VERSION` file and/or `CHANGELOG.md`, bump
    the version appropriately and draft the changelog entry (edits are fine — they're not
@@ -51,7 +51,7 @@ Prepare the current work to ship: **$ARGUMENTS**.
    one you bumped. Grep the repo for the old version string and confirm none are left behind — a
    stale manifest silently makes update checks report "already at latest" on an old number while
    `VERSION` races ahead. (Which files carry the version is repo-specific — record that list in
-   the project's own `CLAUDE.md`/`CONTEXT.md` so the set is bumped as a unit.)
+   the project's own `CLAUDE.md`/`AGENTS.md` so the set is bumped as a unit.)
 
    **Bump by consumer-observable impact, not by how big the diff felt.** A one-line change
    that alters a return shape is breaking; a thousand-line internal refactor nothing outside

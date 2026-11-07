@@ -4,7 +4,7 @@
  * validate-reference-links.js — every relative markdown link inside a skill must
  * resolve relative to that skill's OWN directory. keystone has multi-file skills
  * plus at least one cross-skill link
- * (improve-codebase-architecture -> ../grill-with-docs/ADR-FORMAT.md), so `../`
+ * (improve-codebase-architecture -> ../domain-modeling/ADR-FORMAT.md), so `../`
  * forms are supported and expected.
  *
  *   node scripts/validate-reference-links.js

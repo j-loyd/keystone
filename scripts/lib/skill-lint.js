@@ -3,12 +3,18 @@
  * skill-lint.js — keystone's own frontmatter and cross-reference rules.
  *
  * These are HOUSE rules, not a vendored upstream lint. keystone skills carry
- * `name` and `description` and nothing else, and there is no required-section
- * list: the body shape is the author's call.
+ * `name` and `description`, plus `disable-model-invocation: true` on user-only
+ * skills, and nothing else. There is no required-section list: the body shape is
+ * the author's call.
+ *
+ * User-only skills must be user-only on BOTH harnesses: Claude Code reads
+ * `disable-model-invocation: true` from the frontmatter, Codex reads
+ * `policy.allow_implicit_invocation: false` from the skill's `agents/openai.yaml`.
+ * lintCatalog fails when one flag is set without the other.
  *
  * Integrity property, taken from upstream deliberately: exemptions live HERE, in
  * the validator, never in the artifact being validated. A skill cannot exempt
- * itself — and the name+description-only rule is what makes that airtight, since
+ * itself — and the closed frontmatter key list is what makes that airtight, since
  * any `validator-skip:`-style key is itself an error. Every exemption carries a
  * written reason.
  *
@@ -20,8 +26,17 @@ const path = require("node:path");
 
 const { parseFrontmatter, stripFencedCode, lineOf, walkMarkdown } = require("./markdown.js");
 
-/** The only two frontmatter keys a keystone skill may carry. */
-const ALLOWED_KEYS = ["name", "description"];
+/**
+ * The only frontmatter keys a keystone skill may carry. `disable-model-invocation`
+ * marks a user-only skill (its description is not loaded into context, and the model
+ * cannot load it); it is optional and, when present, must be `true`.
+ */
+const ALLOWED_KEYS = ["name", "description", "disable-model-invocation"];
+const REQUIRED_KEYS = ["name", "description"];
+const USER_ONLY_KEY = "disable-model-invocation";
+
+/** Codex's per-skill policy: `allow_implicit_invocation: false` under `policy:`. */
+const CODEX_NO_IMPLICIT = /^policy:[ \t]*\r?\n(?:[ \t]+.*\r?\n)*?[ \t]+allow_implicit_invocation:[ \t]*false\b/m;
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -239,13 +254,20 @@ function lintSkill(dir, source) {
   if (extras.length) {
     errors.push(
       `${dir}/SKILL.md: frontmatter carries ${extras.map((k) => `"${k}"`).join(", ")} — ` +
-        "keystone skills declare name and description only",
+        "keystone skills declare only name, description, and disable-model-invocation",
     );
   }
-  for (const key of ALLOWED_KEYS) {
+  for (const key of REQUIRED_KEYS) {
     if (!keys.includes(key) || !values[key]) {
       errors.push(`${dir}/SKILL.md: frontmatter is missing "${key}"`);
     }
+  }
+  const userOnly = keys.includes(USER_ONLY_KEY);
+  if (userOnly && values[USER_ONLY_KEY] !== "true") {
+    errors.push(
+      `${dir}/SKILL.md: "${USER_ONLY_KEY}" must be true when present ` +
+        "(omit it for a model-invocable skill)",
+    );
   }
 
   const name = values.name || null;
@@ -286,9 +308,31 @@ function lintSkill(dir, source) {
     name,
     description,
     descriptionLength: description ? description.length : 0,
+    userOnly: userOnly && values[USER_ONLY_KEY] === "true",
     errors,
     warnings,
   };
+}
+
+/**
+ * Both harnesses must agree on whether a skill is user-only. `yamlSource` is the
+ * skill's agents/openai.yaml text, or null when the file is absent.
+ */
+function lintHarnessParity(dir, userOnly, yamlSource) {
+  const codexUserOnly = yamlSource !== null && CODEX_NO_IMPLICIT.test(yamlSource);
+  if (userOnly && !codexUserOnly) {
+    return [
+      `${dir}/: user-only skill (disable-model-invocation: true) needs agents/openai.yaml ` +
+        "with policy.allow_implicit_invocation: false, or Codex will still auto-invoke it",
+    ];
+  }
+  if (!userOnly && codexUserOnly) {
+    return [
+      `${dir}/: agents/openai.yaml disables implicit invocation but SKILL.md lacks ` +
+        "disable-model-invocation: true, so Claude Code will still auto-invoke it",
+    ];
+  }
+  return [];
 }
 
 // ---------- catalog ----------
@@ -338,6 +382,9 @@ function lintCatalog({ skillsDir, commandsDir = null, agentsDir = null } = {}) {
     const result = lintSkill(dir, fs.readFileSync(file, "utf8"));
     skills.push(result);
     errors.push(...result.errors);
+    const yamlFile = path.join(skillsDir, dir, "agents", "openai.yaml");
+    const yamlSource = fs.existsSync(yamlFile) ? fs.readFileSync(yamlFile, "utf8") : null;
+    errors.push(...lintHarnessParity(dir, result.userOnly, yamlSource));
     warnings.push(...result.warnings);
   }
 

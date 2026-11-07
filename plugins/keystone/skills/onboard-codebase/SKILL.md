@@ -63,8 +63,9 @@ the user's call.
 
 The map is _structure_; these are _language_ and _decisions_, and they build on it:
 
-- If no `CONTEXT.md` exists, create one capturing the domain terms you discovered while mapping
-  (glossary only — use the `grill-with-docs` format).
+- If no `GLOSSARY.md` exists, create one capturing the domain terms you discovered while mapping
+  (glossary only — use the `domain-modeling` skill's format). If only a legacy `CONTEXT.md`
+  exists, treat it as the glossary and offer `git mv CONTEXT.md GLOSSARY.md`.
 - If consequential decisions are baked into the code without explanation, propose ADRs for them.
 
 ### 6. Surface risks
@@ -81,12 +82,12 @@ to commit; the risk register is not.
 
 ## Greenfield → set the floor
 
-1. Confirm the stack and target with the user — don't assume a default. Use `/office-hours` if
+1. Confirm the stack and target with the user — don't assume a default. Use `/spec` if
    the product itself is still fuzzy.
 2. Scaffold conventions: a short conventions section in `CLAUDE.md`/`AGENTS.md` (only what
-   the agent can't infer — branch/commit rules included), a starter `CONTEXT.md` glossary, and
+   the agent can't infer — branch/commit rules included), a starter `GLOSSARY.md`, and
    `docs/adr/` for the first real decisions.
-3. Establish the test approach early (`test-driven-development`).
+3. Establish the test approach early: a runner, one passing test, and the command to run it.
 
 ## Hand off
 
