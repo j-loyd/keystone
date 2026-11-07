@@ -37,6 +37,13 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DESCRIPTION_WARN_CHARS = 550;
 
 /**
+ * SKILL.md body budget (repo CLAUDE.md: "SKILL.md files stay under ~500 lines; push depth
+ * into sibling reference files"). Warn-only, like the description ratchet: the "~" is real,
+ * and the fix is a judgment call about what to move out.
+ */
+const SKILL_LINES_WARN = 500;
+
+/**
  * Backticked names that are NOT keystone skills or commands but are legitimate
  * references. Each entry states why. Adding an entry is a deliberate act recorded
  * in this file's history; it cannot be done from inside a skill.
@@ -47,7 +54,7 @@ const REFERENCE_EXEMPTIONS = [
     reason:
       "External design/UI plugin. keystone deliberately excludes the design layer " +
       "(README: 'Design is intentionally out of scope — the impeccable suite stays a " +
-      "separate plugin'), and coding-standards routes React/UI work to it by name.",
+      "separate plugin'), so a skill that routes UI work elsewhere names it.",
   },
   {
     name: "clear",
@@ -55,14 +62,6 @@ const REFERENCE_EXEMPTIONS = [
       "Claude Code's built-in /clear command, not a keystone command. " +
       "commands/handoff.md documents the /handoff -> /clear -> /pickup flow, which " +
       "only makes sense naming the built-in.",
-  },
-  {
-    name: "deep-research",
-    reason:
-      "Harness-provided research capability, referenced in commands/research-notes.md " +
-      "alongside find-docs as the thing that DOES the investigation while /research-notes " +
-      "persists the conclusions. Not shipped by keystone. Flagged for a human: unlike " +
-      "impeccable it is documented nowhere in this repo, so it is the weakest of the three.",
   },
 ];
 
@@ -274,6 +273,14 @@ function lintSkill(dir, source) {
     }
   }
 
+  const lines = String(source).split("\n").length;
+  if (lines > SKILL_LINES_WARN) {
+    warnings.push(
+      `${dir}/SKILL.md: ${lines} lines (over the ~${SKILL_LINES_WARN}-line budget) — ` +
+        "push depth into sibling reference files",
+    );
+  }
+
   return {
     dir,
     name,
@@ -382,6 +389,7 @@ module.exports = {
   ALLOWED_KEYS,
   DESCRIPTION_WARN_CHARS,
   KEBAB,
+  SKILL_LINES_WARN,
   REFERENCE_EXEMPTIONS,
   findSkillReferences,
   PLUGIN_ROOT_EXEMPTIONS,

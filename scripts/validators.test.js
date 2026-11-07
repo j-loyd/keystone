@@ -96,7 +96,19 @@ test("validate-skills.js exits non-zero on a bad skill", () => {
 test("validate-skills.js prints every exemption with its reason", () => {
   const { stdout } = run("validate-skills.js", ["--verbose"]);
   assert.match(stdout, /impeccable/);
-  assert.match(stdout, /deep-research/);
   assert.match(stdout, /Plugin-root exemptions/);
   assert.match(stdout, /writing-plans\/SKILL\.md \(default form\) — Deleted in 1\.0/);
+  assert.match(stdout, /clear/);
+});
+
+test("validate-reference-links.js exits non-zero on a dangling cross-reference", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ks-cli-xref-"));
+  const dir = path.join(root, "plugins", "keystone", "skills", "a-skill");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "SKILL.md"), "load `keystone:deleted-skill`, then run /gone\n");
+
+  const { code, stdout } = run("validate-reference-links.js", ["--root", root]);
+  assert.strictEqual(code, 1);
+  assert.match(stdout, /deleted-skill/);
+  assert.match(stdout, /\/gone/);
 });

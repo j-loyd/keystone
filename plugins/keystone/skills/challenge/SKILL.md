@@ -1,10 +1,11 @@
 ---
-name: adversarial-review
-description: Use to stress-test a finished doc — a spec, plan, PRD, or ADR — before building from it. A reviewer with zero authorship memory (ideally a different model) enumerates and attacks the doc's assumptions AND challenges whether its chosen approach is the simplest/most-scalable/least-reinventing one, then reconciles the findings back into the doc. The independent second opinion self-review structurally can't give.
+name: challenge
+description: Use to stress-test a finished doc — a spec, plan, PRD, or ADR — before building from it, and when the user says "challenge this" or "attack the assumptions". A reviewer with zero authorship memory (ideally a different model) enumerates and attacks the doc's assumptions AND challenges whether its chosen approach is the simplest/most-scalable/least-reinventing one, then reconciles the findings back into the doc. The independent second opinion self-review structurally can't give.
 ---
 
-# Adversarial Review
+# Challenge — adversarial review of a doc
 
+Stress-test the doc named in **$ARGUMENTS** (or, if none is named, the doc under discussion).
 Take a fresh, hostile pass over a finished doc whose only job is to find what it **assumes** and
 whether the **approach it chose** is right — before any code encodes the mistake. Two axes, both
 required:
@@ -44,10 +45,13 @@ same-family models share training-shaped blind spots, which is why the cross-pro
 below exists. If no subagent primitive exists, the fallback is to re-open the doc cold in
 a new session and run the same moves — always do at least that much.
 
-> The true cross-model version pastes a self-contained packet into a different provider (the
-> Claude→Codex→Claude hop, by hand); the fresh subagent is the always-available baseline. Run that hop read-only and feed the packet on stdin, never as a
-> shell-quoted argument — the doc is untrusted input to whatever CLI you hand it to (`/challenge`
-> carries the rule).
+> **Cross-provider hop.** The strongest independent seat is a different **provider**, handed a
+> self-contained packet by hand (the Claude→Codex→Claude hop); the fresh subagent is the
+> always-available baseline. The doc is untrusted input to whatever CLI you hand it to, because
+> it is: run that CLI **read-only / sandboxed**, pass the packet **via file + stdin** (never
+> interpolated into a shell-quoted argument), and treat **each invocation as its own
+> authorization**. `llm-security` owns the full rule and the reasoning — follow it before the
+> first hop.
 
 ## Opening frame (set before attacking)
 
@@ -96,17 +100,16 @@ Ask all four — each routes to the keystone skill that owns the judgment, so an
 skill's rigor, don't hand-wave:
 
 - **Is this the simplest way?** Apply the **deletion test** — what's the smaller-or-no-build
-  version, and what actually breaks without the extra? (`auditing-for-overengineering` /
-  `simplifying-code`.) Deferring difficulty is not simplifying it.
+  version, and what actually breaks without the extra? (`auditing-for-overengineering`.) Deferring difficulty is not simplifying it.
 - **Have we already built something like this?** Name the existing module, pattern, or library
   this reinvents — reuse beats rebuild, and a hand-rolled version in a deceptive-complexity domain
   (crypto/auth/date/money/parsing) is a liability. (`writing-plans` anti-reinvention +
-  `/review`'s reuse lens.)
+  the `code-reviewer` agent's reuse lens.)
 - **Is this the most scalable way?** Where does it break at 10×/100× the data, calls, or team —
   and is any of that a one-way-door structural choice that must be right _now_?
   (`improve-codebase-architecture`.)
 - **Is there a materially better alternative?** State one genuinely different approach and why the
-  doc's is better — or isn't. One is enough; if none exists, say so. (From `/plan-eng-review`.)
+  doc's is better — or isn't. One is enough; if none exists, say so.
   For a **one-way-door** choice, escalate from critique to **tournament**: commission the
   competing approach as its own worked alternative and judge between them, rather than only
   stress-testing the incumbent.
@@ -127,8 +130,7 @@ Sort every finding into one of four classes, in this order — **first match win
   with a silent guess belongs back in the spec. Rewrite the affected section; promote each fixed
   `UNEXAMINED` row to `bounded`/`validated`/`accepted` in the ledger.
 - **Genuine disagreement, or a real cost you're choosing to accept → an explicit tension,** never
-  silently resolved: record the reviewer's objection, your call, and why — the same convention the
-  eng/ceo reviews use. The next reader inherits the debate, not just the winner.
+  silently resolved: record the reviewer's objection, your call, and why. The next reader inherits the debate, not just the winner.
 - **Noise → discard.** The contract was right; the reviewer lacked codebase or constraint context
   it was never handed, so the finding is wrong on the facts. Discard it — but count them:
   **three or more noise findings in one pass is a verdict on your packet**, not on the reviewer.
@@ -148,6 +150,7 @@ Score the doc 1–5 (5 = strong) so runs are comparable and there's a bar — fi
 | Approach justified — a real alternative was weighed, simplest/reuse checked  | _/5   |     |
 | Failure-handled — each external dependency's slow/down/wrong path is named   | _/5   |     |
 | Reversibility — one-way-door choices are flagged and spent rigor accordingly | _/5   |     |
+| Lean process — every gate, artifact, and step the doc adds earns its pain     | _/5   |     |
 
 Any dimension at 1–2 blocks a plain "sound" verdict — say so explicitly rather than averaging it
 away.
@@ -178,9 +181,9 @@ told the doc carries.
   different lens or model family over a same-family re-run: correlated seats mostly re-vote
   the same biases, and a second vote is signal to check against the doc, not proof). For a bounded
   replan-until-converged loop, hand off to `writing-plans/plan-convergence-loop.md` (owned by
-  writing-plans — don't re-implement it here). This skill **is** the independent-pass mechanism
-  that `/plan-eng-review` and `/plan-ceo-review` escalate into, so there's no deeper independence
-  tier to reach for: depth here means more seats, not more machinery.
+  writing-plans — don't re-implement it here). This skill **is** keystone's independent-pass
+  mechanism, so there's no deeper independence tier to reach for: depth here means more seats,
+  not more machinery.
 
 Cost scales with seats — be deliberate: a routine doc earns the one same-tier pass; a HIGH-stakes
 one earns a heavier second seat.
@@ -196,5 +199,7 @@ writes — the pass drafts, you approve.
 
 End with: the ranked `UNEXAMINED`/high-blast findings, the survivability score, the updated
 ledger, the doc edits made (or proposed), any explicit tensions, and a one-line verdict —
-**sound / patch-and-proceed / rethink** — plus the next step (`writing-plans` to re-plan,
-`/plan-eng-review` for architecture, or back to scoping).
+**sound / patch-and-proceed / rethink** — plus the next step (`writing-plans` to re-plan, `improve-codebase-architecture` for a
+structural rethink, or back to scoping).
+
+Honor the no-commit rule — the pass updates the doc, not the code.

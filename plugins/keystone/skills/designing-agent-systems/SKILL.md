@@ -56,8 +56,7 @@ spend the code on the guarantees instead.
 
 ## Prior question 2 — one agent or many?
 
-Default to **one**. The multi-agent question resolved into an asymmetry, not a winner
-(`dispatching-parallel-agents` has the full treatment):
+Default to **one**. The multi-agent question resolved into an asymmetry, not a winner:
 
 - **Fan out** when work is read-heavy and decomposes into genuinely independent threads
   (research, review, parallel search) — the win is breadth and wall-clock.
@@ -68,7 +67,7 @@ Default to **one**. The multi-agent question resolved into an asymmetry, not a w
   (each agent re-pays system prompt + tools per turn — ~4x for even a two-way split); a seat
   that doesn't demonstrably add breadth, isolation, or independent judgment is over-engineering.
 - **A seat to confirm a fact is not a seat.** The verify-seat pattern is a fresh reader
-  exercising _judgment_ on an artifact — including one you wrote (`adversarial-review` is that
+  exercising _judgment_ on an artifact — including one you wrote (`challenge` is that
   pass on your own doc). Spawning an agent to confirm a claim one command would settle is the
   commonest way a run over-delegates — and it compounds with the model's own self-checking
   instead of adding to it.
@@ -132,8 +131,8 @@ done criteria), _one-shot overreach_ (attempts everything at once — counter: o
 iteration), _self-preferential bias_ (trusts its own output when verifying — counter:
 independent verify seat), _goal drift_ (loses the objective over many turns — counter:
 re-anchor from persisted state, record locked decisions), _over-delegation_ (spawns a worker
-for a handful of tool calls, or a verifier for a claim a command settles — counter: the inline rung in
-`dispatching-parallel-agents` plus deterministic spawn caps), _under-batching_ (one tool call
+for a handful of tool calls, or a verifier for a claim a command settles — counter: an inline-first rule —
+anything a handful of tool calls finishes stays inline — plus deterministic spawn caps), _under-batching_ (one tool call
 per turn when several are independent — counter: a per-turn "list what you need, then request
 all of it" line), _lead idling_ (waits on every worker before doing anything — counter: a
 dispatch that returns immediately plus an explicit wait, so the lead works the gaps).
@@ -200,7 +199,7 @@ larger lever than model choice, and unlike a tier change it carries no quality r
 Harness workarounds encode assumptions about _today's_ model, and they go stale as models
 improve — yesterday's necessary crutch is tomorrow's overhead that slows the run and hides
 capability. Every workaround gets a marker with a **ceiling and an upgrade trigger** (the
-`keystone: <ceiling>, <upgrade trigger>` convention from `coding-standards`), e.g.
+`keystone: <ceiling>, <upgrade trigger>` convention `/debt` harvests), e.g.
 `keystone: retry-parse shim for malformed JSON; remove when provider structured outputs cover
 this call`. On every model migration, re-run the deletion test over the scaffolding before
 re-tuning it.
@@ -285,7 +284,6 @@ Seed tasks · rubric · end-state assertions
 ## Integration
 
 - Before `writing-plans` — the design note feeds the plan.
-- `dispatching-parallel-agents` — dispatch mechanics and fan-out economics.
 - `long-running-agents` — loop modes, iteration contract, stuck detection, budget enforcement.
 - `llm-security` — the agent attack surface (prompt injection, tool trust, excessive agency).
-- `adversarial-review` — stress-test the design note itself before building from it.
+- `challenge` — stress-test the design note itself before building from it.

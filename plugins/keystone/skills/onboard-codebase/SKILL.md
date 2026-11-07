@@ -43,8 +43,8 @@ Write the seven docs defined in [`codebase-map-format.md`](./codebase-map-format
 no secrets. Choose the mode by capability:
 
 - **Parallel (Agent tool available — preferred):** dispatch one mapper subagent per doc using
-  the template in [`codebase-mapper-prompt.md`](./codebase-mapper-prompt.md), following the
-  `dispatching-parallel-agents` skill. Each runs in fresh context and writes its own doc
+  the template in [`codebase-mapper-prompt.md`](./codebase-mapper-prompt.md), issued in one batch
+  so they run concurrently. Each runs in fresh context and writes its own doc
   directly; collect only confirmations (path + line count) to keep your context clean.
 - **Sequential (no Agent tool):** make the passes yourself, inline, with file tools only —
   one doc at a time, same format contract.
@@ -83,8 +83,9 @@ to commit; the risk register is not.
 
 1. Confirm the stack and target with the user — don't assume a default. Use `/office-hours` if
    the product itself is still fuzzy.
-2. Scaffold conventions: `coding-standards` baseline, `git-workflow` branch/commit rules,
-   a starter `CONTEXT.md` glossary, and `docs/adr/` for the first real decisions.
+2. Scaffold conventions: a short conventions section in `CLAUDE.md`/`AGENTS.md` (only what
+   the agent can't infer — branch/commit rules included), a starter `CONTEXT.md` glossary, and
+   `docs/adr/` for the first real decisions.
 3. Establish the test approach early (`test-driven-development`).
 
 ## Hand off

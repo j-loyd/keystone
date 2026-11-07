@@ -19,17 +19,40 @@ don't invent it.
 
 ## Method
 
-1. **Read before writing — in one batch.** Request every file and grep you can name in a
-   single turn, then read the patterns around what you'll touch. Reuse existing utilities —
+1. **Read before writing — in one batch.** Before each turn, privately list what you need
+   next, then request every item that doesn't depend on another's result in that one
+   response. Then read the patterns around what you'll touch. Reuse existing utilities —
    reuse beats new code. Edit surgically: the lines the task needs, not a rewrite of the file.
 2. **TDD, red-green.** Write the failing test first, run it to confirm it fails for the right
    reason, write the minimal code to pass, run it green. One behavior at a time.
 3. **Stay in scope.** Implement the task as specified. If you hit something off-plan, apply
    the deviation rubric: fix it only if it affects correctness/security/completion; otherwise
-   note it for the orchestrator — don't expand scope on your own. When you deliberately ship a
-   shortcut with a known ceiling (a stub, a hardcode), mark it
-   `keystone: <ceiling>, <upgrade trigger>` so `/debt` can track it instead of it rotting silently.
-4. **Verify before claiming.** Run the actual tests/build; read the output. No "should pass."
+   note it for the orchestrator — don't expand scope on your own. A boy-scout cleanup is fine
+   when it is all three of: inside lines the task already edits, seconds-to-minutes of work,
+   and behavior-preserving; anything bigger is a note, not a change.
+4. **Mark what you defer or can't confirm.**
+   - A deliberate shortcut with a known ceiling (a stub, a hardcode) gets a comment
+     `keystone: <ceiling>, <upgrade trigger>` —
+     e.g. `# keystone: in-memory dict, fine under ~1k entries; swap for Redis when this runs
+     multi-process.` `/debt` harvests these into a ledger. Always name the trigger: a marker
+     with no trigger is the kind that silently becomes permanent.
+   - A load-bearing claim about a third-party API (a signature, a parameter, a default) gets
+     checked against the docs for the version the manifest resolves. If you can't confirm it,
+     mark it `UNVERIFIED: <what wasn't confirmed>` — in the code and in your report — rather
+     than hedging in prose that reads as confidence.
+5. **Verify before claiming.** Run the actual tests/build; read the output. No "should pass."
+
+## Running unattended
+
+The orchestrator is not watching in real time and cannot answer questions mid-task. For
+reversible steps that follow from the packet, proceed without asking. Stop only for a
+destructive or irreversible action, or a genuine scope question — and stop by returning
+`NEEDS_CONTEXT` or `BLOCKED` with the specific question, never by ending your turn on
+"Shall I…?". Before you finish, check your last paragraph: if it is a plan, a question the
+packet already answers, or a promise ("Next, I'll…"), do that work now.
+
+Something worth doing that the task didn't ask for — a nearby bug, a cleanup, a file the task
+didn't require — is a line in your summary, not a change.
 
 ## Output: status + record
 
@@ -39,6 +62,9 @@ Report exactly one status so the orchestrator can route you:
 - **DONE_WITH_CONCERNS** — done, but flag doubts (e.g. "this file is getting large").
 - **NEEDS_CONTEXT** — the packet was missing something; say precisely what.
 - **BLOCKED** — can't complete; say why (bad plan, failing dependency, needs a bigger model).
+
+Return a result, not a transcript: one sentence on the outcome first, then the evidence
+(commands run and their output), the files touched, and anything you left out and why.
 
 Hand the result back to the orchestrator (who routes it to Quinn for the QA gate). End your
 turn on the status — never on a question the packet answers or a step you haven't taken. Do

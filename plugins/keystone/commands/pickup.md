@@ -1,6 +1,6 @@
 ---
 name: pickup
-description: Resume interrupted work — read the newest resume artifact (a /handoff note, or a subagent-driven-development run-state file) and continue from where it stopped, without restarting. Use after a compaction, crash, or a deliberate /handoff or /pause. (Named pickup, not resume, to avoid colliding with the harness's built-in conversation /resume.)
+description: Resume interrupted work — read the newest resume artifact (a /handoff note, or a subagent-driven-development run-state file) and continue from where it stopped, without restarting. Use after a compaction, crash, or a deliberate /handoff. (Named pickup, not resume, to avoid colliding with the harness's built-in conversation /resume.)
 argument-hint: "[optional: path to a handoff or run-state file; defaults to the newest of either]"
 allowed-tools:
   - Read
@@ -17,7 +17,7 @@ allowed-tools:
   ad-hoc or non-run work. This is the common case.
 - A **run-state file** from a `subagent-driven-development` run (structured, per-task — see
   `../skills/subagent-driven-development/run-state-format.md`). Written continuously by the
-  orchestrator and flushed by `/pause`.
+  orchestrator.
 
 It reads whichever applies and **continues, never restarts**.
 

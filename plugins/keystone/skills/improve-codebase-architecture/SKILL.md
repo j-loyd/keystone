@@ -7,12 +7,12 @@ description: Find deepening opportunities in a codebase, informed by the domain 
 
 Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
 
-This is the **additive** counterpart to two neighbouring skills — know which one you want:
+This is the **additive** counterpart to two neighbours — know which one you want:
 
-- **`auditing-for-overengineering`** (`/audit`) — whole-repo but _subtractive_: cuts structure that costs more than it earns. Opposite thrust to this skill's.
-- **`simplifying-code`** — diff-scoped, behaviour-preserving _clarity_ (flatten, rename). Never structural — not this either.
+- **`auditing-for-overengineering`** — whole-repo but _subtractive_: cuts structure that costs more than it earns. Opposite thrust to this skill's.
+- **The built-in `/simplify`** — diff-scoped, behaviour-preserving _clarity_ (flatten, rename). Never structural — not this either.
 
-They share one referee, the **deletion test** below — see _Reconciling with /audit_ at the end
+They share one referee, the **deletion test** below — see _Reconciling with auditing-for-overengineering_ at the end
 of this file for the one case where the two collide.
 
 ## Glossary
@@ -117,16 +117,16 @@ All of these load directly from here — read the one the task needs, not the se
 - [HTML-REPORT.md](HTML-REPORT.md) — the HTML scaffold, diagram patterns, and styling for the
   candidate report.
 
-## Reconciling with /audit (the call that's easy to get wrong)
+## Reconciling with auditing-for-overengineering (the call that's easy to get wrong)
 
 `auditing-for-overengineering` will sometimes flag the very thing this skill wants to deepen —
 a module with a single current caller looks identical to a pass-through until you check. Run
 the **deletion test** before you commit either direction:
 
 > Imagine deleting the module. If the complexity **vanishes**, it was a pass-through — that's
-> `/audit`'s `yagni:`/`delete:` territory, not a deepening candidate. If the complexity
+> `auditing-for-overengineering`'s `yagni:`/`delete:` territory, not a deepening candidate. If the complexity
 > **reappears across N callers** (even if N is 1 today and a second call site is imminent), it
 > was earning its keep — deepen it.
 
-Don't put a candidate in the HTML report that a straight-faced `/audit` pass would flag for
+Don't put a candidate in the HTML report that a straight-faced over-engineering audit would flag for
 deletion instead — run the test yourself, in the report, not after the fact.

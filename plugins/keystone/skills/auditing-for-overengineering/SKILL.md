@@ -1,6 +1,6 @@
 ---
 name: auditing-for-overengineering
-description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded dependencies, abstractions with one caller, dead flexibility. Use when the user says "audit this codebase", "what can I delete", or "/audit". Scope boundary — code architecture and dependencies, whole-repo; not UI, accessibility, or design quality. One-shot report that applies nothing.
+description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded dependencies, abstractions with one caller, dead flexibility. Use when the user says "audit this codebase", "what can I delete", or "audit for over-engineering". Scope boundary — code architecture and dependencies, whole-repo; not UI, accessibility, or design quality. One-shot report that applies nothing.
 ---
 
 # Auditing for Over-Engineering
@@ -9,9 +9,9 @@ Find structure that costs more than it earns and report **what to cut**. The bes
 outcome of this pass is the codebase getting **smaller**. You list findings; you
 apply nothing (that keeps the pass cheap to run and safe to ignore).
 
-This is the **subtractive** counterpart to two neighbouring skills — know which one you want:
+This is the **subtractive** counterpart to two neighbours — know which one you want:
 
-- **`simplifying-code`** — diff-scoped, behaviour-preserving _clarity_ (flatten, rename). Not this.
+- **The built-in `/simplify`** — diff-scoped, behaviour-preserving _clarity_ (flatten, rename). Not this.
 - **`improve-codebase-architecture`** — whole-repo but _additive_: deepen shallow modules. Its
   opposite thrust. See **Reconciling with deepening** below — they share one referee.
 
@@ -20,8 +20,10 @@ This is the **subtractive** counterpart to two neighbouring skills — know whic
 The taxonomy below is the same whether you scan a diff or the tree. The range is set by
 how you were invoked:
 
-- **`/audit`** (or "audit this repo") → **whole tree**, ranked biggest cut first.
-- **`/review`** → the **diff**, as its reuse-and-over-engineering pass.
+- **Invoked directly** ("audit this repo", or with a path in **$ARGUMENTS**) → **whole tree**
+  (or that subtree), ranked biggest cut first. Skip `node_modules`, `.git`, build output, and
+  vendored/generated code.
+- **The `code-reviewer` agent** → the **diff**, as its reuse-and-over-engineering pass.
 
 ## Tags
 
@@ -42,6 +44,9 @@ One per finding. Every tag **names the replacement** — a finding without one i
   forwards whatever a user handed it. Read the two cautions below before applying this tag.
 
 ## Hunt
+
+**Read the conventions first** — `CLAUDE.md`, `CONVENTIONS.md`, and the `docs/codebase/` map if
+present — so you don't flag an idiom the repo deliberately uses as bloat.
 
 Dependencies the stdlib or platform already ships; single-implementation interfaces;
 factories with one product; wrappers that only delegate; files exporting one thing;
@@ -64,6 +69,12 @@ One line per finding, ranked biggest cut first:
 End with the scoreboard: `net: -<N> lines, -<M> deps possible.`
 If there is nothing to cut: `Lean already. Ship.` and stop.
 
+Lines you counted, you can state. Runtime numbers you cannot: reading source tells you nothing
+about latency, error rates, or what a change costs in production. Tag any figure with its
+source (`measured-now` / `read-from-artifact` / `estimated`), write `not measured` where you
+have none, and frame static findings as **potential impact** — "removes ~40 lines; runtime
+effect not measured." A fabricated-but-plausible number is worse than an absent one.
+
 ```
 stdlib: 27-line email-validator class. "@" check + the confirmation mail is the real validation. [auth/validate.py:12]
 native: moment.js for one format call. Intl.DateTimeFormat, 0 deps. [web/date.ts:4]
@@ -76,11 +87,11 @@ net: -180 lines, -1 dep possible.
 
 ## Boundaries
 
-- **Over-engineering only.** Correctness bugs → `/review`. Security holes → `security-review`
+- **Over-engineering only.** Correctness bugs → the `code-reviewer` agent. Security holes → `security-review`
   / `/cso`. Performance → out of scope. Route them; don't fold them in here.
 - **Tests are not bloat.** A smoke test or an `assert`-based self-check is the minimum, not
-  excess — never flag it for deletion. (Missing tests are `/review`'s problem, not this pass's.)
-- **Lists, applies nothing.** One-shot. To act on the findings, the user runs `simplify`
+  excess — never flag it for deletion. (Missing tests are the reviewer's problem, not this pass's.)
+- **Lists, applies nothing.** One-shot. To act on the findings, the user runs the built-in `/simplify`
   for the clarity-safe cuts or hands the structural ones to an implementer.
 
 ## Reconciling with deepening (the call that's easy to get wrong)

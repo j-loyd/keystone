@@ -4,8 +4,8 @@ A draft-time refinement pass: when you draft a design section, reach for the ana
 that fit its **type** before asking for approval. Apply them in prose, iterate, then move on —
 no numbered menu, no stored state. Reach for the 1–2 that fit; don't run all of them.
 
-Six of these are the same lenses as `/plan-eng-review` (reused verbatim). Three are
-section-type additions, marked _added_ — they are **not** part of the reused six. A separate
+Six of these are standard engineering-review lenses (the core six below). Three are
+section-type additions, marked _added_ — they are **not** part of the core six. A separate
 block of **divergent** lenses sits at the end, for when you need to _generate_ options rather
 than judge one.
 
@@ -18,7 +18,7 @@ than judge one.
 | **Scope / Audience** | Base-rate neglect + _audience scope calibration (added)_    | scope creep; pitched at the wrong reader                      |
 | **Design-judgment**  | Pre-mortem + _identify-risks (added)_                       | a judgment call whose downside was never named                |
 
-## The reused six (from `/plan-eng-review` — names identical)
+## The core six
 
 - **Pre-mortem** — assume it shipped and failed badly. What's the most likely cause? Plan against that now.
 - **MECE** — are the pieces mutually exclusive and collectively exhaustive? Look for gaps (unhandled case) and overlaps (two tasks owning the same thing).

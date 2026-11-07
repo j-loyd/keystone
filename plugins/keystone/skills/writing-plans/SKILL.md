@@ -113,7 +113,7 @@ measurably shrink what follows is churn, so skip it.
 
 State those dependencies in the plan: each batch names the expand task, the contract task names
 every batch. In a plan file that's task order plus one line in the task body — don't rebuild an
-issue graph inside the plan (`/to-issues` owns that ground).
+issue graph inside the plan.
 
 Where the batches genuinely can't stay green on their own, keep the sequence and add a final
 **integrate-and-verify** task that every batch feeds — that task, not the batches, is where green
@@ -127,10 +127,9 @@ Risk tags follow the shape rather than the total size: expand and contract chang
 contract, so they're usually HIGH; migrate batches are mechanical and fail loud, so often LOW/MED.
 Tag each on its own signals.
 
-The mechanics of expand/contract for data and interfaces — nullable adds, dual-write, throttled
-backfill, destructive step last and alone — live in
-[`deprecation-and-migration`](../deprecation-and-migration/SKILL.md). Cite it from the plan rather
-than restating it.
+The mechanics of expand/contract for data and interfaces are the standard ones — nullable adds,
+dual-write, throttled backfill, destructive step last and alone. Name the ordering in the plan
+rather than restating the pattern.
 
 ## Fog — what the plan deliberately leaves unspecified
 
@@ -406,7 +405,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **1d. Lean process:** for each gate, checkpoint, artifact, or review step the plan itself
 adds — what concretely breaks without it? Cut any with no answer: ceremony is debt every
 task in the run pays, and a review gate that never fails anything is theater, not rigor.
-(`/plan-eng-review` scores this same question from outside as its "lean process" row.)
+(`challenge` scores this same question from outside as its "lean process" row.)
 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them. Also scan for scope-shrinking language ("v1 just does X", "wire this up later") that drops agreed scope — if a requirement is genuinely deferred, make it an explicit later SPIDR slice, not an aside, and anything still too vague to slice belongs in `## Not yet specified`, never inside a step.
 
@@ -423,7 +422,7 @@ task in the run pays, and a review gate that never fails anything is theater, no
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-For a large or high-stakes plan, follow the self-check with an independent reviewer subagent using the template in `./plan-document-reviewer-prompt.md`. To attack the plan's _assumptions_ specifically — what it treats as true, and whether its approach is the simplest/least-reinventing one — run the `adversarial-review` skill (`/challenge`) on it; that's keystone's single home for the fresh-context, zero-authorship-memory adversarial pass. Or, for the heaviest plans, run the **bounded convergence loop** in `./plan-convergence-loop.md` — it dispatches that reviewer across goal / buildability / security lenses and replans until no HIGH concern remains (capped at ~3 cycles, with stall detection). Optional; skip it for small or mechanical plans.
+For a large or high-stakes plan, follow the self-check with an independent reviewer subagent using the template in `./plan-document-reviewer-prompt.md`. To attack the plan's _assumptions_ specifically — what it treats as true, and whether its approach is the simplest/least-reinventing one — run the `challenge` skill (`/challenge`) on it; that's keystone's single home for the fresh-context, zero-authorship-memory adversarial pass. Or, for the heaviest plans, run the **bounded convergence loop** in `./plan-convergence-loop.md` — it dispatches that reviewer across goal / buildability / security lenses and replans until no HIGH concern remains (capped at ~3 cycles, with stall detection). Optional; skip it for small or mechanical plans.
 
 ## Execution Handoff
 

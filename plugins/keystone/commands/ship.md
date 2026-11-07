@@ -26,8 +26,9 @@ Prepare the current work to ship: **$ARGUMENTS**.
 2. **Run the tests / build / typecheck / lint** that this repo uses. **This is a gate,
    not a suggestion:** if anything fails, stop and report — do not proceed to prep,
    regardless of how small the diff looks.
-3. **Review the diff** against the base branch (run `/review`-style checks, or invoke the
-   `review` command). **Treat its verdict as a gate**: a FAIL (blockers) means stop and
+3. **Review the diff** against the base branch: dispatch the `code-reviewer` agent through
+   this harness's subagent primitive (fresh context; review inline with the same method if
+   subagents aren't available). **Treat its verdict as a gate**: a FAIL (blockers) means stop and
    report them — do not proceed past this step until they're fixed, or the user
    explicitly accepts the risk in writing (record what was accepted and why in the
    hand-off summary in step 7). A PASS, or a CONCERNS the user has acknowledged, clears
@@ -51,6 +52,25 @@ Prepare the current work to ship: **$ARGUMENTS**.
    stale manifest silently makes update checks report "already at latest" on an old number while
    `VERSION` races ahead. (Which files carry the version is repo-specific — record that list in
    the project's own `CLAUDE.md`/`CONTEXT.md` so the set is bumped as a unit.)
+
+   **Bump by consumer-observable impact, not by how big the diff felt.** A one-line change
+   that alters a return shape is breaking; a thousand-line internal refactor nothing outside
+   can detect is a patch.
+
+   | Bump    | When                                                                                                                                          |
+   | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `major` | a consumer who changes nothing has to change something — removed or renamed surface, changed default, stricter validation, new required input |
+   | `minor` | new capability; existing usage keeps working unchanged                                                                                        |
+   | `patch` | a fix or internal change adding no new surface                                                                                                |
+
+   When unsure, assume breaking. Behavior counts even when the signature doesn't move — a
+   changed default, a different error type or exit code, an output format consumers parse.
+
+   **Changelog entries are for the consumer.** Group by what they do to a consumer — Added /
+   Changed / Fixed / Deprecated / Removed / Security — not by commit order, and keep
+   Deprecated, Removed, and Security out of Changed (they're what readers scan for first).
+   "Bump the parser dependency" is a commit message; "comments in config files no longer break
+   parsing" is an entry. If an entry requires reader action (a migration, a config edit), say so.
 6. **Draft the PR.** Prepare the title and body (summary, rationale, test evidence). Show
    it to the user. Do **not** create it yet.
 7. **Approval gates summary, then stop and hand off.** Before asking for the word, print
@@ -60,7 +80,7 @@ Prepare the current work to ship: **$ARGUMENTS**.
    | Gate                 | Status                                                  |
    | -------------------- | ------------------------------------------------------- |
    | Tests / build / lint | pass / fail                                             |
-   | Review (`/review`)   | PASS / CONCERNS (accepted, note by whom) / —            |
+   | Review (code-reviewer) | PASS / CONCERNS (accepted, note by whom) / —            |
    | Plan completion      | all DONE / N items deferred (list them) / no plan found |
    | Version sync         | bumped this run (list every file) / already current     |
 

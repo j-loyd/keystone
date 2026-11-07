@@ -71,8 +71,6 @@ The repo's **observed** style — descriptive, not prescriptive.
 - Idioms the codebase reaches for (validation lib, state management, logging, async patterns).
 - Formatting/lint tooling in place.
 - Note inconsistencies honestly ("most handlers use X; `legacy/` still uses Y").
-- This is distinct from keystone's `coding-standards` skill, which is the cross-project
-  baseline of what _should_ be true.
 
 ### `INTEGRATIONS.md`
 

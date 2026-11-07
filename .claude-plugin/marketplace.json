@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "keystone",
-      "description": "The keystone plugin: skills (auto-invoked discipline + domain-language) + commands (explicit workflows like /review, /qa, /ship, /office-hours) + the migrated instincts/guard/scan/notify harness hooks.",
+      "description": "The keystone plugin: skills (auto-invoked discipline + domain-language) + commands (explicit workflows like /spec, /qa, /ship, /cso) + the migrated instincts/guard/scan/notify harness hooks.",
       "source": "./plugins/keystone",
       "strict": false
     }

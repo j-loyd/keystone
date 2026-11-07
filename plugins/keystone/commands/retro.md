@@ -66,7 +66,7 @@ the retro questions above map onto these directly (worked → Pattern, hurt/lear
 ### Evolve — propose a skill from what recurred
 
 When a lesson has recurred enough to be worth codifying, propose a **new skill** (never write
-one automatically — hand a brief to `writing-skills` and stop):
+one automatically — draft a brief and stop):
 
 1. **Read what's accumulated.** Cluster the repo's recent learnings:
    `R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/learnings.js" ] || R="${PLUGIN_ROOT}"; node "$R/hooks/learnings.js" --cluster`
@@ -79,7 +79,7 @@ one automatically — hand a brief to `writing-skills` and stop):
 3. **Pitch only when both fire.** Only when a cluster has ≥2 source learnings **and** a matched
    file-pair with `N ≥ 2`, draft a one-paragraph pitch: _"You've learned [X] across [dates] and
    [files A, B] changed together in [N] commits — propose a skill to capture this?"_ Cite the
-   co-change count and the source learnings by date. Route acceptance to `writing-skills`, which carries this kit's authoring conventions.
+   co-change count and the source learnings by date. If accepted, draft it as a `SKILL.md` whose `description` says when to use it, kept under ~500 lines.
 4. **Scope from the evidence.** Broad co-change across the repo → lean toward a global instinct;
    narrow/domain-specific → a repo skill.
 

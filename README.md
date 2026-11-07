@@ -6,11 +6,15 @@
 keystone is a single installable Claude Code plugin that bundles **one winner per
 capability** across four layers:
 
-- **Process discipline** — TDD, debugging, plans, worktrees, review.
-- **Domain language** — a CONTEXT.md glossary + ADRs, grill, zoom-out.
-- **Explicit workflows** — office-hours, ceo/eng review, qa, cso, ship, retro.
-- **Harness & judgment** — tiered model routing, security review, coding standards, and
-  the instinct/memory/security-hook harness.
+- **Process discipline** — TDD, debugging, plans, worktrees, verification.
+- **Domain language** — a CONTEXT.md glossary + ADRs, grill.
+- **Explicit workflows** — office-hours, challenge, qa, cso, ship, retro.
+- **Harness & judgment** — tiered model routing, security review, and the
+  instinct/memory/security-hook harness.
+
+What Claude Code now ships itself, keystone no longer duplicates: bare `/review`, `/simplify`,
+`/code-review`, and `/security-review` are **Claude Code built-ins**. keystone's own reviewer
+is the `code-reviewer` agent (Riley), which `/ship` dispatches as its review gate.
 
 Design is intentionally **out of scope** — the `impeccable` suite stays a separate plugin.
 
@@ -18,48 +22,45 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      30 auto-invoked skills (process discipline + agent/loop design + domain language + security + adversarial review + perf/observability/migration + onboarding/git)
-├── commands/    26 explicit /commands (spec, planning, challenge, review, qa, simplify, security, ship, safety, learn, handoff, research)
-├── agents/      the crew: Pat (planner) · Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
+├── skills/      21 auto-invoked skills (process discipline + agent/loop design + domain language + security + challenge + onboarding/git)
+├── commands/    15 explicit /commands (spec, office-hours, qa, cso, investigate, debt, ship, retro, continuity, learn, safety)
+├── agents/      the crew: Mason (implementer) · Quinn (QA) · Riley (reviewer) · Sage (security)
 └── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
 templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (README + plan.md)
 ```
 
 ### Commands
 
-| Group       | Commands                                                                                                                                                    |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plan        | `/spec` (spec→plan→subagent execute) · `/office-hours` · `/plan-ceo-review` · `/plan-eng-review` · `/challenge` (fresh-eyes assumption red-team)            |
-| Review & QA | `/review` · `/qa` · `/cso` · `/investigate` · `/simplify` (clarity pass) · `/audit` (whole-repo over-engineering scan) · `/debt` (deferred-shortcut ledger) |
-| Ship        | `/ship` (never auto-commits) · `/retro`                                                                                                                     |
-| Continuity  | `/handoff` (resume note) · `/pickup` (resume) · `/pause` (flush run-state) — the blessed `/handoff` → `/clear` → `/pickup` flow                             |
-| Backlog     | `/to-issues` (Linear Backlog) · `/to-prd`                                                                                                                   |
-| Memory      | `/learn` (per-repo lessons) · `/research-notes` (persist external research)                                                                                 |
-| Safety      | `/freeze` · `/careful` · `/guard` · `/unfreeze`                                                                                                             |
+| Group       | Commands                                                                                                                                        |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan        | `/spec` (spec→plan→subagent execute) · `/office-hours` · `/challenge` (skill: fresh-eyes assumption red-team)                                   |
+| Review & QA | `/qa` · `/cso` · `/investigate` · `/debt` (deferred-shortcut ledger) · `auditing-for-overengineering` (skill: whole-repo over-engineering scan) |
+| Ship        | `/ship` (never auto-commits; dispatches the `code-reviewer` agent as its review gate) · `/retro`                                                |
+| Continuity  | `/handoff` (resume note) · `/pickup` (resume) — the blessed `/handoff` → `/clear` → `/pickup` flow                                              |
+| Memory      | `/learn` (per-repo lessons)                                                                                                                     |
+| Safety      | `/freeze` · `/careful` · `/guard` · `/unfreeze`                                                                                                 |
 
 ### Workflow defaults baked in
 
 - **No auto-commits** — `/ship` prepares everything and stops for an explicit go-ahead.
-- **Linear Backlog** — `/to-issues` never creates in Triage.
-- **Cost tiers** — `/review` scales cheap → mid → high tiers, with the top tier reserved
-  for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
+- **Cost tiers** — reviewer and challenge seats scale cheap → mid → high tiers, with the top
+  tier reserved for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
   how to resolve current IDs/prices at build time live in `designing-agent-systems`.
 - **The loop closes** — SDD task completion harvests what the gates caught into per-repo
   lessons (fatigue-gated, one-tap, never silent), and each task packet carries the matching
   lessons back in — so runs compound instead of re-paying for known mistakes.
 - **Agent & loop design (first-class)** — `designing-agent-systems` (the design rubric +
-  note before any agent code), `long-running-agents` (loop modes, iteration contract, stuck
-  detection, budget enforcement), and `dispatching-parallel-agents` (read/write asymmetry,
-  fan-out economics, orchestration pattern vocabulary) — all harness-neutral and
-  model-agnostic.
+  note before any agent code), and `long-running-agents` (iteration contract, stuck
+  detection, budget enforcement on top of the harness's `/goal` / `/loop` / `/schedule`) —
+  harness-neutral and model-agnostic.
 - **Chrome MCP** — `/qa` drives `chrome-devtools` / `claude-in-chrome`, no browse daemon.
 - **Security (first-class)** — three skills: `security-review` (OWASP 2025, source→sink
   methodology), `api-security` (full OWASP API Top 10:2023 — REST/GraphQL/webhooks), and
   `llm-security` (OWASP LLM Top 10:2025); the `security-reviewer` agent (traces +
   adversarially verifies, confirmed / needs validation), the `/cso` audit, and the always-on
-  `scan.js` injection tripwire + `guard.js` secret/dangerous-sink blocks. `/review` and the
-  reviewer agent are **diff-aware** — git-history regression detection, blast-radius, and
-  adaptive scope.
+  `scan.js` injection tripwire + `guard.js` secret/dangerous-sink blocks. The `code-reviewer`
+  agent is **diff-aware** — git-history regression detection, blast-radius caller counts, and
+  risk-scaled depth.
 - **Instincts** — `INSTINCTS.md` rules fire at SessionStart via `guard.js`'s sibling
   `instincts.js`; `guard.js` enforces secret-file/dangerous-command blocks plus the
   opt-in freeze/careful boundary.
@@ -67,8 +68,7 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
   (deliberate, _not_ compaction-driven). `/handoff` writes a four-field resume note to
   `docs/handoffs/<date>.md` and appends a row to `docs/handoffs/README.md`, the repo continuity
   index; `/pickup` reads that index _first_ (recency + liveness aware) to resume the newest
-  **open** handoff or a still-live `subagent-driven-development` run-state; `/pause` flushes a
-  run-state checkpoint. It is all plain files, so it works on Claude Code and Codex CLI alike —
+  **open** handoff or a still-live `subagent-driven-development` run-state. It is all plain files, so it works on Claude Code and Codex CLI alike —
   the SessionStart hook only adds a Claude-Code-only nudge after `/clear` (graceful degradation
   elsewhere). `docs/handoffs/README.md` is _this repo's_ task-state; `MEMORY.md` is your
   personal cross-project index.
@@ -83,10 +83,10 @@ templates/       INSTINCTS.md · MEMORY.md · CONTEXT.md · adr/ · plans/ (READ
 - **Named rigor techniques** — planning has SPIDR task-splitting; verification has a
   test-quality audit + wired/stub ladder (a green suite that proves nothing won't pass);
   debugging forces a falsifiable prediction before each test; discovery draws on a
-  domain-probe cheatsheet; `plan-eng-review` applies pre-mortem / reversibility / base-rate
-  lenses.
+  domain-probe cheatsheet; `challenge` applies a pre-mortem, an assumption ledger, and a
+  survivability score.
 - **A named crew** — `subagent-driven-development` dispatches a virtual team and carries the
-  baton between them: **Pat** plans → **Mason** implements (TDD; the only one who edits code)
+  baton between them: the plan → **Mason** implements (TDD; the only one who edits code)
   → **Quinn** runs a QA gate on HIGH-risk work (risk/coverage/trace/NFR →
   **PASS/CONCERNS/FAIL/WAIVED**, advisory)
   → **Riley** reviews → **Sage** audits security. Each gets a self-contained handoff packet;
@@ -139,8 +139,8 @@ How they fit together:
 - `/cso` and `security-review` call into ToB's `static-analysis` + `supply-chain-risk-auditor`
   for the automated sweep; keystone does the stack-specific manual depth.
 - `variant-analysis` (keystone) → hand off to ToB's `semgrep-rule-creator` to make a finding permanent.
-- ToB's `differential-review` is the deep security diff pass; keystone's `/review` already
-  carries the same _methodology_ for everyday reviews.
+- ToB's `differential-review` is the deep security diff pass; keystone's `code-reviewer` agent
+  already carries the same _methodology_ for everyday reviews.
 - ToB's `agentic-actions-auditor` complements keystone's `llm-security` agent-action audit.
 
 Why the split: security rewards currency, and Trail of Bits maintains these against new

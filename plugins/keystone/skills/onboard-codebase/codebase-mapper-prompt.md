@@ -1,8 +1,7 @@
 # Codebase Mapper Prompt Template
 
 Use this template when dispatching codebase mapper subagents (one per map doc) from the
-`onboard-codebase` brownfield track. Dispatch them in parallel per the
-`dispatching-parallel-agents` skill — they share no state and each writes its own file.
+`onboard-codebase` brownfield track. Dispatch them in parallel, in one batch — they share no state and each writes its own file.
 
 **Purpose:** Produce one focused, fact-based map doc in `docs/codebase/`, citing real paths.
 

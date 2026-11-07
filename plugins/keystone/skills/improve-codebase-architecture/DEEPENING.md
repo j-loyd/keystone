@@ -21,7 +21,7 @@ call — these signals make it checkable instead of a vibe:
 Any one signal is a lead, not a verdict. Confirm with the **deletion test**
 (`LANGUAGE.md`) before proposing the deepening — see also
 [SKILL.md](SKILL.md#reconciling-with-audit-the-call-thats-easy-to-get-wrong) for the case where
-the deletion test points the other way, toward `/audit` instead.
+the deletion test points the other way, toward `auditing-for-overengineering` instead.
 
 ## Dependency categories
 

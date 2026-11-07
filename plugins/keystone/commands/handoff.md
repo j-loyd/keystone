@@ -24,9 +24,9 @@ capture _durable, backward-looking lessons_. A handoff is "the half-finished ref
 file X, do Y next"; it's disposable once resumed.
 
 Resume it later with `/pickup` — it reads the newest handoff note and continues from **Next
-action**. For an active `subagent-driven-development` run, prefer `/pause`, which flushes the
-structured per-task run-state file; `/pickup` resumes either kind (run-state first, otherwise
-the newest handoff note).
+action**. An active `subagent-driven-development` run already writes its structured per-task
+run-state file continuously; `/pickup` resumes either kind (run-state first, otherwise the
+newest handoff note).
 
 ## What to capture
 
@@ -71,5 +71,5 @@ Write only what you actually know — don't pad. If a field is empty, say so.
 
 To resume: run `/clear`, then a fresh session runs `/pickup`. It reads `docs/handoffs/README.md`
 first, finds the newest **open** row, and continues from **Next action** (marking the row
-resumed). For an active `subagent-driven-development` run, `/pause` records the structured
-run-state in the same index's **Active run-state** section.
+resumed). An active `subagent-driven-development` run records its structured run-state in
+the same index's **Active run-state** section.
