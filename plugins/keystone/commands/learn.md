@@ -37,7 +37,8 @@ not a learning — don't bank it.
 
 1. Find this repo's learnings file:
    ```bash
-   LF="$(node "$CLAUDE_PLUGIN_ROOT/hooks/learnings.js" --path)"
+   R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/learnings.js" ] || R="${PLUGIN_ROOT}"
+   LF="$(node "$R/hooks/learnings.js" --path)"
    [ -z "$LF" ] && { echo "Not in a git repo — learnings are per-repo. cd into one first."; exit 0; }
    mkdir -p "$(dirname "$LF")"
    ```

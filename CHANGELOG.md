@@ -2,6 +2,67 @@
 
 All notable changes to keystone are recorded here.
 
+## [0.9.1] — 2026-11-07
+
+A security patch for the guard hook. Upgrade recommended; no breaking changes. `hooks.json` is
+unchanged, so harnesses that trust hooks per command (Codex) need no re-approval.
+
+### Security
+- The guard hook now **fails closed** on an unexpected internal error (it asks instead of silently allowing).
+
+- **Closed an allowlist bypass in `guard.js` (high).** The template allowlist (`.env.example`,
+  `.env.sample`, …) was tested against the _whole_ Bash command and returned allow before any
+  deny layer ran. Appending an allowlisted name anywhere, such as a trailing `# .env.example`
+  comment, let a catastrophic `rm` or a `.env` read through. The allowlist is now applied per
+  shell word: each word that is itself an allowlisted template path is swapped for a neutral
+  placeholder, and every deny/ask layer runs on what remains. A word is never swapped if it
+  carries shell expansion, escape, or glob characters (`.env$IFS.env.example` still reads `.env`)
+  or a `:` (a remote destination like `host:x.env.example` must stay visible to the scp/rsync
+  exfil rules). A template read inside a pipeline (`cat .env.example | head`), which the old
+  check denied, is now correctly allowed. Read/Edit/Write path checks are unchanged.
+- **Guard toggles are user-only, and removing protection asks first (high).** `/careful`,
+  `/freeze`, `/unfreeze`, and `/guard` now carry `disable-model-invocation: true`, so only a
+  user can invoke them; you can still type them. `guard.js` returns **ask** for any Bash, Write,
+  or Edit that touches the guard state file directly, including names split with quotes or
+  backslashes that bash rejoins (`keystone-gu''ard.json`). It also asks for any `guard-state.js`
+  call that could lift or widen protection: `unfreeze`, `careful off`, re-freezing while a
+  boundary is active, a split or escaped script name, or anything other than an exact
+  protection-adding form. The hook cannot tell a
+  user-typed `/unfreeze` from the model running the same command, so a human confirms. This is
+  string matching, a tripwire rather than a sandbox: obfuscated access (globs, names assembled at
+  runtime, interpreter one-liners) is not caught, freeze still does not fence Bash, and an
+  unfrozen session can still edit the installed hook scripts themselves.
+- **A corrupt guard state file now fails closed.** `readState()` returned `{}` for any read or
+  parse failure, so appending one stray character to the file silently lifted an active freeze
+  and careful mode. Now only a missing file means "no extra restrictions". An unreadable file,
+  invalid JSON, or the wrong shape (for example a non-absolute `freeze`) turns careful mode on and
+  makes every Write/Edit ask, because the real boundary can't be known, until the file is
+  rewritten by `/freeze`, `/guard`, or `/unfreeze`. While the file is corrupt, `guard-state.js`
+  writes ask too, and only `status` runs unprompted.
+- **Malformed tool input no longer turns into an allow.** A non-string `command`, `file_path`, or
+  `cwd` used to throw inside the guard, which then returned `{}` (allow). Array input is now
+  joined and checked; any other type asks.
+- **JSON-safe guard state writes.** The four commands built the state file with `printf`, so a
+  directory containing `"` or `\` produced invalid JSON. `readState()` then failed open and the
+  freeze silently stopped applying. The new `hooks/guard-state.js` CLI
+  (`freeze [dir]`, `guard [dir]`, `careful on|off`, `unfreeze`, `status`) writes with
+  `JSON.stringify` and an atomic rename, takes strictly fixed arguments, and keeps the shell's
+  logical working directory as the freeze boundary. `careful off` is new.
+
+### Fixed
+
+- **Plugin root that resolves on both harnesses.** `/learn`, `/retro`, and
+  `subagent-driven-development` used the unbraced `$CLAUDE_PLUGIN_ROOT`, which the harness does not
+  substitute, so the shell resolved `/hooks/learnings.js`. `/handoff` used
+  `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}`, a form whose substitution is unverified. The commands now
+  use the same two-step fallback as `hooks.json`, which works on both Claude Code and Codex:
+  `R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/<file>" ] || R="${PLUGIN_ROOT}"`. The guard commands use it
+  too. (`subagent-driven-development`, removed in 1.0, is only braced, with no Codex fallback.
+  That is no regression, since the unbraced form was empty on both harnesses.)
+  `validate-skills.js` fails on the unbraced form and the `:-` form in any shipped `.md`.
+  The only exemptions are two skill files slated for removal, each recorded in the validator with
+  its reason.
+
 ## [0.9.0] — 2026-09-29
 
 A refresh for current frontier-model prompting, on Claude Code and Codex alike. A prompt audit

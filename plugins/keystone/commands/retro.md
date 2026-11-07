@@ -69,7 +69,8 @@ When a lesson has recurred enough to be worth codifying, propose a **new skill**
 one automatically — hand a brief to `writing-skills` and stop):
 
 1. **Read what's accumulated.** Cluster the repo's recent learnings:
-   `node "$CLAUDE_PLUGIN_ROOT/hooks/learnings.js" --cluster` (returns `[{key, entries}]`). Also
+   `R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/learnings.js" ] || R="${PLUGIN_ROOT}"; node "$R/hooks/learnings.js" --cluster`
+   (returns `[{key, entries}]`). Also
    skim the global `## [N%] when …` instinct blocks.
 2. **Join to the git evidence.** For each cluster, find the co-change pairs (from Gather context)
    whose path or commit subject matches the cluster's terms, and read off `N` = the pair's

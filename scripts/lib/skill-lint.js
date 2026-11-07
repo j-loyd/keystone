@@ -160,6 +160,65 @@ function findSkillReferences(text) {
   return found;
 }
 
+// ---------- plugin-root substitution ----------
+
+/**
+ * Only the literal braced `${CLAUDE_PLUGIN_ROOT}` is known to be substituted by Claude
+ * Code in shipped markdown. Two forms are rejected:
+ *   - unbraced `$CLAUDE_PLUGIN_ROOT`: reaches the shell as a plain, usually unset, env
+ *     var, so `node "$CLAUDE_PLUGIN_ROOT/hooks/x.js"` quietly runs `/hooks/x.js`;
+ *   - `${CLAUDE_PLUGIN_ROOT:-...}`: whether the default-value form is substituted is
+ *     unverified.
+ * The supported pattern for both harnesses is the two-step fallback hooks.json uses:
+ *   R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/<file>" ] || R="${PLUGIN_ROOT}"
+ * (substituted on Claude Code; empty on Codex, which then uses its $PLUGIN_ROOT env var).
+ * Fenced code is NOT stripped: the commands that matter live in fenced bash blocks.
+ */
+const PLUGIN_ROOT_MISUSE = [
+  { form: "unbraced", re: /\$CLAUDE_PLUGIN_ROOT(?![A-Za-z0-9_])/g },
+  { form: "default", re: /\$\{CLAUDE_PLUGIN_ROOT:-/g },
+];
+
+/**
+ * Files allowed to keep a rejected form, by path relative to the plugin root. Each entry
+ * states why; as with REFERENCE_EXEMPTIONS, a file cannot exempt itself.
+ */
+const PLUGIN_ROOT_EXEMPTIONS = [
+  {
+    file: "skills/writing-plans/SKILL.md",
+    form: "default",
+    reason:
+      "Deleted in 1.0; the 0.9.1 security patch leaves it untouched rather than rewriting " +
+      "a file that is about to be removed.",
+  },
+  {
+    file: "skills/subagent-driven-development/SKILL.md",
+    form: "default",
+    reason:
+      "Deleted in 1.0; the 0.9.1 security patch leaves its template-path reference " +
+      "untouched rather than rewriting a file that is about to be removed.",
+  },
+];
+
+/** Every rejected plugin-root reference in `text`, as { line, form }, in source order. */
+function findPluginRootMisuse(text) {
+  const source = String(text);
+  const found = [];
+  for (const { form, re } of PLUGIN_ROOT_MISUSE) {
+    re.lastIndex = 0;
+    let match;
+    while ((match = re.exec(source)) !== null) {
+      found.push({ index: match.index, line: lineOf(source, match.index), form });
+    }
+  }
+  return found.sort((a, b) => a.index - b.index).map(({ line, form }) => ({ line, form }));
+}
+
+const PLUGIN_ROOT_FIX = {
+  unbraced: "unbraced $CLAUDE_PLUGIN_ROOT is not substituted by the harness",
+  default: "${CLAUDE_PLUGIN_ROOT:-...} substitution is unverified",
+};
+
 // ---------- per-skill rules ----------
 
 /**
@@ -297,6 +356,25 @@ function lintCatalog({ skillsDir, commandsDir = null, agentsDir = null } = {}) {
     }
   }
 
+  // Plugin-root references in every shipped .md under the plugin root (skills, commands,
+  // agents, templates, ...), minus the declared exemptions.
+  for (const file of walkMarkdown(scanRoot)) {
+    let source;
+    try {
+      source = fs.readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    const rel = path.relative(scanRoot, file).split(path.sep).join("/");
+    for (const hit of findPluginRootMisuse(source)) {
+      if (PLUGIN_ROOT_EXEMPTIONS.some((e) => e.file === rel && e.form === hit.form)) continue;
+      errors.push(
+        `${rel}:${hit.line}: ${PLUGIN_ROOT_FIX[hit.form]} — use ` +
+          'R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/<file>" ] || R="${PLUGIN_ROOT}"',
+      );
+    }
+  }
+
   return { ok: errors.length === 0, skills, known: [...known].sort(), errors, warnings };
 }
 
@@ -306,6 +384,8 @@ module.exports = {
   KEBAB,
   REFERENCE_EXEMPTIONS,
   findSkillReferences,
+  PLUGIN_ROOT_EXEMPTIONS,
+  findPluginRootMisuse,
   hasTriggerClause,
   lintCatalog,
   lintSkill,

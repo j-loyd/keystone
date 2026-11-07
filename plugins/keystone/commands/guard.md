@@ -2,6 +2,7 @@
 name: guard
 description: Full safety mode — freeze edits to the current directory AND turn on careful mode for destructive commands. Combines /freeze + /careful.
 argument-hint: "[optional: directory to allow; defaults to current dir]"
+disable-model-invocation: true
 allowed-tools:
   - Bash
 ---
@@ -13,11 +14,9 @@ require confirmation for destructive commands (like `/careful`). Use in producti
 shared repos where you want maximum protection.
 
 ```bash
-DIR="$ARGUMENTS"; [ -n "$DIR" ] || DIR="$PWD"
-ABS="$(cd "$DIR" 2>/dev/null && pwd)" || { echo "No such directory: $DIR"; exit 1; }
-STATE="$HOME/.claude/keystone-guard.json"
-printf '{\n  "freeze": "%s",\n  "careful": true\n}\n' "$ABS" > "$STATE"
-echo "🛡️  Guard mode ON — edits fenced to $ABS, careful mode on. Run /unfreeze to lift."
+R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/guard.js" ] || R="${PLUGIN_ROOT}"
+node "$R/hooks/guard-state.js" guard "$ARGUMENTS"
 ```
 
-Confirm the active protections to the user.
+Confirm the active protections to the user. If a freeze is already active, guard.js asks
+for confirmation before moving it (a new boundary could be wider).

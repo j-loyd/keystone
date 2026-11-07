@@ -10,6 +10,8 @@ const {
   DESCRIPTION_WARN_CHARS,
   REFERENCE_EXEMPTIONS,
   findSkillReferences,
+  findPluginRootMisuse,
+  PLUGIN_ROOT_EXEMPTIONS,
   hasTriggerClause,
   lintCatalog,
   lintSkill,
@@ -273,6 +275,69 @@ test("a directory with no SKILL.md is an error, not a silent skip", () => {
   });
   const result = lintCatalog({ skillsDir: path.join(root, "skills") });
   assert.match(result.errors.join("\n"), /empty-skill/);
+});
+
+// ---------- plugin-root references ----------
+
+// Only the literal braced `${CLAUDE_PLUGIN_ROOT}` is known to be substituted by the
+// harness. The unbraced form reaches the shell as a (usually empty) env var, and the
+// `${CLAUDE_PLUGIN_ROOT:-...}` default form is unverified. The supported two-harness
+// pattern is the two-step `R="${CLAUDE_PLUGIN_ROOT}"; [ -f ... ] || R="${PLUGIN_ROOT}"`.
+const UNBRACED = "$" + "CLAUDE_PLUGIN_ROOT";
+const BRACED = "${" + "CLAUDE_PLUGIN_ROOT}";
+const DEFAULTED = "${" + "CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}";
+
+test("unbraced plugin root is found, even inside fenced code, with its line", () => {
+  const src = `# T\n\n\`\`\`bash\nnode "${UNBRACED}/hooks/x.js"\n\`\`\`\n`;
+  assert.deepStrictEqual(findPluginRootMisuse(src), [{ line: 4, form: "unbraced" }]);
+});
+
+test("the ${CLAUDE_PLUGIN_ROOT:-...} default form is flagged", () =>
+  assert.deepStrictEqual(findPluginRootMisuse(`seed from \`${DEFAULTED}/templates/a.md\``), [
+    { line: 1, form: "default" },
+  ]));
+
+test("the literal braced form and the two-step fallback pattern are clean", () => {
+  assert.deepStrictEqual(findPluginRootMisuse(`node "${BRACED}/hooks/x.js"`), []);
+  const twoStep =
+    `R="${BRACED}"; [ -f "$R/hooks/x.js" ] || R="\${PLUGIN_ROOT}"; node "$R/hooks/x.js"`;
+  assert.deepStrictEqual(findPluginRootMisuse(twoStep), []);
+});
+
+test("a longer variable name sharing the prefix is not flagged", () =>
+  assert.deepStrictEqual(findPluginRootMisuse(`${UNBRACED}_EXTRA`), []));
+
+test("lintCatalog fails on plugin-root misuse in any shipped .md, not only skills/commands", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": good(),
+    "agents/helper.md": `run node "${UNBRACED}/hooks/x.js"\n`,
+    "templates/t.md": `see ${DEFAULTED}/a.md\n`,
+  });
+  const text = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.join("\n");
+  assert.match(text, /agents\/helper\.md:1: unbraced/);
+  assert.match(text, /templates\/t\.md:1: .*:-/);
+});
+
+test("an exempted file is not reported for its exempted form, but is for others", () => {
+  const { file } = PLUGIN_ROOT_EXEMPTIONS[0];
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": good(),
+    [file]: `${DEFAULTED}/a.md\nnode "${UNBRACED}/x.js"\n`,
+  });
+  const errors = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.filter((e) =>
+    e.startsWith(file),
+  );
+  assert.strictEqual(errors.length, 1, errors.join("\n"));
+  assert.match(errors[0], /unbraced/);
+});
+
+test("every plugin-root exemption names a file and form and carries a written reason", () => {
+  assert.ok(PLUGIN_ROOT_EXEMPTIONS.length > 0);
+  for (const entry of PLUGIN_ROOT_EXEMPTIONS) {
+    assert.ok(typeof entry.file === "string" && entry.file.endsWith(".md"), JSON.stringify(entry));
+    assert.ok(["unbraced", "default"].includes(entry.form), JSON.stringify(entry));
+    assert.ok(typeof entry.reason === "string" && entry.reason.length > 20, JSON.stringify(entry));
+  }
 });
 
 // ---------- the real catalog ----------

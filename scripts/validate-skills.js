@@ -12,6 +12,9 @@
  *   - `description` says WHEN to use the skill, not only what it does
  *   - warn (never error) on a description past the length ratchet
  *   - error on a backticked skill/command reference that resolves to nothing
+ *   - error on an unbraced $CLAUDE_PLUGIN_ROOT or a ${CLAUDE_PLUGIN_ROOT:-...} default
+ *     form in any shipped .md (only the literal braced form is known to be substituted;
+ *     use the two-step R="${CLAUDE_PLUGIN_ROOT}"; [ -f ... ] || R="${PLUGIN_ROOT}" fallback)
  *
  * Exemptions live in the validator, never in skill frontmatter, so a skill cannot
  * exempt itself. Warnings do not affect the exit code.
@@ -22,6 +25,7 @@ const path = require("node:path");
 const { runCli } = require("./lib/cli.js");
 const {
   DESCRIPTION_WARN_CHARS,
+  PLUGIN_ROOT_EXEMPTIONS,
   REFERENCE_EXEMPTIONS,
   lintCatalog,
 } = require("./lib/skill-lint.js");
@@ -51,6 +55,10 @@ function body(options) {
     for (const entry of REFERENCE_EXEMPTIONS) {
       lines.push(`  · \`${entry.name}\` — ${entry.reason}`);
     }
+    lines.push("", `Plugin-root exemptions (${PLUGIN_ROOT_EXEMPTIONS.length})`);
+    for (const entry of PLUGIN_ROOT_EXEMPTIONS) {
+      lines.push(`  · ${entry.file} (${entry.form} form) — ${entry.reason}`);
+    }
     lines.push("");
   }
 
@@ -64,7 +72,7 @@ function body(options) {
     lines.push(`Errors (${result.errors.length})`);
     for (const error of result.errors) lines.push(`  ✗ ${error}`);
   } else {
-    lines.push("  ✓ frontmatter, naming, trigger clauses, and cross-references all clean");
+    lines.push("  ✓ frontmatter, naming, trigger clauses, cross-references, and plugin-root references all clean");
     lines.push(`  ✓ no description over the ${DESCRIPTION_WARN_CHARS}-char ratchet`);
   }
 
