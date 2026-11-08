@@ -433,6 +433,15 @@ test("buildContext emits the active-rules header and a bullet per rule", () => {
   assert.match(ctx, /Active rules this session/);
   assert.match(ctx, /- \[90%\] when X → Do Y\./);
 });
+test("buildContext caps each injected instinct's length", () => {
+  const ctx = instincts.buildContext([
+    { confidence: 90, trigger: "when X", action: "y".repeat(instincts.RULE_MAX_CHARS * 4) },
+    { confidence: 80, trigger: "when Z", action: "Do Z." },
+  ]);
+  assert.ok(ctx.length < instincts.RULE_MAX_CHARS * 2, `context is ${ctx.length} chars`);
+  assert.match(ctx, /truncated/);
+  assert.match(ctx, /when Z → Do Z\./);
+});
 
 // ── Malformed tool input never turns into an allow ───────────────────────────
 const { spawnSync } = require("node:child_process");

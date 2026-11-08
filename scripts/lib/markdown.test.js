@@ -53,6 +53,35 @@ test("parseFrontmatter handles a block scalar description", () => {
   assert.strictEqual(fm.values.description, "one two");
 });
 
+test("parseFrontmatter reports no errors for well-formed frontmatter", () => {
+  const fm = parseFrontmatter("---\nname: x\ndescription: |\n  one\n\n  two\nallowed-tools:\n  - Read\n---\n");
+  assert.deepStrictEqual(fm.errors, []);
+  assert.strictEqual(fm.values.description, "one two");
+});
+
+test("parseFrontmatter reads a column-0 list after an empty key as that key's list", () => {
+  const fm = parseFrontmatter("---\nname: x\nallowed-tools:\n- Bash\n- Write\n---\n");
+  assert.deepStrictEqual(fm.errors, []);
+  assert.strictEqual(fm.values["allowed-tools"], "- Bash - Write");
+});
+
+test("parseFrontmatter keeps the raw inline value alongside the unquoted one", () => {
+  const fm = parseFrontmatter('---\nname: "x"\n---\n');
+  assert.strictEqual(fm.values.name, "x");
+  assert.strictEqual(fm.raw.name, '"x"');
+});
+
+test("parseFrontmatter flags lines that are not plain keys or continuations, by line", () => {
+  const fm = parseFrontmatter('---\nname: x\n"allowed-tools": [Bash]\n---\n');
+  assert.strictEqual(fm.errors.length, 1);
+  assert.match(fm.errors[0], /frontmatter line 3\b/); // line numbers are file lines
+});
+
+test("parseFrontmatter flags duplicate keys", () => {
+  const fm = parseFrontmatter("---\nname: x\nname: y\n---\n");
+  assert.match(fm.errors.join("\n"), /duplicate frontmatter key "name"/);
+});
+
 test("parseFrontmatter ignores a --- that is not at the very start", () => {
   assert.strictEqual(parseFrontmatter("intro\n---\nname: x\n---\n"), null);
 });

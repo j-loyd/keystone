@@ -438,6 +438,20 @@ const CAREFUL = [
     why: "forced recursive copy (can overwrite)",
   },
   {
+    id: "gh-pr-merge",
+    re: /\bgh\b[^;|&\n]*\bpr\s+merge\b/,
+    why: "gh pr merge (merges a pull request on the remote)",
+  },
+  {
+    // keystone: matches only a checkout/switch to main/master earlier in the SAME command; a
+    // bare `git merge` run while already on main is not caught (the hook doesn't read HEAD).
+    // Upgrade trigger: a merge into main seen slipping past careful mode in practice — then
+    // resolve the branch from cwd (`git symbolic-ref --short HEAD`).
+    id: "git-merge-into-main",
+    re: /\bgit\s+(?:checkout|switch)\s+(?:-\S+\s+)*(?:main|master)(?![\w./-])[\s\S]*\bgit\b[^;|&\n]*\bmerge(?![\w-])/,
+    why: "git merge into main/master",
+  },
+  {
     id: "truncate-redirect",
     re: /(^|[;&|]\s*)>\s*\/?\w[^;&|]*/,
     why: "shell redirect that truncates a file",
@@ -512,14 +526,53 @@ function dequoted(cmd) {
     .replace(/['"\\`]/g, "");
 }
 
-/** Does this Bash command reference the guard state file directly? */
-function bashTouchesStateFile(cmd, env) {
+/**
+ * Absolute targets of every rm/rmdir/mv in a (dequoted) command, with `~`, `$HOME`, and
+ * `${HOME}` expanded and relative paths resolved against cwd. A glob is cut at its first
+ * wildcard segment (`~/.cl*` → home), so it is judged by the directory it can reach.
+ * keystone: word splitting only — other variables, command substitution, and interpreter
+ * one-liners are not resolved; upgrade trigger: an ancestor-delete bypass seen in practice.
+ */
+function removalTargets(cmd, env, cwd) {
+  const homes = [os.homedir(), env && env.HOME].filter(Boolean);
+  const base = cwd || process.cwd();
+  const targets = [];
+  for (const segment of dequoted(cmd).split(/[;&|\n()]/)) {
+    const words = segment.trim().split(/\s+/);
+    const at = words.findIndex((w) => /^(?:\S*\/)?(?:rm|rmdir|mv)$/.test(w));
+    if (at < 0) continue;
+    for (const word of words.slice(at + 1)) {
+      if (!word || word.startsWith("-")) continue;
+      for (const home of homes) {
+        let p = word.replace(/^(?:~|\$\{HOME\}|\$HOME)(?=\/|$)/, home);
+        if (/\$/.test(p)) continue; // an unresolved variable: unknowable here
+        const parts = p.split("/");
+        const glob = parts.findIndex((seg) => /[*?[]/.test(seg));
+        if (glob >= 0) p = parts.slice(0, glob).join("/") || "/";
+        targets.push(path.resolve(base, p));
+      }
+    }
+  }
+  return targets;
+}
+
+/**
+ * Does this Bash command reference the guard state file directly, or rm/mv a directory
+ * that contains it (`rm -rf ~/.claude` deletes the file and silently lifts a freeze)?
+ */
+function bashTouchesStateFile(cmd, env, cwd) {
   const forms = [String(cmd), dequoted(cmd)];
   if (forms.some((c) => STATE_MENTION.test(c))) return true;
-  return stateFileCandidates(env).some((p) => {
+  const candidates = stateFileCandidates(env);
+  const hit = candidates.some((p) => {
     if (path.basename(p).toLowerCase() === STATE_BASENAME) return false; // covered above
     return forms.some((c) => c.toLowerCase().includes(p.toLowerCase()));
   });
+  if (hit) return true;
+  // Case-insensitive: macOS's default filesystem treats ~/.CLAUDE as ~/.claude.
+  return removalTargets(cmd, env, cwd).some((t) =>
+    candidates.some((p) => isInside(t.toLowerCase(), p.toLowerCase())),
+  );
 }
 
 /** Is this Read/Write target the guard state file? (case-insensitive: macOS default FS) */
@@ -697,10 +750,10 @@ function evaluate(
       if (hit) return { decision: "deny", why: hit.why };
     }
     // Guard state integrity (ask): checked on the RAW command, after the deny layers.
-    if (bashTouchesStateFile(raw, env)) {
+    if (bashTouchesStateFile(raw, env, cwd)) {
       return {
         decision: "ask",
-        why: "this command touches the keystone guard state file directly (it holds the freeze/careful settings). Use /guard (freeze, careful, on, off) instead",
+        why: "this command touches the keystone guard state file (directly, or by removing/moving a directory that contains it), which holds the freeze/careful settings. Use /guard (freeze, careful, on, off) instead",
       };
     }
     if (!guardStateCallsAreProtective(raw, state)) {

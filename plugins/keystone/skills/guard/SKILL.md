@@ -17,7 +17,8 @@ keystone's `guard.js` hook always hard-blocks catastrophic commands and secret-f
 - **freeze**: any Edit/Write whose target resolves outside the boundary directory is denied.
   Reads and Bash are not fenced.
 - **careful**: a broader set of destructive Bash commands asks for confirmation first: `rm -rf`,
-  `git push`, force operations, and bulk overwrite or move.
+  `git push`, `gh pr merge`, a checkout of main/master followed by `git merge`, force
+  operations, and bulk overwrite or move.
 
 ## Pick the mode
 

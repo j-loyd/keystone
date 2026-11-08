@@ -258,13 +258,17 @@ const READ_ONLY_TOOLS = new Set(["Read", "Grep", "Glob"]);
  */
 const READ_ONLY_BASH = [/^git status$/, /^git rev-parse --show-toplevel$/, /^ls$/, /^pwd$/];
 
-/** Split an allowed-tools value (YAML list folded by parseFrontmatter, or a space/comma
- *  string) into tools, keeping `Bash(git log *)` together. Exported for tests. */
+/** Split an allowed-tools value (YAML list folded by parseFrontmatter, a `[a, b]` flow
+ *  sequence, or a space/comma string) into tools, keeping `Bash(git log *)` together and
+ *  judging a quoted item by its unquoted name. Exported for tests. */
 function parseAllowedTools(value) {
   const tools = [];
   let cur = "";
   let depth = 0;
-  for (const ch of String(value || "")) {
+  let text = String(value || "").trim();
+  const flow = text.match(/^\[([\s\S]*)\]$/);
+  if (flow) text = flow[1];
+  for (const ch of text) {
     if (ch === "(") depth++;
     if (ch === ")") depth = Math.max(0, depth - 1);
     if (depth === 0 && /[\s,]/.test(ch)) {
@@ -275,7 +279,7 @@ function parseAllowedTools(value) {
     cur += ch;
   }
   if (cur) tools.push(cur);
-  return tools.filter((t) => t !== "-");
+  return tools.filter((t) => t !== "-").map((t) => t.replace(/^(["'])(.*)\1$/s, "$2"));
 }
 
 /** Why `tool` is too broad to pre-approve on a model-invocable skill, or null. */
@@ -310,7 +314,8 @@ function lintSkill(dir, source) {
     return { dir, name: null, description: null, descriptionLength: 0, errors, warnings };
   }
 
-  const { keys, values } = parsed;
+  const { keys, values, raw } = parsed;
+  for (const e of parsed.errors) errors.push(`${dir}/SKILL.md: ${e}`);
   const extras = keys.filter((k) => !ALLOWED_KEYS.includes(k));
   if (extras.length) {
     errors.push(
@@ -324,18 +329,21 @@ function lintSkill(dir, source) {
       errors.push(`${dir}/SKILL.md: frontmatter is missing "${key}"`);
     }
   }
+  // The RAW token must be the bare literal `true`: a quoted "true" is a string to YAML, and
+  // `True`, `!!bool true`, or a trailing comment are forms the harness may read differently.
+  // Anything else counts as model-invocable here, so the allowed-tools rule still runs.
   const userOnly = keys.includes(USER_ONLY_KEY);
-  if (userOnly && values[USER_ONLY_KEY] !== "true") {
+  const isUserOnly = userOnly && raw[USER_ONLY_KEY] === "true";
+  if (userOnly && !isUserOnly) {
     errors.push(
-      `${dir}/SKILL.md: "${USER_ONLY_KEY}" must be true when present ` +
-        "(omit it for a model-invocable skill)",
+      `${dir}/SKILL.md: "${USER_ONLY_KEY}" must be the bare literal true when present ` +
+        "(unquoted, no comment; omit it for a model-invocable skill)",
     );
   }
 
   const name = values.name || null;
   const description = values.description || null;
 
-  const isUserOnly = userOnly && values[USER_ONLY_KEY] === "true";
   if (!isUserOnly && keys.includes("allowed-tools")) {
     for (const tool of parseAllowedTools(values["allowed-tools"])) {
       const why = unsafeModelTool(tool);
@@ -384,7 +392,7 @@ function lintSkill(dir, source) {
     name,
     description,
     descriptionLength: description ? description.length : 0,
-    userOnly: userOnly && values[USER_ONLY_KEY] === "true",
+    userOnly: isUserOnly,
     errors,
     warnings,
   };

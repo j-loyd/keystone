@@ -89,37 +89,92 @@ function unquote(value) {
   return match ? match[2] : value;
 }
 
+/** A plain top-level `key: value` line: unquoted key, colon, then whitespace or end. */
+const FRONTMATTER_KEY = /^([A-Za-z_][\w-]*):(?=[ \t]|$)[ \t]*(.*)$/;
+
 /**
- * Parse the leading YAML frontmatter block into { keys, values }.
+ * Parse the leading YAML frontmatter block into { keys, values, raw, errors }.
  *
  * `keys` is every top-level key in source order — including keys whose value is a
  * list or is empty — because the rule "frontmatter carries name and description
  * only" is about the keys present, not about the ones we could read a string from.
- * `values` holds the flattened string value for each scalar key.
+ * `values` holds the flattened, unquoted string value for each key; `raw` the same
+ * text before unquoting (block-scalar indicator included), for rules that need the
+ * literal YAML token.
+ *
+ * FAILS CLOSED. This is a subset parser, and a real YAML parser (js-yaml) reads forms it
+ * would otherwise skip as real keys — quoted keys, `? key` / `: value`, `key : value`,
+ * flow mappings, a lone CR line break — so a skill could carry an `allowed-tools` grant
+ * the lint never saw. Every line must be blank, a plain `key:` line, an indented
+ * continuation of the current key, or a column-0 `- item` under a key with an empty
+ * inline value (YAML's unindented list, which is PARSED into that key). Anything else,
+ * and any duplicate key, is reported in `errors` with its file line number.
  *
  * Returns null when the file has no frontmatter block at position 0.
  */
 function parseFrontmatter(source) {
   const match = String(source).match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (!match) return null;
+  const errors = [];
+  if (/\r(?!\n)/.test(match[1])) {
+    errors.push(
+      "frontmatter contains a carriage return not followed by a newline — YAML reads it as a " +
+        "line break, so it can hide a key from this lint",
+    );
+  }
   const lines = match[1].split(/\r?\n/);
   const keys = [];
   const values = {};
+  const raw = {};
+  let cur = null;
+  const flush = () => {
+    if (!cur) return;
+    raw[cur.key] = cur.rawParts.join(" ").replace(/\s+/g, " ").trim();
+    values[cur.key] = unquote(cur.parts.join(" ").replace(/\s+/g, " ").trim());
+    cur = null;
+  };
   for (let i = 0; i < lines.length; i++) {
-    const keyMatch = lines[i].match(/^([A-Za-z_][\w-]*):[ \t]*(.*)$/);
-    if (!keyMatch) continue;
-    const key = keyMatch[1];
-    const inline = keyMatch[2].trim();
-    const isBlockScalar = /^[|>][-+]?\d*$/.test(inline);
-    const parts = inline === "" || isBlockScalar ? [] : [inline];
-    // Fold indented continuation lines (and list items) into one value.
-    while (i + 1 < lines.length && /^[ \t]+\S/.test(lines[i + 1])) {
-      parts.push(lines[++i].trim());
+    const line = lines[i];
+    const fileLine = i + 2; // line 1 of the file is the opening ---
+    if (/^\s*$/.test(line)) continue; // blank lines don't end a value (block scalars, lists)
+    const keyMatch = line.match(FRONTMATTER_KEY);
+    if (keyMatch) {
+      flush();
+      const key = keyMatch[1];
+      const inline = keyMatch[2].trim();
+      const isBlockScalar = /^[|>][-+]?\d*$/.test(inline);
+      if (keys.includes(key)) {
+        errors.push(
+          `frontmatter line ${fileLine}: duplicate frontmatter key "${key}" — YAML parsers ` +
+            "disagree on which value wins, so the lint cannot know what the harness reads",
+        );
+      } else {
+        keys.push(key);
+      }
+      cur = {
+        key,
+        listOk: inline === "",
+        parts: inline === "" || isBlockScalar ? [] : [inline],
+        rawParts: inline === "" ? [] : [inline],
+      };
+      continue;
     }
-    if (!keys.includes(key)) keys.push(key);
-    values[key] = unquote(parts.join(" ").replace(/\s+/g, " ").trim());
+    const continuation = /^[ \t]+\S/.test(line);
+    const unindentedItem = /^-(?:[ \t]|$)/.test(line) && cur && cur.listOk;
+    if (cur && (continuation || unindentedItem)) {
+      cur.parts.push(line.trim());
+      cur.rawParts.push(line.trim());
+      continue;
+    }
+    const shown = line.trim().length > 60 ? `${line.trim().slice(0, 57)}...` : line.trim();
+    errors.push(
+      `frontmatter line ${fileLine}: "${shown}" is not a plain \`key: value\` line, an ` +
+        "indented continuation, or a list item under an empty key — a YAML parser may read " +
+        "it as a key this lint cannot check",
+    );
   }
-  return { keys, values };
+  flush();
+  return { keys, values, raw, errors };
 }
 
 /**
