@@ -1,0 +1,5 @@
+interface:
+  display_name: "Guard"
+  short_description: "Freeze edits to a directory and confirm destructive commands"
+policy:
+  allow_implicit_invocation: false

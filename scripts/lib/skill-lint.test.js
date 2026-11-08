@@ -9,17 +9,18 @@ const path = require("node:path");
 const {
   DESCRIPTION_WARN_CHARS,
   REFERENCE_EXEMPTIONS,
+  SKILL_LINES_WARN,
   findSkillReferences,
   findPluginRootMisuse,
   PLUGIN_ROOT_EXEMPTIONS,
   hasTriggerClause,
   lintCatalog,
   lintSkill,
+  parseAllowedTools,
 } = require("./skill-lint.js");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SKILLS_DIR = path.join(ROOT, "plugins", "keystone", "skills");
-const COMMANDS_DIR = path.join(ROOT, "plugins", "keystone", "commands");
 
 const frontmatter = (fields) =>
   `---\n${Object.entries(fields).map(([k, v]) => `${k}: ${v}`).join("\n")}\n---\n\n# Body\n`;
@@ -96,9 +97,19 @@ test("missing frontmatter is an error", () => {
 
 test("a third frontmatter key is an error", () => {
   const source = good();
-  const withExtra = source.replace("---\n\n# Body", "allowed-tools: Bash\n---\n\n# Body");
+  const withExtra = source.replace("---\n\n# Body", "model: opus\n---\n\n# Body");
   const result = lintSkill("zoom-out", withExtra);
-  assert.match(result.errors.join("\n"), /allowed-tools/);
+  assert.match(result.errors.join("\n"), /model/);
+});
+
+test("disable-model-invocation: true is allowed (user-only skills)", () => {
+  const source = good().replace("---\n\n# Body", "disable-model-invocation: true\n---\n\n# Body");
+  assert.deepStrictEqual(lintSkill("zoom-out", source).errors, []);
+});
+
+test("disable-model-invocation with any value but true is an error", () => {
+  const source = good().replace("---\n\n# Body", "disable-model-invocation: false\n---\n\n# Body");
+  assert.match(lintSkill("zoom-out", source).errors.join("\n"), /disable-model-invocation/);
 });
 
 test("a missing description is an error", () => {
@@ -130,7 +141,7 @@ test("a description with no trigger clause is an error", () => {
 
 test("a skill cannot exempt itself through frontmatter", () => {
   // Exemptions live in this validator, never in the artifact being validated.
-  // The name+description-only rule is what makes that airtight.
+  // The closed frontmatter key list is what makes that airtight.
   const source = good().replace(
     "---\n\n# Body",
     "exempt-references: deep-research\nvalidator-skip: true\n---\n\n# Body",
@@ -163,7 +174,7 @@ test("an over-long description warns rather than errors", () => {
 test("the length threshold sits above every description in the catalog today", () => {
   // Chosen from the real distribution, not invented: it is a ratchet on the
   // observed ceiling, so it warns on growth rather than on the status quo.
-  const result = lintCatalog({ skillsDir: SKILLS_DIR, commandsDir: COMMANDS_DIR });
+  const result = lintCatalog({ skillsDir: SKILLS_DIR });
   const longest = Math.max(...result.skills.map((s) => s.descriptionLength));
   assert.ok(
     DESCRIPTION_WARN_CHARS > longest,
@@ -319,20 +330,21 @@ test("lintCatalog fails on plugin-root misuse in any shipped .md, not only skill
 });
 
 test("an exempted file is not reported for its exempted form, but is for others", () => {
-  const { file } = PLUGIN_ROOT_EXEMPTIONS[0];
+  const file = "skills/legacy/SKILL.md";
+  const pluginRootExemptions = [{ file, form: "default", reason: "fixture exemption for the test" }];
   const root = catalogFixture({
     "skills/zoom-out/SKILL.md": good(),
     [file]: `${DEFAULTED}/a.md\nnode "${UNBRACED}/x.js"\n`,
   });
-  const errors = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.filter((e) =>
-    e.startsWith(file),
-  );
+  const errors = lintCatalog({ skillsDir: path.join(root, "skills"), pluginRootExemptions })
+    .errors.filter((e) => e.startsWith(file));
   assert.strictEqual(errors.length, 1, errors.join("\n"));
   assert.match(errors[0], /unbraced/);
 });
 
 test("every plugin-root exemption names a file and form and carries a written reason", () => {
-  assert.ok(PLUGIN_ROOT_EXEMPTIONS.length > 0);
+  // The list may be empty; any entry added later must still be fully specified.
+  assert.ok(Array.isArray(PLUGIN_ROOT_EXEMPTIONS));
   for (const entry of PLUGIN_ROOT_EXEMPTIONS) {
     assert.ok(typeof entry.file === "string" && entry.file.endsWith(".md"), JSON.stringify(entry));
     assert.ok(["unbraced", "default"].includes(entry.form), JSON.stringify(entry));
@@ -340,10 +352,223 @@ test("every plugin-root exemption names a file and form and carries a written re
   }
 });
 
+// ---------- user-only parity across harnesses ----------
+
+const USER_ONLY = frontmatter({
+  name: "zoom-out",
+  description: "Step back. Use when the user runs /zoom-out.",
+  "disable-model-invocation": "true",
+});
+const CODEX_POLICY = "interface:\n  display_name: \"Zoom Out\"\npolicy:\n  allow_implicit_invocation: false\n";
+
+test("a user-only skill with a matching Codex policy passes", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": USER_ONLY,
+    "skills/zoom-out/agents/openai.yaml": CODEX_POLICY,
+  });
+  assert.deepStrictEqual(lintCatalog({ skillsDir: path.join(root, "skills") }).errors, []);
+});
+
+test("a user-only skill without agents/openai.yaml is an error", () => {
+  const root = catalogFixture({ "skills/zoom-out/SKILL.md": USER_ONLY });
+  const text = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.join("\n");
+  assert.match(text, /zoom-out/);
+  assert.match(text, /allow_implicit_invocation/);
+});
+
+test("a Codex no-implicit policy on a model-invocable skill is an error", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": good(),
+    "skills/zoom-out/agents/openai.yaml": CODEX_POLICY,
+  });
+  const text = lintCatalog({ skillsDir: path.join(root, "skills") }).errors.join("\n");
+  assert.match(text, /disable-model-invocation/);
+});
+
+test("an openai.yaml with only an interface block is fine on a model-invocable skill", () => {
+  const root = catalogFixture({
+    "skills/zoom-out/SKILL.md": good(),
+    "skills/zoom-out/agents/openai.yaml": "interface:\n  display_name: \"Zoom Out\"\n",
+  });
+  assert.deepStrictEqual(lintCatalog({ skillsDir: path.join(root, "skills") }).errors, []);
+});
+
 // ---------- the real catalog ----------
 
 test("the real keystone catalog passes every rule", () => {
-  const result = lintCatalog({ skillsDir: SKILLS_DIR, commandsDir: COMMANDS_DIR });
+  const result = lintCatalog({ skillsDir: SKILLS_DIR });
   assert.deepStrictEqual(result.errors, []);
-  assert.ok(result.skills.length >= 30, `only ${result.skills.length} skills found`);
+  // Sanity floor (the lint found the real tree, not an empty dir), not a catalog census.
+  assert.ok(result.skills.length >= 15, `only ${result.skills.length} skills found`);
+});
+
+test("a SKILL.md over the line budget warns but does not error", () => {
+  const long = good() + "\nline".repeat(SKILL_LINES_WARN);
+  const result = lintSkill("zoom-out", long);
+  assert.deepStrictEqual(result.errors, []);
+  assert.match(result.warnings.join("\n"), /line budget/);
+});
+
+test("a SKILL.md within the line budget does not warn", () => {
+  assert.deepStrictEqual(lintSkill("zoom-out", good()).warnings, []);
+});
+
+// ---------- allowed-tools on model-invocable skills ----------
+
+const withTools = (tools, extra = {}) =>
+  frontmatter({
+    name: "zoom-out",
+    description: "Step back. Use when the user says are we off track.",
+    ...extra,
+    "allowed-tools": tools,
+  });
+
+for (const tools of [
+  "Bash",
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "NotebookEdit",
+  "Read, Bash",
+  "Bash(*)",
+  "Bash(rm *)",
+  "Bash(git status; rm -rf x)",
+  "Bash(git log * | sh)",
+  "Bash(git branch *)",
+  "Bash(git status *)",
+  "Bash(git log:*)",
+  "Bash(git log *)",
+  "Bash(git diff *)",
+  "Bash(git log --output=notes.txt)",
+  "Bash(ls *)",
+  "Edit(src/**)",
+  "mcp__claude-in-chrome__navigate",
+  "WebFetch",
+  "\n  - Read\n  - Write",
+])
+  test(`model-invocable skill may not pre-approve ${JSON.stringify(tools)}`, () => {
+    const result = lintSkill("zoom-out", withTools(tools));
+    assert.match(result.errors.join("\n"), /allowed-tools/, JSON.stringify(result.errors));
+  });
+
+for (const tools of [
+  "Read",
+  "Read, Grep, Glob",
+  "Read Grep Glob",
+  "\n  - Read\n  - Glob",
+  "Bash(git status)",
+  "Read Bash(git status) Bash(pwd) Bash(ls)",
+  "Bash(git rev-parse --show-toplevel)",
+])
+  test(`model-invocable skill may pre-approve ${JSON.stringify(tools)}`, () => {
+    assert.deepStrictEqual(lintSkill("zoom-out", withTools(tools)).errors, []);
+  });
+
+test("a user-only skill may keep broad allowed-tools grants", () => {
+  const result = lintSkill(
+    "zoom-out",
+    withTools("\n  - Bash\n  - Write\n  - Edit\n  - mcp__claude-in-chrome__navigate", {
+      "disable-model-invocation": "true",
+    }),
+  );
+  assert.deepStrictEqual(result.errors, []);
+});
+
+// ---------- frontmatter forms a real YAML parser reads as grants (1.0.0 review) ----------
+// Each of these is read by js-yaml as allowed-tools: [Bash, Write] (or as a model-invocable
+// skill with a quoted "true"). The lint must either PARSE the grant so the allowed-tools
+// rule sees it, or reject the form outright. Built with raw strings, not the frontmatter()
+// helper, because the helper always emits well-formed `key: value` lines.
+
+const HEAD = "name: zoom-out\ndescription: Step back. Use when the user says are we off track.\n";
+const rawSkill = (fm) => `---\n${HEAD}${fm}---\n\n# Body\n`;
+
+test("an unindented YAML list is parsed as the key's list, so Bash and Write are caught", () => {
+  const errors = lintSkill("zoom-out", rawSkill("allowed-tools:\n- Bash\n- Write\n")).errors.join("\n");
+  assert.match(errors, /pre-approves "Bash"/);
+  assert.match(errors, /pre-approves "Write"/);
+});
+
+test("an unindented list of read-only tools still passes", () => {
+  assert.deepStrictEqual(lintSkill("zoom-out", rawSkill("allowed-tools:\n- Read\n- Glob\n")).errors, []);
+});
+
+test("a list item that blank lines separate from the rest of the list is still parsed", () => {
+  const errors = lintSkill("zoom-out", rawSkill("allowed-tools:\n  - Read\n\n  - Bash\n  - Write\n")).errors;
+  assert.match(errors.join("\n"), /pre-approves "Bash"/);
+});
+
+for (const [label, fm] of [
+  ["double-quoted key", '"allowed-tools": [Bash, Write]\n'],
+  ["single-quoted key", "'allowed-tools': [Bash, Write]\n"],
+  ["explicit ? key", "? allowed-tools\n: [Bash, Write]\n"],
+  ["space before the colon", "allowed-tools : [Bash, Write]\n"],
+  ["a flow mapping line", "{allowed-tools: [Bash, Write]}\n"],
+  ["a column-0 list item after a scalar key", "argument-hint: x\n- Bash\n"],
+  ["a top-level comment line", "# allowed-tools: [Bash]\n"],
+  ["a key with no space after the colon", "allowed-tools:Bash\n"],
+])
+  test(`frontmatter with ${label} is an error, not silently skipped`, () => {
+    const errors = lintSkill("zoom-out", rawSkill(fm)).errors;
+    assert.ok(errors.length > 0, `expected an error for ${label}`);
+    assert.match(errors.join("\n"), /frontmatter line \d+/);
+  });
+
+test("an indented first line (YAML would read an indented mapping) is an error", () => {
+  const errors = lintSkill("zoom-out", "---\n  allowed-tools: Bash\n  name: zoom-out\n---\n").errors;
+  assert.match(errors.join("\n"), /frontmatter line 2\b/);
+});
+
+test("a duplicate frontmatter key is an error, whichever value comes last", () => {
+  for (const fm of ["allowed-tools: Bash, Write\nallowed-tools: Read\n", "name: other\n"]) {
+    assert.match(lintSkill("zoom-out", rawSkill(fm)).errors.join("\n"), /duplicate frontmatter key/);
+  }
+});
+
+test("a lone carriage return (a YAML line break) in frontmatter is an error", () => {
+  const source = `---\n${HEAD.replace(/\n$/, "")}\rallowed-tools: Bash, Write\n---\n\n# Body\n`;
+  assert.match(lintSkill("zoom-out", source).errors.join("\n"), /carriage return/);
+});
+
+test("CRLF frontmatter still parses cleanly", () => {
+  const source = `---\r\n${HEAD.replace(/\n/g, "\r\n")}---\r\n\r\n# Body\r\n`;
+  assert.deepStrictEqual(lintSkill("zoom-out", source).errors, []);
+});
+
+for (const value of ['"true"', "'true'", "True", "yes", "true # user-only", "!!bool true"])
+  test(`disable-model-invocation: ${value} is an error (only the bare literal true counts)`, () => {
+    const result = lintSkill("zoom-out", rawSkill(`disable-model-invocation: ${value}\nallowed-tools: Bash, Write\n`));
+    const errors = result.errors.join("\n");
+    assert.match(errors, /disable-model-invocation/);
+    assert.match(errors, /pre-approves "Bash"/, "the allowed-tools rule must still run");
+    assert.strictEqual(result.userOnly, false);
+  });
+
+test("a flow-sequence allowed-tools value is split into its tools", () => {
+  assert.deepStrictEqual(parseAllowedTools("[Read, Glob]"), ["Read", "Glob"]);
+  assert.deepStrictEqual(lintSkill("zoom-out", rawSkill("allowed-tools: [Read, Glob]\n")).errors, []);
+  assert.match(lintSkill("zoom-out", rawSkill("allowed-tools: [Read, Bash]\n")).errors.join("\n"), /"Bash"/);
+});
+
+test("a quoted tool name is judged by its unquoted name", () => {
+  assert.deepStrictEqual(parseAllowedTools('- "Read" - \'Glob\''), ["Read", "Glob"]);
+});
+
+test("a block-scalar description with a blank line inside still passes", () => {
+  const source =
+    "---\nname: zoom-out\ndescription: |\n  Step back.\n\n  Use when the user says are we off track.\n---\n\n# Body\n";
+  assert.deepStrictEqual(lintSkill("zoom-out", source).errors, []);
+});
+
+test("parseAllowedTools keeps scoped Bash patterns with spaces as one tool", () => {
+  assert.deepStrictEqual(parseAllowedTools("- Read - Bash(git log *) - Glob"), [
+    "Read",
+    "Bash(git log *)",
+    "Glob",
+  ]);
+  assert.deepStrictEqual(parseAllowedTools("Read, Bash(git status *), Grep"), [
+    "Read",
+    "Bash(git status *)",
+    "Grep",
+  ]);
 });

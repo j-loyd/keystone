@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-// Tests for guard-state.js — the JSON-safe writer behind /freeze, /careful, /guard, /unfreeze.
+// Tests for guard-state.js — the JSON-safe writer behind the /guard skill.
 // Every run points KEYSTONE_GUARD_FILE at a fresh temp file; the real home state file is
 // never read or written.
 const { test } = require("node:test");

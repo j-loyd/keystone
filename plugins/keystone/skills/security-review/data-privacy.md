@@ -1,6 +1,6 @@
 <!-- Sibling of security-review/SKILL.md. Data-lifecycle governance: classification,
      minimization, retention, subject rights, and onward sharing. Cited from SKILL.md's
-     pre-deployment checklist; api-security cites it for export endpoints. -->
+     "Data privacy" section. -->
 
 # Data privacy — an engineering property, not a legal footnote
 

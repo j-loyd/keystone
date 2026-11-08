@@ -42,8 +42,8 @@ const SECRET_EXFIL = true;
 const SECRET_FILES = true;
 const SQL_GUARD = true;
 // DATABRICKS_GUARD is opt-in (stack-specific) — read from env at call time, off by default.
-// Layer 0 (freeze / careful) is opt-in per machine via the /freeze, /careful, /guard
-// commands, which write ~/.claude/keystone-guard.json. Absent file ⇒ baseline behavior.
+// Layer 0 (freeze / careful) is opt-in per machine via the user-only /guard skill
+// (/guard freeze|careful|on|off), which writes ~/.claude/keystone-guard.json. Absent file ⇒ baseline behavior.
 const GUARD_STATE_FILE =
   process.env.KEYSTONE_GUARD_FILE ||
   path.join(os.homedir(), ".claude", "keystone-guard.json");
@@ -414,7 +414,7 @@ const SQL_DESTRUCTIVE = [
 
 // ── Layer 0b: "careful mode" Bash commands → ASK (only when careful is enabled) ─
 // Legitimate-but-destructive operations that guard.js does NOT block by default, but
-// escalates to a confirmation prompt while careful mode is on (via /careful or /guard).
+// escalates to a confirmation prompt while careful mode is on (via /guard careful on or /guard on).
 const CAREFUL = [
   {
     id: "rm-recursive",
@@ -436,6 +436,20 @@ const CAREFUL = [
     id: "cp-recursive-force",
     re: /\bcp\s+[^;|&]*-\S*[rR]\S*f|\bcp\s+[^;|&]*-\S*f\S*[rR]/,
     why: "forced recursive copy (can overwrite)",
+  },
+  {
+    id: "gh-pr-merge",
+    re: /\bgh\b[^;|&\n]*\bpr\s+merge\b/,
+    why: "gh pr merge (merges a pull request on the remote)",
+  },
+  {
+    // keystone: matches only a checkout/switch to main/master earlier in the SAME command; a
+    // bare `git merge` run while already on main is not caught (the hook doesn't read HEAD).
+    // Upgrade trigger: a merge into main seen slipping past careful mode in practice — then
+    // resolve the branch from cwd (`git symbolic-ref --short HEAD`).
+    id: "git-merge-into-main",
+    re: /\bgit\s+(?:checkout|switch)\s+(?:-\S+\s+)*(?:main|master)(?![\w./-])[\s\S]*\bgit\b[^;|&\n]*\bmerge(?![\w-])/,
+    why: "git merge into main/master",
   },
   {
     id: "truncate-redirect",
@@ -475,8 +489,8 @@ function neutralizeAllowlisted(cmd) {
 }
 
 // ── Guard state integrity: the model must not quietly lift its own fence ─────
-// /freeze, /careful, /guard, /unfreeze all run through the model's Bash tool, so the hook
-// cannot tell a user-typed /unfreeze from a model-initiated one. Rule: anything that could
+// Every /guard mode runs guard-state.js through the model's Bash tool, so the hook
+// cannot tell a user-typed /guard off from a model-initiated one. Rule: anything that could
 // REMOVE or WIDEN protection asks a human; forms that only ADD protection pass.
 // keystone: string matching only — obfuscated access (globs like keystone-g*, variables
 // built at runtime, interpreter one-liners that assemble the name, a copied script) is not
@@ -512,14 +526,100 @@ function dequoted(cmd) {
     .replace(/['"\\`]/g, "");
 }
 
-/** Does this Bash command reference the guard state file directly? */
-function bashTouchesStateFile(cmd, env) {
+// ── Destructive commands that could reach the state file without naming it ────
+// `rm -rf ~/.claude` deletes the state file and silently lifts an active freeze. Shell
+// expansion (variables, `~user`, braces, a prior `cd`) can't be resolved reliably from the
+// command text, so this FAILS CLOSED: a destructive segment asks whenever an argument names
+// `.claude`, the home directory in any form, a brace expansion, or an unresolved `$`, or an
+// earlier segment changed directory. Resolving literal paths is only an extra on top.
+// keystone: string matching, not a sandbox — a symlink pointing at ~/.claude, or cp/tar/ln
+// overwriting the state file, is not caught; upgrade trigger: a real realpath-based resolver
+// or an OS-level sandbox if the freeze ever needs to hold against a hostile model.
+const DESTRUCTIVE_CMD = /^(?:\S*\/)?(?:rm|rmdir|mv|unlink)$/;
+const FIND_CMD = /^(?:\S*\/)?find$/;
+const RSYNC_CMD = /^(?:\S*\/)?rsync$/;
+const DIR_CHANGE = /^(?:cd|pushd)$/;
+// `env -C dir` / `env --chdir=dir` / `sudo -D dir` change directory inside the same segment.
+const CHDIR_WRAPPER = /^(?:\S*\/)?(?:env|sudo)$/;
+// Fail closed: any flag on an env/sudo wrapper may bundle -C/-D (e.g. `sudo -nD dir`).
+const CHDIR_FLAG = /^-/;
+
+function changesDir(words) {
+  return (
+    words.some((w) => DIR_CHANGE.test(w)) ||
+    (words.some((w) => CHDIR_WRAPPER.test(w)) && words.some((w) => CHDIR_FLAG.test(w)))
+  );
+}
+
+function isDestructive(words) {
+  if (words.some((w) => DESTRUCTIVE_CMD.test(w))) return true;
+  if (words.some((w) => FIND_CMD.test(w)) && words.includes("-delete")) return true;
+  return (
+    words.some((w) => RSYNC_CMD.test(w)) &&
+    words.some((w) => /^--(?:del$|delete|remove-(?:source|sent)-files)/.test(w))
+  );
+}
+
+/** An argument whose real target can't be known from the text, or that names ~/.claude. */
+function unresolvableArg(word) {
+  return (
+    /\.claude/i.test(word) ||
+    (word.includes("{") && word !== "{}") || // brace expansion; find's bare {} placeholder is literal
+    /(?:^|[=:])~/.test(word) || // ~, ~/, ~user (also after --opt= or a : list separator)
+    word.includes("$") // $HOME, ${HOME}, $X, $(...): anything still to be expanded
+  );
+}
+
+/** Literal-path extra: does `word`, resolved against cwd, contain a state file? */
+function literalReachesState(word, candidates, cwd) {
+  if (!word || word.startsWith("-")) return false;
+  const parts = word.split("/");
+  const glob = parts.findIndex((seg) => /[*?[]/.test(seg));
+  const p = glob < 0 ? word : parts.slice(0, glob).join("/") || (word.startsWith("/") ? "/" : ".");
+  const target = path.resolve(cwd || process.cwd(), p).toLowerCase();
+  // Case-insensitive: macOS's default filesystem treats ~/.CLAUDE as ~/.claude.
+  return candidates.some((c) => isInside(target, c.toLowerCase()));
+}
+
+/** True when a destructive segment of `cmd` could remove or move the guard state file. */
+function destructiveReachesState(cmd, env, cwd) {
+  const candidates = stateFileCandidates(env);
+  const segments = dequoted(cmd)
+    .split(/[;&|\n()]/)
+    .map((seg) => seg.trim().split(/\s+/).filter(Boolean));
+  const allWords = segments.flat();
+  // dequoted() strips backticks, so check the raw text: a command substitution anywhere
+  // means a destructive segment's real arguments can't be known from the text.
+  const hasSubstitution = /`|[$<>]\(/.test(String(cmd)); // `…`, $(…), <(…), >(…)
+  let changedDir = false;
+  for (const words of segments) {
+    if (isDestructive(words)) {
+      if (changedDir || changesDir(words) || hasSubstitution) return true;
+      // xargs takes its arguments from the pipe, so judge every word in the command.
+      const viaXargs = words.some((w) => /^(?:\S*\/)?xargs$/.test(w));
+      // xargs -a/--arg-file reads targets from a file the text doesn't show.
+      if (viaXargs && words.some((w) => /^(?:-a|--arg-file)(?:=.*)?$/.test(w))) return true;
+      const args = viaXargs ? allWords : words;
+      if (args.some(unresolvableArg)) return true;
+      if (words.some((w) => literalReachesState(w, candidates, cwd))) return true;
+    }
+    if (changesDir(words)) changedDir = true;
+  }
+  return false;
+}
+
+/**
+ * Does this Bash command reference the guard state file directly, or run a destructive
+ * command that could reach it (see destructiveReachesState)?
+ */
+function bashTouchesStateFile(cmd, env, cwd) {
   const forms = [String(cmd), dequoted(cmd)];
   if (forms.some((c) => STATE_MENTION.test(c))) return true;
-  return stateFileCandidates(env).some((p) => {
+  const hit = stateFileCandidates(env).some((p) => {
     if (path.basename(p).toLowerCase() === STATE_BASENAME) return false; // covered above
     return forms.some((c) => c.toLowerCase().includes(p.toLowerCase()));
   });
+  return hit || destructiveReachesState(cmd, env, cwd);
 }
 
 /** Is this Read/Write target the guard state file? (case-insensitive: macOS default FS) */
@@ -612,7 +712,7 @@ function readState(file = GUARD_STATE_FILE) {
 function corruptStateHint(reason) {
   return /^unreadable/.test(String(reason))
     ? `fix or remove ${GUARD_STATE_FILE} by hand (guard-state.js cannot rewrite a path it cannot read)`
-    : "run `/freeze` or `/guard` to rewrite it, `/unfreeze` to clear it, or `guard-state.js status` to inspect it";
+    : "run `/guard freeze` or `/guard on` to rewrite it, `/guard off` to clear it, or `/guard status` (guard-state.js status) to inspect it";
 }
 
 /** True if `target` resolves inside `dir`. Both should be absolute-ish paths. */
@@ -645,31 +745,6 @@ function output(decision, why) {
       permissionDecisionReason: `${emoji} [guard] ${why}.${tail}`,
     },
   };
-}
-
-// Risk-scaled pre-edit discovery gate (stateless). The executor declares the current task's
-// risk + discovery facts via env carriers (KEYSTONE_TASK_RISK / KEYSTONE_TASK_FACTS). This
-// gate fires ONLY when a MED/HIGH risk is declared WITHOUT facts — it never bricks ordinary
-// edits (no signal ⇒ allow). It is declaration-only: it checks facts were stated, not that
-// they are correct (the plan-reviewer owns correctness). KEYSTONE_FACT_FORCE=off disables it.
-function needsDiscovery(env) {
-  if (!env || env.KEYSTONE_FACT_FORCE === "off") return false;
-  const risk = String(env.KEYSTONE_TASK_RISK || "")
-    .trim()
-    .toLowerCase();
-  if (risk !== "med" && risk !== "high") return false;
-  return String(env.KEYSTONE_TASK_FACTS || "").trim() === "";
-}
-
-function discoveryGateMsg(risk) {
-  const dims =
-    risk === "high"
-      ? "importers/callers, contract shape, side-effects, and test coverage"
-      : "blast radius and error handling";
-  return (
-    `declare discovery facts before this ${risk.toUpperCase()} edit (${dims}) in ` +
-    `KEYSTONE_TASK_FACTS — declaration only; the plan-reviewer checks correctness`
-  );
 }
 
 /**
@@ -722,10 +797,10 @@ function evaluate(
       if (hit) return { decision: "deny", why: hit.why };
     }
     // Guard state integrity (ask): checked on the RAW command, after the deny layers.
-    if (bashTouchesStateFile(raw, env)) {
+    if (bashTouchesStateFile(raw, env, cwd)) {
       return {
         decision: "ask",
-        why: "this command touches the keystone guard state file directly (it holds the freeze/careful settings). Use /freeze, /careful, or /unfreeze instead",
+        why: "this command touches the keystone guard state file (directly, or by removing/moving a directory that contains it), which holds the freeze/careful settings. Use /guard (freeze, careful, on, off) instead",
       };
     }
     if (!guardStateCallsAreProtective(raw, state)) {
@@ -784,15 +859,9 @@ function evaluate(
       if (!isInside(state.freeze, abs)) {
         return {
           decision: "deny",
-          why: `freeze active: edits restricted to ${state.freeze} (this targets outside it). Run /unfreeze to lift`,
+          why: `freeze active: edits restricted to ${state.freeze} (this targets outside it). Run /guard off to lift`,
         };
       }
-    }
-
-    // Risk-scaled pre-edit discovery gate — after secret + freeze (those win), before allow.
-    if (WRITE_TOOLS.includes(toolName) && needsDiscovery(env)) {
-      const risk = String(env.KEYSTONE_TASK_RISK).trim().toLowerCase();
-      return { decision: "deny", why: discoveryGateMsg(risk) };
     }
 
     // Corrupt state file (fail closed) — the freeze boundary is unknown, so confirm every
@@ -808,7 +877,7 @@ function evaluate(
     if (WRITE_TOOLS.includes(toolName) && fp && isStateFilePath(fp, cwd, env)) {
       return {
         decision: "ask",
-        why: "this edits the keystone guard state file directly (it holds the freeze/careful settings). Use /freeze, /careful, or /unfreeze instead",
+        why: "this edits the keystone guard state file directly (it holds the freeze/careful settings). Use /guard (freeze, careful, on, off) instead",
       };
     }
     return null;
@@ -872,7 +941,5 @@ if (require.main === module) {
     isStateFilePath,
     guardStateCallsAreProtective,
     isInside,
-    needsDiscovery,
-    discoveryGateMsg,
   };
 }

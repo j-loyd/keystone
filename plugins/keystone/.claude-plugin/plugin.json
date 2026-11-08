@@ -1,8 +1,8 @@
 {
   "name": "keystone",
   "displayName": "Keystone",
-  "description": "Repo-agnostic Claude Code kit: instincts + security hooks, process-discipline skills, a domain-language layer (CONTEXT.md + ADRs), and heavy explicit workflows.",
-  "version": "0.9.1",
+  "description": "Repo-agnostic Claude Code kit: instincts + security hooks, a /spec → tickets → /implement pipeline, a domain-language layer (GLOSSARY.md + ADRs), security review, and explicit user-only workflows (/ship, /qa, /cso, /guard, ...).",
+  "version": "1.0.0",
   "author": {
     "name": "Jordan Loyd"
   },
@@ -12,19 +12,16 @@
   "keywords": [
     "skills",
     "workflows",
-    "tdd",
-    "debugging",
+    "specs",
+    "tickets",
     "code-review",
     "security",
     "domain-language",
     "instincts"
   ],
   "skills": "./skills/",
-  "commands": "./commands/",
   "agents": [
-    "./agents/planner.md",
     "./agents/implementer.md",
-    "./agents/qa.md",
     "./agents/code-reviewer.md",
     "./agents/security-reviewer.md"
   ],

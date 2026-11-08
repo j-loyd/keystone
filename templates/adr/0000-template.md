@@ -7,7 +7,7 @@
 ## Context
 
 What forces are at play? The problem, constraints, and the tension that makes this a
-real decision (not an obvious default). Reference glossary terms from `../CONTEXT.md`.
+real decision (not an obvious default). Reference glossary terms from the root `GLOSSARY.md`.
 
 ## Decision
 

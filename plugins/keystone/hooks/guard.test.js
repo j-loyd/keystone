@@ -13,7 +13,7 @@ const read = (file_path) => ["Read", { file_path }];
 const write = (file_path) => ["Write", { file_path }];
 
 // Pass explicit cwd="" and state={} so baseline tests are hermetic — independent of any
-// real ~/.claude/keystone-guard.json a /freeze or /careful may have written.
+// real ~/.claude/keystone-guard.json a /guard freeze or /guard careful may have written.
 function decision(args, state = {}, cwd = "", env = {}) {
   const r = guard.evaluate(...args, env, cwd, state);
   return r ? r.decision : "allow";
@@ -59,79 +59,15 @@ test("allows git log -n 5", () =>
 test("allows benign -c config override", () =>
   assert.equal(decision(bash("git -c user.name=x commit -m y")), "allow"));
 
-// ── Risk-scaled pre-edit discovery gate (env carrier, stateless) ─────────────
-const decisionE = (args, env, state = {}, cwd = "") => {
-  const r = guard.evaluate(...args, env, cwd, state);
-  return r ? r.decision : "allow";
-};
-const edit = (file_path) => ["Edit", { file_path }];
-test("discovery gate: HIGH risk without facts → deny", () =>
-  assert.equal(
-    decisionE(edit("src/auth.js"), { KEYSTONE_TASK_RISK: "high" }),
-    "deny",
-  ));
-test("discovery gate: HIGH risk with facts → allow", () =>
-  assert.equal(
-    decisionE(edit("src/auth.js"), {
-      KEYSTONE_TASK_RISK: "high",
-      KEYSTONE_TASK_FACTS: "callers: login.js; sync; pure",
-    }),
-    "allow",
-  ));
-test("discovery gate: MED risk without facts → deny", () =>
-  assert.equal(
-    decisionE(edit("src/util.js"), { KEYSTONE_TASK_RISK: "med" }),
-    "deny",
-  ));
-test("discovery gate: LOW risk → allow", () =>
-  assert.equal(
-    decisionE(edit("src/util.js"), { KEYSTONE_TASK_RISK: "low" }),
-    "allow",
-  ));
-test("discovery gate: no risk signal → allow (ordinary edit, unbricked)", () =>
-  assert.equal(decisionE(edit("src/util.js"), {}), "allow"));
-test("discovery gate: FACT_FORCE=off disables it", () =>
-  assert.equal(
-    decisionE(edit("src/auth.js"), {
-      KEYSTONE_TASK_RISK: "high",
-      KEYSTONE_FACT_FORCE: "off",
-    }),
-    "allow",
-  ));
-test("discovery gate: whitespace-only facts treated as absent → deny", () =>
-  assert.equal(
-    decisionE(edit("src/auth.js"), {
-      KEYSTONE_TASK_RISK: "high",
-      KEYSTONE_TASK_FACTS: "   ",
-    }),
-    "deny",
-  ));
-test("discovery gate: secret-file edit still denies even with HIGH+facts (secret wins)", () =>
-  assert.equal(
-    decisionE(["Edit", { file_path: ".env" }], {
-      KEYSTONE_TASK_RISK: "high",
-      KEYSTONE_TASK_FACTS: "facts here",
-    }),
-    "deny",
-  ));
-test("discovery gate: freeze still wins over the gate", () =>
-  assert.equal(
-    decisionE(
-      edit("/outside/x.js"),
-      { KEYSTONE_TASK_RISK: "high", KEYSTONE_TASK_FACTS: "facts" },
-      { freeze: "/repo" },
-      "/repo",
-    ),
-    "deny",
-  ));
-test("discovery gate: KEYSTONE_GUARD_OFF disables it", () =>
-  assert.equal(
-    decisionE(edit("src/auth.js"), {
-      KEYSTONE_TASK_RISK: "high",
-      KEYSTONE_GUARD_OFF: "1",
-    }),
-    "allow",
-  ));
+// ── The 0.x SDD discovery gate is gone: its env carriers no longer change decisions ─
+test("KEYSTONE_TASK_RISK without KEYSTONE_TASK_FACTS no longer blocks an edit", () => {
+  const r = guard.evaluate("Edit", { file_path: "src/auth.js" }, { KEYSTONE_TASK_RISK: "high" }, "", {});
+  assert.equal(r, null);
+});
+test("the discovery-gate helpers are no longer exported", () => {
+  assert.equal(guard.needsDiscovery, undefined);
+  assert.equal(guard.discoveryGateMsg, undefined);
+});
 
 // ── Layer 2: secret exfiltration → deny ──────────────────────────────────────
 test("denies curl upload of .env", () =>
@@ -496,6 +432,15 @@ test("buildContext emits the active-rules header and a bullet per rule", () => {
   ]);
   assert.match(ctx, /Active rules this session/);
   assert.match(ctx, /- \[90%\] when X → Do Y\./);
+});
+test("buildContext caps each injected instinct's length", () => {
+  const ctx = instincts.buildContext([
+    { confidence: 90, trigger: "when X", action: "y".repeat(instincts.RULE_MAX_CHARS * 4) },
+    { confidence: 80, trigger: "when Z", action: "Do Z." },
+  ]);
+  assert.ok(ctx.length < instincts.RULE_MAX_CHARS * 2, `context is ${ctx.length} chars`);
+  assert.match(ctx, /truncated/);
+  assert.match(ctx, /when Z → Do Z\./);
 });
 
 // ── Malformed tool input never turns into an allow ───────────────────────────

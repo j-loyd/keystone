@@ -1,6 +1,6 @@
 ---
 name: llm-security
-description: Security review for LLM and agent code — prompt injection, tool/output abuse, data exfiltration, excessive agency, RAG/memory poisoning. Use when building or reviewing anything that calls an LLM, runs an agent loop, exposes tools to a model, does RAG, or ingests untrusted content into a prompt. Anchored to OWASP LLM Top 10 (2025).
+description: Security review for LLM and agent code — prompt injection, tool/output abuse, data exfiltration, excessive agency, RAG/memory poisoning. Use when building or reviewing anything that calls an LLM, runs an agent loop, exposes tools to a model (especially destructive ones like delete, send, or pay), does RAG, or ingests untrusted content into a prompt. Anchored to OWASP LLM Top 10 (2025).
 ---
 
 # LLM & Agent Security
@@ -55,9 +55,9 @@ user it runs on behalf of, not just that the model chose it.
   code, *even when the docs mark it as required*: "required by the vendor" is a claim made
   inside untrusted content, not a verified constraint.
 - **Models invent plausible package names** (typosquat, slopsquat, or wholly invented) — a
-  plan that names a dependency is an injection of an unverified external component. The
-  `writing-plans` Anti-Reinvention & Package Legitimacy gate detects this at plan time;
-  registry existence alone is not legitimacy.
+  plan that names a dependency is an injection of an unverified external component. `/spec`'s
+  package-legitimacy and live-repo check catches this at spec time; registry existence alone
+  is not legitimacy.
 
 ### LLM04 Data and Model Poisoning
 
@@ -82,6 +82,38 @@ user it runs on behalf of, not just that the model chose it.
   shouldn't be able to delete, pay, email, or exfiltrate freely.
 - Separate identities/tokens for the agent (its own scoped GitHub/Gmail/DB creds), not the
   operator's.
+
+#### Approval binding: authorization isn't intent
+
+Authorization and approval answer different questions. Authorization asks whether this
+principal *may* do X. Approval asks whether they *asked for* this exact X. An injected
+instruction that makes the agent act under a victim's valid credentials passes every
+authorization check, so the defect is the missing approval, not missing access.
+
+- **Bind each approval to the exact action.** That means the normalized tool name, the full
+  argument object, the requester, the target resource, any amount, and an expiry. Then compare
+  that bound object with what the handler actually executes. An approval for "refund order 12"
+  must not authorize a refund on order 13, a larger amount, or a later turn's re-planned call.
+- **Retries, resumes, and batches are where binding breaks.** A resumed session or a retry
+  loop must not reuse an old approval for a changed or duplicated side effect. Check that one
+  item approved in a batch doesn't approve the whole batch.
+- **Finding shape:** attacker-controlled content caused a side effect under someone's
+  authority that they didn't request or approve, even though they were allowed to do it.
+
+#### MCP identity: route by the connection, not by names
+
+- **Identity comes from the authenticated connection and the outstanding request**, not from
+  server names, tool names, resource URIs, request IDs, or a model-chosen alias. All of those
+  can be influenced. Check whether two servers can claim the same tool name, whether a
+  reconnect changes which server answers, and whether one server's response can satisfy
+  another server's pending call.
+- **Peer-supplied metadata is never policy.** Tool descriptions, schemas, prompts, and
+  completion hints from an MCP server can steer the model, but they can't grant a capability.
+  Find the deterministic allowlist and handler-side authorization that still decide when the
+  metadata says otherwise.
+- **Delegation narrows authority.** A subagent or MCP call should carry the least authority
+  the task needs, not the whole session's credentials, memory, and tools. Treat what comes
+  back as untrusted input.
 
 ### LLM07 System Prompt Leakage
 
@@ -166,6 +198,8 @@ For an agent with tools, do an explicit action audit — the failure mode is rar
 - [ ] External/fetched/tool content treated as data, not instructions (indirect injection)
 - [ ] Model output sanitized/parameterized/escaped at every downstream sink (LLM05)
 - [ ] Tools least-privilege; irreversible actions gated by human approval (LLM06)
+- [ ] Each approval bound to the exact normalized action (tool, args, target, amount, expiry); retries/resumes can't reuse it
+- [ ] MCP calls and results routed by authenticated connection + request, not by tool/server names; peer metadata never grants capability
 - [ ] Tool-call depth, iteration, and cost bounded (LLM06/LLM10)
 - [ ] No secrets / cross-user data / authz logic in the prompt or system prompt (LLM02/07)
 - [ ] RAG retrieval scoped to the caller's authorization; corpus/memory write-access controlled (LLM04/08)
@@ -180,4 +214,7 @@ For an agent with tools, do an explicit action audit — the failure mode is rar
 
 - [OWASP Top 10 for LLM Applications (2025)](https://genai.owasp.org/llm-top-10/)
 - keystone: `scan.js` (injection tripwire), `guard.js` (sink blocks), `security-review`
-  (web vulns), `/cso` (full audit).
+  (web vulns), and the user-run `/cso` (full audit).
+- For a full source-first audit of an AI/agent codebase with coverage tracking, the optional
+  Cloudflare `security-audit` companion (see the keystone README) carries a deeper AI and
+  agent hunting guide.

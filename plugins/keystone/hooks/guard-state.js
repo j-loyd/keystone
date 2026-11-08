@@ -2,12 +2,14 @@
 /**
  * guard-state.js — read/write keystone's opt-in guard state file, JSON-safely.
  *
- * Backs the /freeze, /careful, /guard, and /unfreeze commands. The state file is the one
+ * Backs the user-only /guard skill (freeze, careful, on, off, status). The state file is the one
  * guard.js reads (GUARD_STATE_FILE: $KEYSTONE_GUARD_FILE, else ~/.claude/keystone-guard.json),
  * shape { freeze: <abs dir> | null, careful: <bool> }. Writes go through JSON.stringify and
  * an atomic temp-file rename. (The commands used to build JSON with printf, so a directory
  * containing `"` or `\` produced invalid JSON, guard.js's readState() failed open, and the
  * freeze silently stopped applying.)
+ *
+ * /guard maps its modes onto these verbs: on → guard, off → unfreeze, the rest 1:1.
  *
  *   guard-state.js freeze [dir]     fence edits to dir (default: cwd); keeps careful as-is
  *   guard-state.js guard [dir]      freeze + careful on
@@ -127,10 +129,10 @@ function main(argv, file = GUARD_STATE_FILE) {
       const careful = cmd === "guard" ? true : !!(state && state.careful);
       save(file, { freeze: dir, careful });
       if (cmd === "guard") {
-        console.log(`🛡️  Guard mode ON — edits fenced to ${dir}, careful mode on. Run /unfreeze to lift.`);
+        console.log(`🛡️  Guard mode ON — edits fenced to ${dir}, careful mode on. Run /guard off to lift.`);
       } else {
         console.log(`🧊 Frozen. Edits restricted to: ${dir}`);
-        console.log(`   (careful mode: ${careful ? "on" : "off"}). Run /unfreeze to lift.`);
+        console.log(`   (careful mode: ${careful ? "on" : "off"}). Run /guard off to lift.`);
       }
       return 0;
     }
@@ -161,7 +163,7 @@ function main(argv, file = GUARD_STATE_FILE) {
       arity(0, 0);
       const { state, error } = load(file);
       if (error) {
-        console.log(`Guard state file is unreadable (${error}) — guard.js fails closed (careful on, every edit asks) until you run freeze, guard, or unfreeze to rewrite it.`);
+        console.log(`Guard state file is unreadable (${error}) — guard.js fails closed (careful on, every edit asks) until you run /guard freeze, /guard on, or /guard off to rewrite it.`);
       } else if (!state) {
         console.log("No active freeze/careful state (baseline guard only).");
       } else {

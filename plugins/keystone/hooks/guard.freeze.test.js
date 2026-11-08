@@ -45,7 +45,7 @@ test("isInside: nested true; sibling and escape false", () => {
 });
 
 // ── Guard state file: direct manipulation asks; protection-removing toggles ask ──
-// The user-run /unfreeze executes through the same Bash tool the model uses, so a hook
+// The user-run /guard off executes through the same Bash tool the model uses, so a hook
 // cannot tell who initiated it. Removing protection therefore always needs a human "yes".
 const os = require("node:os");
 const path = require("node:path");
@@ -131,41 +131,67 @@ test("guard-state: an allowed form does not launder the rest of the command", ()
 test("guard-state: reading the script by its test-file name is not an invocation", () =>
   assert.equal(decide(bash("node --test hooks/guard-state.test.js"), FROZEN), "allow"));
 
-// The shipped command files, as the harness expands them, must route as intended:
-// protection-adding commands run unprompted, /unfreeze asks.
+// The shipped /guard skill, as the harness expands it, must route as intended:
+// protection-adding modes run unprompted, lifting or widening asks.
 const fs = require("node:fs");
 // Claude Code substitutes ${CLAUDE_PLUGIN_ROOT}; Codex leaves it empty and the two-step
 // fallback picks up $PLUGIN_ROOT — both expansions must route the same way.
 const ROOTS = { claude: "/Users/u/.claude/plugins/cache/keystone/9.9.9", codex: "" };
-function commandBash(name, args, root = ROOTS.claude) {
-  const md = fs.readFileSync(path.join(__dirname, "..", "commands", `${name}.md`), "utf8");
-  const block = md.match(/```bash\n([\s\S]*?)```/)[1].trim();
-  return block.split("${CLAUDE_PLUGIN_ROOT}").join(root).split("$ARGUMENTS").join(args);
+const GUARD_SKILL = path.join(__dirname, "..", "skills", "guard", "SKILL.md");
+// Each mode's fenced block, keyed by the guard-state.js verb it runs.
+function guardBlocks() {
+  const md = fs.readFileSync(GUARD_SKILL, "utf8");
+  const blocks = {};
+  for (const m of md.matchAll(/```bash\n([\s\S]*?)```/g)) {
+    const verb = m[1].match(/guard-state\.js" ([a-z]+(?: (?:on|off))?)/);
+    if (verb) blocks[verb[1]] = m[1].trim();
+  }
+  return blocks;
 }
+// The model replaces <dir> with the user's directory, or deletes it for the cwd.
+function modeBash(verb, dir, root = ROOTS.claude) {
+  const block = guardBlocks()[verb];
+  assert.ok(block, `no /guard block runs guard-state.js ${verb}`);
+  return block.split("${CLAUDE_PLUGIN_ROOT}").join(root).split(" <dir>").join(dir ? ` ${dir}` : "");
+}
+test("/guard ships one block per guard-state.js verb", () =>
+  assert.deepStrictEqual(Object.keys(guardBlocks()).sort(), [
+    "careful off",
+    "careful on",
+    "freeze",
+    "guard",
+    "status",
+    "unfreeze",
+  ]));
 for (const harness of Object.keys(ROOTS))
-for (const [name, args, state, want] of [
+for (const [verb, dir, state, want] of [
   ["freeze", "", {}, "allow"],
   ["freeze", "/tmp/safe", {}, "allow"],
+  ["freeze", "'/tmp/my dir'", {}, "allow"],
   ["guard", "", {}, "allow"],
-  ["careful", "", FROZEN, "allow"],
+  ["careful on", "", FROZEN, "allow"],
+  ["status", "", FROZEN, "allow"],
   ["freeze", "/", FROZEN, "ask"],
   ["guard", "", FROZEN, "ask"],
+  ["careful off", "", CAREFUL_ON, "ask"],
   ["unfreeze", "", FROZEN, "ask"],
 ])
-  test(`command file /${name} ${JSON.stringify(args)} (${harness}) routes to ${want}`, () =>
-    assert.equal(decide(bash(commandBash(name, args, ROOTS[harness])), state), want));
+  test(`/guard block "${verb}" ${JSON.stringify(dir)} (${harness}) routes to ${want}`, () =>
+    assert.equal(decide(bash(modeBash(verb, dir, ROOTS[harness])), state), want));
 
-test("guard command files are user-only and use the two-harness plugin-root fallback", () => {
-  for (const name of ["careful", "freeze", "unfreeze", "guard"]) {
-    const md = fs.readFileSync(path.join(__dirname, "..", "commands", `${name}.md`), "utf8");
-    const fm = md.split("---")[1];
-    assert.match(fm, /^disable-model-invocation: true$/m, name);
+test("/guard is user-only on both harnesses and uses the two-harness plugin-root fallback", () => {
+  const md = fs.readFileSync(GUARD_SKILL, "utf8");
+  const fm = md.split("---")[1];
+  assert.match(fm, /^disable-model-invocation: true$/m);
+  const yaml = fs.readFileSync(path.join(path.dirname(GUARD_SKILL), "agents", "openai.yaml"), "utf8");
+  assert.match(yaml, /allow_implicit_invocation: false/);
+  for (const block of Object.values(guardBlocks())) {
     assert.ok(
-      md.includes('R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/guard.js" ] || R="${PLUGIN_ROOT}"\nnode "$R/hooks/guard-state.js"'),
-      name,
+      block.startsWith('R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/hooks/guard.js" ] || R="${PLUGIN_ROOT}"\nnode "$R/hooks/guard-state.js"'),
+      block,
     );
-    assert.doesNotMatch(md, /keystone-guard\.json|printf/, name);
   }
+  assert.doesNotMatch(md, /keystone-guard\.json|printf/);
 });
 
 // ── readState: only a MISSING file means "no state"; anything else unreadable fails closed ─
@@ -233,16 +259,122 @@ test("corrupt state: guard-state status runs; any write through it asks (boundar
   assert.equal(decide(bash(`${GS} freeze /tmp/safe`), CORRUPT), "ask");
   assert.equal(decide(bash(`${GS} careful on`), CORRUPT), "ask");
 });
-test("unreadable state path: the ask reason says to fix it by hand, not via /freeze", () => {
+test("unreadable state path: the ask reason says to fix it by hand, not via /guard", () => {
   const why = guard.evaluate("Write", { file_path: "/tmp/a" }, {}, "", {
     careful: true,
     corrupt: "unreadable (EISDIR)",
   }).why;
   assert.match(why, /by hand/);
-  assert.doesNotMatch(why, /\/freeze/);
+  assert.doesNotMatch(why, /\/guard/);
 });
 test("corrupt state: the ask reason says how to repair", () =>
   assert.match(
     guard.evaluate("Write", { file_path: "/tmp/a" }, {}, "", CORRUPT).why,
-    /guard-state\.js status|\/freeze/,
+    /\/guard (?:freeze|on|off|status)/,
   ));
+
+// ── Ancestor directories of the state file (1.0.0 review) ──────────────────────
+// Removing or moving a directory that CONTAINS the state file deletes it too, which
+// silently lifts an active freeze. Always on (the bug case is freeze with careful off).
+const RM = "r" + "m"; // keep the live guard from matching this test file's own command lines
+const HOME = os.homedir();
+for (const cmd of [
+  `${RM} -rf ~/.claude`,
+  `${RM} -rf ~/.claude/`,
+  `${RM} -r $HOME/.claude`,
+  `${RM} -rf "\${HOME}/.claude"`,
+  `${RM} -rf '${path.join(HOME, ".claude")}'`,
+  `${RM} -rf ~/.CLAUDE`,
+  `${RM} -rf ~/.cl*`,
+  `mv ~/.claude /tmp/old-claude`,
+  `cd /tmp && mv -f ~/.claude ~/.claude.bak`,
+  `sudo ${RM} -rf ~/.claude`,
+])
+  test(`state file: ${JSON.stringify(cmd)} (an ancestor dir) asks under freeze`, () =>
+    assert.equal(decide(bash(cmd), FROZEN), "ask"));
+
+test("state file: a relative ancestor resolved against cwd asks", () =>
+  assert.equal(decide(bash(`${RM} -rf .claude`), FROZEN, HOME), "ask"));
+
+// Fail closed (follow-up review): a destructive segment asks whenever an argument names
+// .claude, the home directory in any form, a brace expansion, or an unresolved `$`, or the
+// command changed directory first — none of those can be resolved reliably from the text.
+for (const cmd of [
+  `${RM} -rf $X/.claude`,
+  `${RM} -rf \${HOME}x`,
+  `${RM} -rf $TARGET`,
+  `${RM} -rf $(echo dir)`,
+  `${RM} -rf ~someone/.config`,
+  `${RM} -rf ~/projects/old`,
+  `cd ~ && ${RM} -rf .claude`,
+  `cd /tmp; ${RM} -rf x`,
+  `pushd ~ >/dev/null && ${RM} -rf stuff`,
+  `${RM} -rf ~/.{claude,x}`,
+  `${RM} -rf /tmp/{a,b}`,
+  `rmdir ~/.claude`,
+  `unlink ~/.claude/keystone-state-copy`,
+  `find ~ -name '*.json' -delete`,
+  `find . -path '*/.claude/*' -delete`,
+  `rsync -a --delete empty/ ~/.claude/`,
+  `rsync -a --delete-after src/ $DEST`,
+  `echo ~/.claude | xargs ${RM} -rf`,
+  `${RM} -rf ~/.claude-backup`,
+  `${RM} ~/.claude/keystone/learnings/x.wrap-scratch.md`,
+  `rsync -a --del empty/ out/`.replace("out/", "~/.claude/"),
+  `rsync -a --remove-sent-files ~/.claude/ host:dst/`,
+  `${RM} -rf \`echo dir\``,
+  `echo x | ${RM} -rf \`cat list\``,
+  `env -C /Users ${RM} -rf x`,
+  `env --chdir=/Users ${RM} -rf x`,
+  `sudo -D /Users ${RM} -rf x`,
+  `sudo -nD /Users ${RM} -rf x`,
+  `env -iC /Users ${RM} -rf x`,
+  `${RM} -rf <(echo x)`,
+  `/usr/bin/xargs ${RM} -rf < list.txt`.replace("< list.txt", "-a list.txt"),
+  `xargs --arg-file=list.txt ${RM} -rf`,
+])
+  test(`state file (fail closed): ${JSON.stringify(cmd)} asks`, () =>
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "ask"));
+
+for (const cmd of [
+  `${RM} -rf build/`,
+  `${RM} -rf node_modules`,
+  `${RM} -f dist/app.js coverage/lcov.info`,
+  `mv notes.md docs/`,
+  `find build -name '*.o' -exec ${RM} {} +`,
+  `find build -name '*.o' -delete`,
+  `rsync -a --delete src/ out/`,
+  `npm run build && ${RM} -rf tmp`,
+  `echo $HOME`, // not destructive
+  `ls ~/.claude`, // not destructive
+])
+  test(`state file: ordinary ${JSON.stringify(cmd)} is not gated outside careful mode`, () => {
+    assert.equal(decide(bash(cmd), {}, "/tmp/safe"), "allow");
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow");
+  });
+
+test("state file: deleting home itself still hard-denies", () =>
+  assert.equal(decide(bash(`${RM} -rf ~`), FROZEN), "deny"));
+
+// ── Careful mode: merges into main (1.0.0 review) ──────────────────────────────
+for (const cmd of [
+  "gh pr merge 12 --squash",
+  "gh -R owner/repo pr merge --auto",
+  "git checkout main && git merge feature/x",
+  "git switch master; git merge --no-ff topic",
+  "git checkout -q main && git pull && git merge feat",
+  "git push origin HEAD:main", // already covered by careful git-push; documented here
+])
+  test(`careful: ${JSON.stringify(cmd)} asks`, () =>
+    assert.equal(decide(bash(cmd), CAREFUL_ON), "ask"));
+
+for (const cmd of [
+  "git checkout feature/x && git merge main", // merging main INTO a feature branch
+  "git merge-base --is-ancestor abc123 main",
+  "gh pr view 12",
+])
+  test(`careful: ${JSON.stringify(cmd)} is not gated`, () =>
+    assert.equal(decide(bash(cmd), CAREFUL_ON), "allow"));
+
+test("careful OFF: gh pr merge is not gated", () =>
+  assert.equal(decide(bash("gh pr merge 12 --squash"), {}), "allow"));

@@ -1,6 +1,6 @@
 ---
 name: long-running-agents
-description: Use when designing or reviewing agent work that outlives one context window or one sitting — overnight/autonomous runs, recurring or scheduled agents, "keep going until it's done" loops, or any run needing budget ceilings and stuck-loop detection. Trigger on continuous loops, cron/scheduled agents, self-pacing runs, or multi-session builds.
+description: Use when designing or reviewing agent work that outlives one context window or one sitting — overnight/autonomous runs, recurring or scheduled agents, "keep going until it's done" loops, or any run needing budget ceilings and stuck-loop detection. Trigger on continuous loops, cron/scheduled agents, self-pacing runs, or a build that spans multiple sessions and must keep state (progress, failures, budget) between them.
 ---
 
 # Long-Running Agents — loop engineering
@@ -15,23 +15,17 @@ single session with a plan beats a scaffold. Reach for this skill when the work 
 exceeds one sitting or one window; every mechanism below must earn its place (the deletion
 test applies to loop scaffolding exactly as it does to code).
 
-## Pick the loop mode deliberately
+## Use the harness's loop primitives
 
-| Mode                    | Shape                                                       | Right when                                                                  |
-| ----------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Single long session** | one context, compaction/handoffs as needed                  | work fits a day and one window (with resets); the default                   |
-| **Fixed-interval poll** | re-run every N minutes                                      | watching external state that changes on a known cadence (CI, deploy, queue) |
-| **Self-paced**          | agent chooses its own cadence AND its own termination       | open-ended "keep working until done" with a verifiable done condition       |
-| **Scheduled wake**      | agent ends a run by writing its own next-wake time to state | recurring work with irregular, agent-judged timing                          |
-| **Queue consumer**      | agents produce/consume messages under a schema contract     | multi-stage pipelines; crash-resume via acknowledgement comes free          |
+Don't build loop machinery the harness already has. In Claude Code, `/goal` keeps a session
+working toward a stated condition, `/loop` re-runs a prompt on an interval or self-paced, and
+`/schedule` runs a scheduled cloud agent; other harnesses have resume/continue plus external
+cron. A shell loop re-invoking the agent against a spec file is the degraded fallback. What
+they don't give you is the part this skill owns: `/goal`'s evaluator judges only the
+transcript (so "done" still needs the verification below), and it has no hard spend ceiling —
+budgets and stuck detection are yours to add.
 
-Name the harness instance, don't hardcode it: Claude Code has native loop/scheduling
-primitives (a `/loop` command, wake scheduling, scheduled cloud agents, Stop hooks); other
-harnesses have resume/continue plus external cron. The degraded fallback — a shell loop
-re-invoking the agent against a spec file — still works, but it is the _fallback_: it has no
-native stuck-detection or budget enforcement, so you must add both yourself (below).
-
-**Cold-start rule (applies to every mode):** a scheduled or restarted run wakes with zero
+**Cold-start rule (applies to every loop):** a scheduled or restarted run wakes with zero
 conversational memory. Never wake context-blind — every iteration starts by reading persisted
 state (below). If a wake has no state to read, that's a design bug, not a prompt problem.
 
@@ -61,16 +55,16 @@ asking; the loop stops only for destructive or irreversible actions and genuine 
 and records those in state as a blocker rather than asking a question into the void; and before
 ending a turn it checks that its last paragraph is a result, not a plan. Name the must-stop
 actions explicitly — the same line that stops the permission-asking also makes the model less
-likely to pause on a genuinely ambiguous step. (`dispatching-parallel-agents/patterns.md` has
-the packet-footer wording.)
+likely to pause on a genuinely ambiguous step. (The "Running unattended" section of
+`agents/implementer.md` is worded for exactly this.)
 
 ## Memory lives outside the window
 
 - **Progress file** — the running state: item checklist, current status, next action,
   blockers. The continuity primitive is a **structured handoff file, not a conversation
   summary** — summaries decay and bloat; a state file stays exact. (keystone's
-  `/handoff` → `/pickup` flow and `subagent-driven-development`'s run-state file are this
-  pattern; reuse them, don't invent a third format.)
+  `/handoff` → `/pickup` flow and `/implement`'s ticket files are this pattern; reuse them,
+  don't invent a third format.)
 - **Failure log** — a persistent "what didn't work and why" file every iteration reads before
   acting. Without it, iteration N cheerfully retries what iteration N-3 already proved
   broken. Highest-value lines: the exact command/approach that failed and the observed error.
@@ -137,7 +131,7 @@ agent degrades one run rather than the whole budget.
   compaction point; mid-derivation is not. Threshold-triggered auto-compaction that fires
   mid-task is how runs lose the thread.
 - **Don't re-absorb verbosity.** Carry results (status, files, findings) forward, not
-  transcripts — the same rule `subagent-driven-development` applies to subagent returns.
+  transcripts — the same rule `/implement` applies to implementer returns.
 
 ## When NOT to loop
 
@@ -145,19 +139,18 @@ agent degrades one run rather than the whole budget.
 - **The task needs deep, evolving judgment of one codebase** — a loop's per-iteration
   cold-start re-pays the orientation cost every cycle; a single long session with resets
   does better.
-- **A plan already exists with independent tasks** — that's `subagent-driven-development`
-  (orchestrated, gated), not an autonomous loop. Loops are for work you _can't_ fully plan
+- **A spec already exists with independent tickets** — that's `/implement` (orchestrated,
+  one final review), not an autonomous loop. Loops are for work you _can't_ fully plan
   up front or that must run unattended.
 - **The loop exists to avoid writing a spec.** A loop amplifies its spec's quality in both
   directions; garbage spec, confidently iterated garbage.
 
 ## Cross-references
 
-- `subagent-driven-development` — run-state format, orchestrator discipline, review gates.
+- `/implement` — ticket graph, frontier, per-ticket implementers, the final review.
 - `/handoff` + `/pickup` — the session-boundary handoff this skill's progress file feeds.
 - `llm-security` — denial-of-wallet and unbounded consumption as an abuse class, when the
   runaway burn is adversarial rather than accidental.
 - `designing-agent-systems` — tier ladder, effort control, and the cache/prefix economics of
   the loop this skill schedules.
-- `dispatching-parallel-agents` — when one loop should fan work out instead of iterating.
 - `verification-before-completion` — the done-means-verified bar each iteration must clear.
