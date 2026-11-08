@@ -307,7 +307,6 @@ for (const cmd of [
   `${RM} -rf ~someone/.config`,
   `${RM} -rf ~/projects/old`,
   `cd ~ && ${RM} -rf .claude`,
-  `cd /tmp; ${RM} -rf x`,
   `pushd ~ >/dev/null && ${RM} -rf stuff`,
   `${RM} -rf ~/.{claude,x}`,
   `${RM} -rf /tmp/{a,b}`,
@@ -352,6 +351,136 @@ for (const cmd of [
     assert.equal(decide(bash(cmd), {}, "/tmp/safe"), "allow");
     assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow");
   });
+
+// A LEADING spelled-out cd (absolute, ~, ~/…) is resolved, so ordinary "cd into the repo,
+// then delete" no longer asks. Deletes are checked against the new dir AND the old one (the cd may fail).
+const HEREDOC_THEN_GIT_RM = [
+  "cd ~/proj/data-api && cat >> .gitlab-ci.yml <<'EOF'",
+  "job:",
+  '  script: [test -n "${TOKEN:-}" || { echo "unset"; exit 1; }]',
+  "  rules: [{ if: $CI_PIPELINE_SOURCE == \"merge_request_event\" }]",
+  "EOF",
+  `git ${RM} -q observability/a.yaml observability/b.yaml && git add -A observability && git status -s | cat`,
+].join("\n");
+for (const cmd of [
+  `cd ~/proj && git ${RM} -q old.yaml`,
+  `cd /tmp/work && ${RM} -rf build`,
+  `cd /tmp; ${RM} -rf x`,
+  `cd ~/proj && ${RM} -rf node_modules && npm ci`,
+  `cd ~/proj/sub/ && mv notes.md docs/`,
+  HEREDOC_THEN_GIT_RM,
+])
+  test(`state file: a spelled-out cd then delete is not gated: ${JSON.stringify(cmd).slice(0, 70)}`, () =>
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow"));
+
+for (const cmd of [
+  `cd ~/.claude && ${RM} -rf *`,
+  `cd ~/.claude && ${RM} -f *.json`,
+  `cd ~/.claude && git ${RM} -r .`,
+  `cd ~ && ${RM} -rf *`,
+  `cd && ${RM} -rf *`, // bare cd goes home
+  `cd / && ${RM} -rf Users`, // an ancestor of home, named literally
+  `cd "~/x" && ${RM} -rf y`, // quoted ~ does not expand: unknown
+  `cd '/tmp/x' && ${RM} -rf y`, // quoted: unknown (stay conservative)
+  `cd $X && ${RM} -rf y`,
+  `cd proj && ${RM} -rf y`, // relative: CDPATH can redirect it
+  `cd ~- && ${RM} -rf y`, // OLDPWD
+  `cd ~other/x && ${RM} -rf y`,
+  `cd - && ${RM} -rf y`,
+  `cd -P /tmp && ${RM} -rf y`, // flags: unknown
+  `HOME=/tmp; cd ~ && ${RM} -rf y`, // HOME reassigned: ~ is unknown
+  `export HOME=/tmp/h; cd ~/x && ${RM} -rf ../y`,
+  `cd /tmp/{a,b} && ${RM} -rf y`,
+  `cd /tmp/a* && ${RM} -rf y`,
+  `popd && ${RM} -rf y`,
+  `cd /tmp >/dev/null && ${RM} -rf y`, // redirect word on the cd: unknown
+  `cd /tmp && cd ~/.claude && ${RM} -rf *`,
+  `cd /tmp/a && cd /tmp/b && ${RM} -f out.log`, // only the leading cd is resolved
+  // Bypasses found in review of the first version of this change:
+  `cd ~/.claude>/dev/null && ${RM} -f *.json`, // redirect glued to the target
+  `cd ~/.claude</dev/null && ${RM} -f *.json`,
+  `cd ~/.claude>&2 && ${RM} -f *.json`,
+  `cd ${os.homedir()}/.claude>/dev/null && ${RM} -f *.json`,
+  `cd ~/.cl; cd ~/.cl\\\naude && ${RM} -f *.json`, // line continuation + planted segment
+  `: ";cd ~/.cl;"; cd ~/.cl\\\naude && ${RM} -f *.json`,
+  `cd ~/.cl\\\naude && ${RM} -f *.json`,
+  `export HO""ME=/tmp; cd ~/x/.claude && ${RM} -f *.json`, // HOME reassigned without "HOME"
+  `cd ~/.claude/projects(:h) && ${RM} -f *.json`, // zsh glob qualifier
+  `cd ~/.c(laude|zz) && ${RM} -f *.json`, // zsh alternation
+])
+  // ask, or deny where a stricter layer (e.g. `rm -rf *`) already hard-blocks it
+  test(`state file (cd still fails closed): ${JSON.stringify(cmd)} is gated`, () =>
+    assert.notEqual(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow"));
+
+// A `$(…)` elsewhere in the command no longer makes an unrelated delete ask (it used to:
+// any substitution anywhere + any rm anywhere). Shape of real write-a-script-then-run-it calls.
+const SCRIPT_WITH_SUBST = [
+  "cat > /tmp/p0/try.sh <<'EOF'",
+  '. "$HOME/proj/.dev.vars"',
+  'for p in a b; do',
+  `  code=$(curl -s -o /tmp/p0/t.json -w '%{http_code}' "$BASE/$p")`,
+  `  echo "$p -> $code $(jq -c '{n: .meta.count}' /tmp/p0/t.json)"`,
+  "done",
+  `${RM} -f /tmp/p0/t.json`,
+  "EOF",
+  "bash /tmp/p0/try.sh",
+].join("\n");
+for (const cmd of [
+  SCRIPT_WITH_SUBST,
+  `echo $(date); ${RM} -f /tmp/x`,
+  `cd ~/r && x=$(git rev-parse HEAD) && git ${RM} -q a.yaml`,
+])
+  test(`state file: an unrelated $(…) doesn't gate a delete: ${JSON.stringify(cmd).slice(0, 60)}`, () =>
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow"));
+
+for (const cmd of [
+  `${RM} -rf $(echo ~/.claude)`,
+  `${RM} -rf "$(echo ~/.claude)"`,
+  `${RM} -rf $(printf ~)/.claude`,
+  `${RM} -rf \\\n$(echo ~/.claude)`, // line continuation joins the delete to its argument
+  `find $(pwd) -delete`, // the $(…) splits find from -delete
+  `find $(ls | head) -delete`,
+  `rsync -a $(x) --delete a b`,
+  `echo ~/.claude | xargs $(echo) ${RM} -rf`,
+  `x=$(date); ${RM} -rf \`echo ~/.claude\``, // backticks still gate the whole command
+])
+  test(`state file: a $(…) feeding a delete still gates: ${JSON.stringify(cmd)}`, () =>
+    assert.notEqual(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow"));
+
+test("state file: with freeze and careful both off, touching it is not gated", () => {
+  for (const cmd of [`cd ~/.claude && ${RM} -f *.json`, `${RM} -f ~/.claude/keystone-guard.json`])
+    assert.equal(decide(bash(cmd), {}, "/tmp/safe"), "allow", cmd);
+});
+test("state file: careful on, or a corrupt file, still gates touching it", () => {
+  const cmd = `${RM} -f ~/.claude/keystone-guard.json`;
+  assert.notEqual(decide(bash(cmd), { careful: true }, "/tmp/safe"), "allow");
+  assert.notEqual(decide(bash(cmd), { careful: true, corrupt: "invalid JSON" }, "/tmp/safe"), "allow");
+});
+
+test("state file: a cd into a custom KEYSTONE_GUARD_FILE's dir then deleting it asks", () => {
+  const r = guard.evaluate(
+    "Bash",
+    { command: `cd /tmp/w/cfg && ${RM} -f state.json` },
+    { KEYSTONE_GUARD_FILE: "/tmp/w/cfg/state.json" },
+    "/tmp/safe",
+    FROZEN,
+  );
+  assert.equal(r && r.decision, "ask");
+});
+
+test("state file: cd resolution stays linear on huge commands (no hook-timeout bypass)", () => {
+  const many = `cd /tmp/a; `.repeat(20000) + `${RM} -f x`; // 20k cd segments, ~220 KB
+  const ws = `cd /tmp/a;${"\n".repeat(200000)}${RM} -f x`;
+  const sp = `cd /tmp/a;${" ".repeat(200000)}x; ${RM} -f y`;
+  // many cds × many destructive words (review: quadratic -> hook timeout)
+  const nm = `cd /a;`.repeat(5000) + `${RM} ` + "w ".repeat(5000) + `; ${RM} -f ~/.claude/*.json`;
+  for (const cmd of [many, ws, sp, nm]) {
+    const t = Date.now();
+    decide(bash(cmd), FROZEN, "/tmp/safe");
+    const ms = Date.now() - t;
+    assert.ok(ms < 1000, `took ${ms} ms on a ${cmd.length}-char command`);
+  }
+});
 
 test("state file: deleting home itself still hard-denies", () =>
   assert.equal(decide(bash(`${RM} -rf ~`), FROZEN), "deny"));

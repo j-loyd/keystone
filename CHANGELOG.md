@@ -2,6 +2,28 @@
 
 All notable changes to keystone are recorded here.
 
+## [Unreleased]
+
+### Fixed
+
+- **The "touches the guard state file" prompt only appears while protection is on.** The file
+  holds only the freeze and careful settings, so with both off (the default) deleting or editing
+  it lifts nothing, and the check is skipped. With freeze or careful on, or a corrupt file, it
+  still asks as before.
+- **Fewer false "touches the guard state file" prompts after a `cd`.** The guard used to ask on
+  any delete (`rm`, `git rm`, `mv`, …) that followed any `cd`, so the everyday
+  `cd ~/repo && git rm old.yaml` prompted every time. A command that **starts** with a plain
+  `cd <path> &&` (or `;`), where the path is absolute, `~` or `~/…` and uses only ordinary path
+  characters, now has that directory resolved, and later deletes are checked against it and the
+  starting directory. `cd ~/.claude && rm *.json`, `cd ~ && rm -rf .claude`, a second `cd`, and
+  any `cd` with a relative, quoted, variable, `-`, `~user`, redirect, glob or line-continued
+  target still ask. `popd` now also counts as a directory change.
+- **A `$(…)` elsewhere in a command no longer makes every delete in it ask.** Write-a-script-
+  then-run-it calls such as `x=$(curl …)` followed later by `rm -f /tmp/out.json` used to prompt
+  about the guard state file. Now only a delete whose own statement contains the `$(…)` (as in
+  `rm -rf $(echo ~/.claude)` or `find $(pwd) -delete`) asks. Backticks and `<(…)`/`>(…)` still
+  gate the whole command, and line continuations are joined first, as the shell does.
+
 ## [1.0.0] — 2026-11-07
 
 keystone lean. Claude Code now ships much of what this kit used to carry: built-in `/review`,

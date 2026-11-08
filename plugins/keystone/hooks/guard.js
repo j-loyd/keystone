@@ -528,17 +528,21 @@ function dequoted(cmd) {
 
 // ── Destructive commands that could reach the state file without naming it ────
 // `rm -rf ~/.claude` deletes the state file and silently lifts an active freeze. Shell
-// expansion (variables, `~user`, braces, a prior `cd`) can't be resolved reliably from the
+// expansion (variables, `~user`, braces, most `cd`s) can't be resolved reliably from the
 // command text, so this FAILS CLOSED: a destructive segment asks whenever an argument names
 // `.claude`, the home directory in any form, a brace expansion, or an unresolved `$`, or an
-// earlier segment changed directory. Resolving literal paths is only an extra on top.
+// earlier segment changed to a directory guard can't name. Resolving literal paths is only
+// an extra on top. A `cd` spelled out as an absolute path, `~` or `~/…` (unquoted, nothing to
+// expand, HOME not reassigned in the command) IS resolved: later deletes are then checked
+// against that directory AND every earlier one (in case the cd failed), so the common
+// `cd ~/repo && git rm old.yaml` no longer asks while `cd ~/.claude && rm *` still does.
 // keystone: string matching, not a sandbox — a symlink pointing at ~/.claude, or cp/tar/ln
 // overwriting the state file, is not caught; upgrade trigger: a real realpath-based resolver
 // or an OS-level sandbox if the freeze ever needs to hold against a hostile model.
 const DESTRUCTIVE_CMD = /^(?:\S*\/)?(?:rm|rmdir|mv|unlink)$/;
 const FIND_CMD = /^(?:\S*\/)?find$/;
 const RSYNC_CMD = /^(?:\S*\/)?rsync$/;
-const DIR_CHANGE = /^(?:cd|pushd)$/;
+const DIR_CHANGE = /^(?:cd|pushd|popd)$/;
 // `env -C dir` / `env --chdir=dir` / `sudo -D dir` change directory inside the same segment.
 const CHDIR_WRAPPER = /^(?:\S*\/)?(?:env|sudo)$/;
 // Fail closed: any flag on an env/sudo wrapper may bundle -C/-D (e.g. `sudo -nD dir`).
@@ -581,29 +585,92 @@ function literalReachesState(word, candidates, cwd) {
   return candidates.some((c) => isInside(target, c.toLowerCase()));
 }
 
+/**
+ * The directory a command's LEADING `cd` moves to, else null (unknown). Only one shape is
+ * trusted: the raw text starts with `cd <target>` followed by `&&`, `;` or a newline, where
+ * the target is `~`, `~/…` or absolute and uses only plain path characters. Anything else
+ * (quotes, escapes, redirects, globs, parens, a second cd, or anything before the cd that
+ * could reassign HOME) leaves the directory unknown, and destructiveReachesState fails
+ * closed. Matching the raw text, anchored at the start, means dequoted() can't make the
+ * two views of the command disagree, and resolving at most one cd keeps this linear.
+ */
+const LEADING_CD = /^[ \t\n]*cd[ \t]+([A-Za-z0-9._\/~+@%,-]+)[ \t]*(?:&&|;|\n)/;
+function leadingCdTarget(cmd) {
+  const m = LEADING_CD.exec(String(cmd));
+  if (!m) return null;
+  const target = m[1];
+  if (target === "~" || target.startsWith("~/")) return path.join(os.homedir(), target.slice(1));
+  return target.startsWith("/") ? path.resolve(target) : null;
+}
+
+/**
+ * Top-level statements of `text`: split on ; & | and newlines only outside parentheses, so a
+ * `$(…)` stays inside the statement that uses it. Linear. Unbalanced parens just make a
+ * statement longer, which only makes destructiveReachesState ask more.
+ */
+function topLevelStatements(text) {
+  const out = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0 && (ch === ";" || ch === "&" || ch === "|" || ch === "\n")) {
+      out.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  out.push(text.slice(start));
+  return out;
+}
+
 /** True when a destructive segment of `cmd` could remove or move the guard state file. */
 function destructiveReachesState(cmd, env, cwd) {
   const candidates = stateFileCandidates(env);
-  const segments = dequoted(cmd)
+  // Join line continuations first, as the shell does: otherwise `rm -rf \<newline>$(…)`
+  // would split the delete from its arguments. (Inside single quotes the join only makes a
+  // segment longer, which errs toward asking.)
+  const flat = dequoted(String(cmd).replace(/\\\n/g, ""));
+  // A `$(…)` inside a delete's own statement can hide its flags or targets from the
+  // per-segment split below (`find $(pwd) -delete` splits into `find $` and `-delete`).
+  if (
+    flat.includes("$(") &&
+    topLevelStatements(flat).some(
+      (st) => st.includes("$(") && isDestructive(st.split(/[\s()]+/).filter(Boolean)),
+    )
+  )
+    return true;
+  const segments = flat
     .split(/[;&|\n()]/)
     .map((seg) => seg.trim().split(/\s+/).filter(Boolean));
   const allWords = segments.flat();
-  // dequoted() strips backticks, so check the raw text: a command substitution anywhere
-  // means a destructive segment's real arguments can't be known from the text.
-  const hasSubstitution = /`|[$<>]\(/.test(String(cmd)); // `…`, $(…), <(…), >(…)
-  let changedDir = false;
-  for (const words of segments) {
+  // dequoted() strips backticks, so check the raw text: a backtick or process substitution
+  // anywhere means a destructive segment's real arguments can't be known from the text. A
+  // `$(…)` needs no such blanket rule: splitting on `(` leaves its `$` in the destructive
+  // segment's own words (`rm -rf $(echo ~)` → `rm -rf $`), which unresolvableArg catches, so
+  // an unrelated `x=$(curl …)` elsewhere in the command no longer makes every delete ask.
+  const hasSubstitution = /`|[<>]\(/.test(String(cmd)); // `…`, <(…), >(…)
+  // Every directory a later segment might run in: the start, plus the leading cd's target
+  // (both kept, since after `cd x; …` a failed cd leaves the shell where it was).
+  const dirs = [cwd || process.cwd()];
+  let unknownDir = false;
+  for (const [i, words] of segments.entries()) {
     if (isDestructive(words)) {
-      if (changedDir || changesDir(words) || hasSubstitution) return true;
+      if (unknownDir || changesDir(words) || hasSubstitution) return true;
       // xargs takes its arguments from the pipe, so judge every word in the command.
       const viaXargs = words.some((w) => /^(?:\S*\/)?xargs$/.test(w));
       // xargs -a/--arg-file reads targets from a file the text doesn't show.
       if (viaXargs && words.some((w) => /^(?:-a|--arg-file)(?:=.*)?$/.test(w))) return true;
       const args = viaXargs ? allWords : words;
       if (args.some(unresolvableArg)) return true;
-      if (words.some((w) => literalReachesState(w, candidates, cwd))) return true;
+      if (words.some((w) => dirs.some((d) => literalReachesState(w, candidates, d)))) return true;
     }
-    if (changesDir(words)) changedDir = true;
+    if (changesDir(words)) {
+      const next = i === 0 && words.length === 2 && words[0] === "cd" ? leadingCdTarget(cmd) : null;
+      if (next) dirs.push(next);
+      else unknownDir = true;
+    }
   }
   return false;
 }
@@ -796,8 +863,12 @@ function evaluate(
       const hit = matchFirst(EXFIL, cmd);
       if (hit) return { decision: "deny", why: hit.why };
     }
-    // Guard state integrity (ask): checked on the RAW command, after the deny layers.
-    if (bashTouchesStateFile(raw, env, cwd)) {
+    // Guard state integrity (ask): checked on the RAW command, after the deny layers. Only
+    // while freeze or careful mode is on (or the file is corrupt, which reads as careful):
+    // the file holds nothing else, so with both off there is no protection for a delete or
+    // edit to lift, and this text heuristic's false positives cost a prompt for nothing.
+    const protectionOn = Boolean(state && (state.freeze || state.careful || state.corrupt));
+    if (protectionOn && bashTouchesStateFile(raw, env, cwd)) {
       return {
         decision: "ask",
         why: "this command touches the keystone guard state file (directly, or by removing/moving a directory that contains it), which holds the freeze/careful settings. Use /guard (freeze, careful, on, off) instead",
