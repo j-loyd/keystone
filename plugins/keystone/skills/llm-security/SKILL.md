@@ -1,6 +1,6 @@
 ---
 name: llm-security
-description: Security review for LLM and agent code — prompt injection, tool/output abuse, data exfiltration, excessive agency, RAG/memory poisoning. Use when building or reviewing anything that calls an LLM, runs an agent loop, exposes tools to a model, does RAG, or ingests untrusted content into a prompt. Anchored to OWASP LLM Top 10 (2025).
+description: Security review for LLM and agent code — prompt injection, tool/output abuse, data exfiltration, excessive agency, RAG/memory poisoning. Use when building or reviewing anything that calls an LLM, runs an agent loop, exposes tools to a model (especially destructive ones like delete, send, or pay), does RAG, or ingests untrusted content into a prompt. Anchored to OWASP LLM Top 10 (2025).
 ---
 
 # LLM & Agent Security

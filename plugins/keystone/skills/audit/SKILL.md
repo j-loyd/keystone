@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded dependencies you could drop or inline, abstractions with one caller, dead flexibility. Use when the user says "audit this codebase", "what can I delete", or "is this overbuilt". Scope boundary — code architecture and dependencies, whole-repo; not UI, accessibility, or design quality. One-shot report that applies nothing.
+description: Scan for over-engineering and report what to cut — reinvented stdlib, unneeded dependencies you could drop or inline, abstractions with one caller or that nobody needed, dead flexibility. Use when the user says "audit this codebase", "what can I delete", or "is this overbuilt". Scope boundary — code architecture and dependencies, whole-repo; not UI, accessibility, or design quality. One-shot report that applies nothing.
 ---
 
 # Audit for Over-Engineering

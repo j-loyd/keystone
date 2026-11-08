@@ -1,6 +1,6 @@
 ---
 name: long-running-agents
-description: Use when designing or reviewing agent work that outlives one context window or one sitting — overnight/autonomous runs, recurring or scheduled agents, "keep going until it's done" loops, or any run needing budget ceilings and stuck-loop detection. Trigger on continuous loops, cron/scheduled agents, self-pacing runs, or multi-session builds.
+description: Use when designing or reviewing agent work that outlives one context window or one sitting — overnight/autonomous runs, recurring or scheduled agents, "keep going until it's done" loops, or any run needing budget ceilings and stuck-loop detection. Trigger on continuous loops, cron/scheduled agents, self-pacing runs, or a build that spans multiple sessions and must keep state (progress, failures, budget) between them.
 ---
 
 # Long-Running Agents — loop engineering
