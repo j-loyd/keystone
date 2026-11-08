@@ -541,7 +541,8 @@ const RSYNC_CMD = /^(?:\S*\/)?rsync$/;
 const DIR_CHANGE = /^(?:cd|pushd)$/;
 // `env -C dir` / `env --chdir=dir` / `sudo -D dir` change directory inside the same segment.
 const CHDIR_WRAPPER = /^(?:\S*\/)?(?:env|sudo)$/;
-const CHDIR_FLAG = /^(?:-C|-D|--chdir)(?:=.*)?$/;
+// Fail closed: any flag on an env/sudo wrapper may bundle -C/-D (e.g. `sudo -nD dir`).
+const CHDIR_FLAG = /^-/;
 
 function changesDir(words) {
   return (
@@ -589,13 +590,16 @@ function destructiveReachesState(cmd, env, cwd) {
   const allWords = segments.flat();
   // dequoted() strips backticks, so check the raw text: a command substitution anywhere
   // means a destructive segment's real arguments can't be known from the text.
-  const hasSubstitution = /`|\$\(/.test(String(cmd));
+  const hasSubstitution = /`|[$<>]\(/.test(String(cmd)); // `…`, $(…), <(…), >(…)
   let changedDir = false;
   for (const words of segments) {
     if (isDestructive(words)) {
       if (changedDir || changesDir(words) || hasSubstitution) return true;
       // xargs takes its arguments from the pipe, so judge every word in the command.
-      const args = words.includes("xargs") ? allWords : words;
+      const viaXargs = words.some((w) => /^(?:\S*\/)?xargs$/.test(w));
+      // xargs -a/--arg-file reads targets from a file the text doesn't show.
+      if (viaXargs && words.some((w) => /^(?:-a|--arg-file)(?:=.*)?$/.test(w))) return true;
+      const args = viaXargs ? allWords : words;
       if (args.some(unresolvableArg)) return true;
       if (words.some((w) => literalReachesState(w, candidates, cwd))) return true;
     }
