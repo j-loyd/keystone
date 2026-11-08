@@ -18,7 +18,8 @@ keystone's `guard.js` hook always hard-blocks catastrophic commands and secret-f
   Reads and Bash are not fenced.
 - **careful**: a broader set of destructive Bash commands asks for confirmation first: `rm -rf`,
   `git push`, `gh pr merge`, a checkout of main/master followed by `git merge`, force
-  operations, and bulk overwrite or move.
+  operations, and bulk overwrite or move. On Codex CLI these asks are ignored (Codex runs the
+  command anyway), so careful mode only takes effect in Claude Code.
 
 ## Pick the mode
 
@@ -87,5 +88,8 @@ node "$R/hooks/guard-state.js" status
 always ask for confirmation. The hook can't tell a user-typed `/guard off` from the model
 running the same command, so anything that removes or widens protection goes to a human.
 Adding protection runs unprompted.
+
+On Codex CLI, hooks can't ask, so those same commands are **denied** instead. To lift or widen
+protection there, run the `guard-state.js` command above yourself, in your own terminal.
 
 Afterwards, tell the user the active state: the boundary (or none) and careful on/off.
