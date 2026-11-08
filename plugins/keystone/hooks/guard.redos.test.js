@@ -229,7 +229,7 @@ for (const size of [12000, 200000]) {
     const p = pump(size);
     for (const [name, command, state] of [
       ["guard-state.js off", `node /plugin/hooks/guard-state.js off # ${p}`, { freeze: "/tmp/allowed" }],
-      ["echo into the state file", `echo '{}' > ~/.claude/${SF} # ${p}`, {}],
+      ["echo into the state file", `echo '{}' > ~/.claude/${SF} # ${p}`, { freeze: "/tmp/allowed" }],
       ["shell-form patch of a secret file", PATCH(`*** Add File: ${E}`, `+${p.replace(/\n/g, " ")}\n`), {}],
       ["guard-state.js off, careful on", `node /plugin/hooks/guard-state.js off # ${p}`, { careful: true, freeze: "/tmp/allowed" }],
     ])

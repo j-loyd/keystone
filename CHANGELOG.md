@@ -2,7 +2,7 @@
 
 All notable changes to keystone are recorded here.
 
-## [Unreleased]
+## [1.0.1] — 2026-11-08
 
 ### Changed
 

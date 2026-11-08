@@ -64,8 +64,13 @@ test("detection: an apply_patch payload is Codex even without turn_id/model", ()
 });
 
 // ── Guard-integrity asks: deny on Codex, ask on Claude Code ──────────────────
+// The Bash state-file check only runs while freeze or careful is on (with both off the file
+// holds nothing to lift), so these use an active freeze.
+const FROZEN = { freeze: "/tmp/allowed" };
 test("integrity: an echo into the state file → deny on Codex, ask on Claude Code", () =>
-  assert.deepEqual(both("Bash", { command: `echo '{}' > ~/.claude/${SF}` }), ["deny", "ask"]));
+  assert.deepEqual(both("Bash", { command: `echo '{}' > ~/.claude/${SF}` }, FROZEN), ["deny", "ask"]));
+test("integrity: with protection off, an echo into the state file is allowed on both", () =>
+  assert.deepEqual(both("Bash", { command: `echo '{}' > ~/.claude/${SF}` }), ["allow", "allow"]));
 test("integrity: a protection-removing guard-state.js call → deny on Codex, ask on Claude Code", () =>
   assert.deepEqual(both("Bash", { command: `${GS} off` }, { freeze: "/tmp/allowed" }), ["deny", "ask"]));
 test("integrity: a Write to the state file → deny on Codex, ask on Claude Code", () =>
@@ -77,7 +82,7 @@ test("integrity: a protective guard-state.js call is allowed on both", () =>
 test("apply_patch: a malformed patch → deny on any payload (apply_patch is Codex-only)", () =>
   assert.deepEqual(both("apply_patch", { command: "*** Add File: a.py\n+x" }), ["deny", "deny"]));
 test("shell form: a patch naming the state file → deny on Codex; Claude Code keeps main's ask", () =>
-  assert.deepEqual(both("Bash", { command: `apply_patch <<'EOF'\n${P(`*** Add File: ${SF}`, "+{}")}\nEOF` }), [
+  assert.deepEqual(both("Bash", { command: `apply_patch <<'EOF'\n${P(`*** Add File: ${SF}`, "+{}")}\nEOF` }, FROZEN), [
     "deny",
     "ask",
   ]));
@@ -99,7 +104,7 @@ test("deny layers deny on both harnesses", () =>
 const docs = (hdr) => `cat > docs/codex.md <<'EOF'\nCodex applies patches with apply_patch:\n${P(hdr, "+x")}\nEOF`;
 const CORRUPT = { careful: true, corrupt: "invalid JSON" };
 test("Claude Code: a docs heredoc naming the state file asks (main: ask), not deny", () =>
-  assert.equal(on(CLAUDE, "Bash", { command: docs(`*** Add File: ${SF}`) }), "ask"));
+  assert.equal(on(CLAUDE, "Bash", { command: docs(`*** Add File: ${SF}`) }, FROZEN), "ask"));
 test("Claude Code: a docs heredoc under a corrupt state file is unchanged (main: allow)", () =>
   assert.equal(on(CLAUDE, "Bash", { command: docs("*** Add File: src/app.py") }, CORRUPT), "allow"));
 test("Claude Code: a docs heredoc naming the state file under a corrupt state asks (main: ask)", () =>
@@ -124,9 +129,10 @@ test("main(): guard-state.js off → deny on Codex, ask on Claude Code", () => {
 });
 
 // ── Fail closed when guard itself breaks ──────────────────────────────────────
-function spawnGuard(guardPath, payload, preload) {
+function spawnGuard(guardPath, payload, preload, state) {
   const args = preload ? ["-r", preload, guardPath] : [guardPath];
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ks-broken-"));
+  if (state) fs.writeFileSync(path.join(dir, "state.json"), JSON.stringify(state));
   const r = spawnSync(process.execPath, args, {
     input: JSON.stringify(payload),
     encoding: "utf8",
@@ -147,9 +153,11 @@ test("main(): an internal error denies ANY Codex call, and asks on Claude Code",
   );
   const G = path.join(__dirname, "guard.js");
   const call = { cwd: "/tmp/allowed", tool_name: "Bash", tool_input: { command: "ls -la" } };
-  assert.equal(spawnGuard(G, { ...CODEX, ...call }, preload), "deny");
-  assert.equal(spawnGuard(G, { ...CLAUDE, ...call }, preload), "ask");
-  assert.equal(spawnGuard(G, { ...CODEX, ...call }), "allow"); // without the stub: no error
+  // Under a freeze, so evaluating `ls` reaches path.resolve (the state-file check).
+  const frozen = { freeze: "/tmp/allowed" };
+  assert.equal(spawnGuard(G, { ...CODEX, ...call }, preload, frozen), "deny");
+  assert.equal(spawnGuard(G, { ...CLAUDE, ...call }, preload, frozen), "ask");
+  assert.equal(spawnGuard(G, { ...CODEX, ...call }, undefined, frozen), "allow"); // no stub: no error
 });
 test("main(): with patch-paths.js missing, a Codex shell patch is denied and other calls still work", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ks-nopp-"));
