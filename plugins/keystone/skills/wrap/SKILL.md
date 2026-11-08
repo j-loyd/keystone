@@ -27,10 +27,9 @@ echo "R=$R"; echo "LF=$LF"; echo "S=$S"; echo "META=$META"; echo "EOT=$EOT"
 ```
 
 Use the printed values from here on; shell variables don't carry over to the next command.
-`LF` is `.keystone/lessons.md` in the repo's main checkout, kept out of git by the repo's private
-exclude file (never committed); `META` lives under `~/.claude`. Either can sit outside an active
-`/guard` freeze (always `META`; `LF` from a worktree or a narrower freeze), which denies
-Edit/Write there, so write through Bash instead (freeze fences Edit/Write, not Bash). Every heredoc uses the printed
+`LF` is `keystone/lessons.md` inside the repo's git dir (usually `.git/`), which git never
+commits; `META` lives under `~/.claude`. Either can sit outside an active `/guard` freeze, which
+denies Edit/Write there, so write through Bash instead (freeze fences Edit/Write, not Bash). Every heredoc uses the printed
 `EOT` as its quoted terminator, so no line of saved text can end it and run as shell. Scratch
 notes: `cat >> "<S>" <<'<EOT>'`. Save a picked entry only with `--append`, one entry per call
 (`--meta` for the `META` inbox). It reads stdin, writes only to the computed `LF` or `META`

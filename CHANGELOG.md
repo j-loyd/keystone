@@ -12,15 +12,13 @@ All notable changes to keystone are recorded here.
   task. Before, repos with 30+ lessons surfaced only the newest 8 and the rest were never seen.
   `KEYSTONE_LEARNINGS_MAX` now sets the full-entry count (default 5, was 8). The index is capped
   at 150 titles of 200 characters each.
-- **Per-repo lessons now live in the repo, uncommitted.** `/wrap` saves to
-  `.keystone/lessons.md` in the repo's main checkout, and adds `/.keystone/` to the repo's
-  private `.git/info/exclude` (never its shared `.gitignore`), so the file is never committed.
-  Every worktree reads and writes that one file. Existing lessons in
-  `~/.claude/keystone/learnings/<slug>.md` are still read until the first new save, which copies
-  them into the repo file (the old file is kept). The hook ignores a `.keystone/` that git tracks
-  or that is a symlink, so a cloned repo can't plant "lessons" into your sessions. A `git clean`
-  with `-x` deletes ignored files, including this one. Set `KEYSTONE_LEARNINGS_DIR` to keep the
-  old out-of-repo layout.
+- **Per-repo lessons now live with the repo, uncommitted.** `/wrap` saves to
+  `.git/keystone/lessons.md`, inside the repo's git dir: git never commits it, `git clean` never
+  touches it, and every worktree shares it. A clone or checkout can't put a file there, so a
+  cloned repo can't plant "lessons" into your sessions; a symlinked store is refused. Existing
+  lessons in `~/.claude/keystone/learnings/<slug>.md` are still read until the first new save,
+  which copies them into the repo file (the old file is kept). Deleting or re-cloning the repo
+  loses them. Set `KEYSTONE_LEARNINGS_DIR` to keep the old out-of-repo layout.
 - **Superseded lessons.** A lesson whose heading carries `SUPERSEDED` never takes a full slot;
   it stays in the index by title. `/wrap` now proposes superseding (instead of deleting) a lesson
   that was replaced but still partly holds.

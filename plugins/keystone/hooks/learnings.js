@@ -9,21 +9,19 @@
  *      path, so the agent can open any older lesson that bears on the task. Entries whose
  *      heading says SUPERSEDED never take a full slot; they stay in the index by title.
  *      Matcher: startup|resume|clear|compact
- *   2. `--path` CLI: print the learnings file path for the current repo. For an in-repo
- *      store it also creates `.keystone/` and git-excludes it, so /wrap can put its scratch
- *      file next to it. Used by the /wrap skill for its scratch-file location.
+ *   2. `--path` CLI: print the learnings file path for the current repo. For the in-repo
+ *      store it also creates the store's directory, so /wrap can put its scratch file there. Used by the /wrap skill for its scratch-file location.
  *   3. `--append [--meta]` CLI: read ONE entry from stdin, check its shape and size, and
  *      append it to this repo's computed lessons file (or, with --meta, the keystone meta
  *      inbox). No path argument is accepted, so the caller cannot choose where it writes,
  *      and the entry never passes through a shell. /wrap saves every entry this way.
  *
- * Storage is IN the repo but never committed: <main checkout>/.keystone/lessons.md, listed in
- * the repo's private exclude file (.git/info/exclude), not its shared .gitignore. Every
- * worktree of the repo resolves to the main checkout, so they share one file. The file is
- * trusted only while git does NOT track it and neither it nor `.keystone/` is a symlink: a
- * cloned repo can commit its own `.keystone/lessons.md`, and that must never be injected as
- * this user's lessons. When it isn't usable, or doesn't exist yet, the hook reads the legacy
- * out-of-repo file, keyed by the git remote (fallback: toplevel path):
+ * Storage is per-repo and never committed: <git common dir>/keystone/lessons.md (usually
+ * .git/keystone/lessons.md in the main checkout). Every worktree shares it. Git never commits
+ * files in its own dir, and a clone or checkout can't plant one there, so the hook never
+ * injects another repo's text as this user's lessons. A symlinked store is refused. Until
+ * the store exists, the hook reads the legacy out-of-repo file, keyed by the git remote
+ * (fallback: toplevel path):
  *   ~/.claude/keystone/learnings/<repo-slug>.md
  * The first --append copies that legacy file into the repo file (the legacy file is kept).
  *
@@ -49,8 +47,10 @@ const OUT_OF_REPO = Boolean(process.env.KEYSTONE_LEARNINGS_DIR);
 const ROOT =
   process.env.KEYSTONE_LEARNINGS_DIR ||
   path.join(os.homedir(), ".claude", "keystone", "learnings");
-const REPO_DIR = ".keystone";
-const REPO_FILE = "lessons.md";
+// Inside the repo's git dir: git never commits it, and a clone, checkout or archive of
+// someone else's repo can't put a file there, so its text is always this user's own.
+const STORE_DIR = "keystone";
+const STORE_FILE = "lessons.md";
 const MAX = clampInt(process.env.KEYSTONE_LEARNINGS_MAX, 5, 1, 50);
 // Title index bounds. The lessons file is plain markdown anyone can hand-edit, so a runaway
 // heading or a huge file must not flood the session: cap each title and the line count.
@@ -95,7 +95,7 @@ function slugify(s) {
 /**
  * Resolve the repo identity and lessons files for a directory, or null if not a repo.
  *   legacy   the out-of-repo file (~/.claude/keystone/learnings/<slug>.md)
- *   repo     <main checkout>/.keystone/lessons.md, or null under KEYSTONE_LEARNINGS_DIR
+ *   repo     <git common dir>/keystone/lessons.md, or null under KEYSTONE_LEARNINGS_DIR
  *   file     the file to READ: the repo file when it is usable and exists, else legacy
  * Exported for tests.
  */
@@ -106,17 +106,15 @@ function repoFile(cwd) {
   const slug = slugify(remote || top) || path.basename(top);
   const legacy = path.join(ROOT, slug + ".md");
   let repo = null;
-  let commonDir = "";
   if (!OUT_OF_REPO) {
-    // Absolute form (git 2.31+); older git prints it relative to cwd, not the toplevel.
-    commonDir =
+    // The common git dir is shared by every worktree. Absolute form needs git 2.31+; older
+    // git prints it relative to cwd, not the toplevel.
+    const commonDir =
       git(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd) ||
       path.resolve(cwd || process.cwd(), git(["rev-parse", "--git-common-dir"], cwd) || ".git");
-    // The main checkout holds the shared store; a bare repo or odd layout falls back to top.
-    const mainTop = path.basename(commonDir) === ".git" ? path.dirname(commonDir) : top;
-    repo = path.join(mainTop, REPO_DIR, REPO_FILE);
+    repo = path.join(commonDir, STORE_DIR, STORE_FILE);
   }
-  const usable = repo && repoStoreProblem(repo, cwd) === null;
+  const usable = repo && repoStoreProblem(repo) === null;
   return {
     slug,
     top,
@@ -124,49 +122,30 @@ function repoFile(cwd) {
     name: path.basename(top),
     legacy,
     repo,
-    commonDir,
     file: usable && fs.existsSync(repo) ? repo : legacy,
   };
 }
 
 /**
- * Why the in-repo store at `file` can't be trusted, or null. Refuses a symlinked
- * `.keystone/` or lessons file (writes could land anywhere) and any `.keystone/` content
- * git tracks (a cloned repo's committed file is someone else's text, not this user's).
+ * Why the in-repo store at `file` can't be used, or null. Refuses a symlinked store dir or
+ * lessons file, so a read or --append can't be redirected somewhere else.
  */
-function repoStoreProblem(file, cwd) {
-  const dir = path.dirname(file);
-  for (const p of [dir, file]) {
+function repoStoreProblem(file) {
+  for (const p of [path.dirname(file), file]) {
     try {
       if (fs.lstatSync(p).isSymbolicLink()) return `${p} is a symlink`;
     } catch (e) {
       if (!e || e.code !== "ENOENT") return `${p} is unreadable`;
     }
   }
-  const tracked = git(["-C", path.dirname(dir), "ls-files", "--", REPO_DIR], cwd);
-  return tracked ? `git tracks files in ${dir}, so it is not a private lessons store` : null;
+  return null;
 }
 
-/**
- * Create `.keystone/` for the in-repo store and list it in the repo's private exclude
- * file, so it can never be committed. Returns null, or why the store can't be used.
- */
-function ensureRepoStore(info, cwd) {
-  const problem = repoStoreProblem(info.repo, cwd);
+/** Create the in-repo store's directory. Returns null, or why the store can't be used. */
+function ensureRepoStore(info) {
+  const problem = repoStoreProblem(info.repo);
   if (problem) return problem;
   fs.mkdirSync(path.dirname(info.repo), { recursive: true });
-  const exclude = path.join(info.commonDir, "info", "exclude");
-  let text = "";
-  try {
-    text = fs.readFileSync(exclude, "utf8");
-  } catch (e) {
-    if (!e || e.code !== "ENOENT") throw e;
-  }
-  if (!/^\/?\.keystone\/?$/m.test(text)) {
-    fs.mkdirSync(path.dirname(exclude), { recursive: true });
-    const sep = !text || text.endsWith("\n") ? "" : "\n";
-    fs.appendFileSync(exclude, `${sep}# keystone per-repo lessons (never committed)\n/${REPO_DIR}/\n`);
-  }
   return null;
 }
 
@@ -382,7 +361,7 @@ function appendEntry(text, { meta, cwd }) {
       };
     file = info.legacy;
     if (info.repo) {
-      const problem = ensureRepoStore(info, cwd);
+      const problem = ensureRepoStore(info);
       if (problem) return { error: `${problem}; refusing to write lessons there` };
       file = info.repo;
       // First write to the repo store: carry over this repo's legacy lessons (kept as-is).
@@ -501,7 +480,7 @@ function main() {
     let out = "";
     try {
       const info = repoFile(process.cwd());
-      if (info && info.repo && ensureRepoStore(info, process.cwd()) === null) out = info.repo;
+      if (info && info.repo && ensureRepoStore(info) === null) out = info.repo;
       else if (info) out = info.legacy;
     } catch (_) {
       // fail open: empty path
