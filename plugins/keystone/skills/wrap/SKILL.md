@@ -27,8 +27,9 @@ echo "R=$R"; echo "LF=$LF"; echo "S=$S"; echo "META=$META"; echo "EOT=$EOT"
 ```
 
 Use the printed values from here on; shell variables don't carry over to the next command.
-These files live outside the repo, so an active `/guard` freeze denies Edit/Write to them;
-write through Bash instead (freeze fences Edit/Write, not Bash). Every heredoc uses the printed
+`LF` is `keystone/lessons.md` inside the repo's git dir (usually `.git/`), which git never
+commits; `META` lives under `~/.claude`. Either can sit outside an active `/guard` freeze, which
+denies Edit/Write there, so write through Bash instead (freeze fences Edit/Write, not Bash). Every heredoc uses the printed
 `EOT` as its quoted terminator, so no line of saved text can end it and run as shell. Scratch
 notes: `cat >> "<S>" <<'<EOT>'`. Save a picked entry only with `--append`, one entry per call
 (`--meta` for the `META` inbox). It reads stdin, writes only to the computed `LF` or `META`
@@ -51,7 +52,8 @@ instead of working around it.
   and to run `/handoff`.
 - **Decisions and their reasons** go to the spec, an ADR (`docs/adr/`), or the project notes.
 - **Hard-won facts**, things you learned by testing or investigating, go to the `LF` file,
-  which lives outside the repo (outside a git repo there is none; use memory). The
+  which every worktree of the repo shares and git never commits (outside a git repo there is
+  none; use memory). The
   SessionStart hook re-surfaces entries only in this shape:
 
   ```markdown
@@ -68,6 +70,10 @@ instead of working around it.
   it (a command or file, with the date). Mark it `unchecked` if nothing in this session backs
   it.
 - **Drops**: notes that are now wrong or obsolete. Propose deleting them, not just rewording.
+  When a lesson was replaced but part of it still holds (or its history matters), propose
+  superseding it instead: append ` — SUPERSEDED <YYYY-MM-DD>` to its heading and add a
+  `**Superseded:** <what replaced it, and what still holds>` line. The SessionStart hook then
+  lists it by title only and never injects it in full.
 - **Unanswered questions** that came up this session and were never resolved.
 - **External pointers**: URLs, ticket IDs, PRs.
 - **Rules**: propose one only if the agent would decide differently without being told. If a

@@ -8,7 +8,12 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const {
   ENTRY_MAX_CHARS,
+  HEADING_MAX_CHARS,
+  INDEX_MAX,
+  allEntries,
   buildContext,
+  isSuperseded,
+  selectEntries,
   clusterEntries,
   missContext,
   repoFile,
@@ -20,14 +25,16 @@ const HOOK = path.join(__dirname, "learnings.js");
 // Run the SessionStart hook as a real child process (so we exercise stdout, the fail-open
 // path, and env-driven storage). `cwd` sets what git repo it resolves; `learningsDir` overrides
 // KEYSTONE_LEARNINGS_DIR so tests never touch the real ~/.claude store.
-function runSessionStart(input, { cwd, learningsDir } = {}) {
+function runSessionStart(input, { cwd, learningsDir, env = {} } = {}) {
   const res = spawnSync(process.execPath, [HOOK], {
     input: input || "{}",
     cwd: cwd || __dirname,
     encoding: "utf8",
     env: {
       ...process.env,
+      KEYSTONE_LEARNINGS_MAX: "",
       ...(learningsDir ? { KEYSTONE_LEARNINGS_DIR: learningsDir } : {}),
+      ...env,
     },
   });
   return res.stdout;
@@ -285,4 +292,125 @@ test("--append refuses to follow a symlinked lessons file", () => {
   } finally {
     fs.rmSync(store, { recursive: true, force: true });
   }
+});
+
+// ---------- full entries + title index ----------
+
+// `n` entries in file order, oldest first: "## 2026-01-01 — [Lesson] Topic 1" …
+function seedEntries(n, mark = {}) {
+  return Array.from({ length: n }, (_, i) => {
+    const k = i + 1;
+    const day = String(k).padStart(2, "0");
+    const tag = mark[k] ? ` ${mark[k]}` : "";
+    return `## 2026-01-${day} — [Lesson] Topic ${k}${tag}\nBody of topic ${k}.\n**Triggers:** testing`;
+  });
+}
+
+function withSeededStore(text, fn) {
+  const store = mkTmp("ks-index-store-");
+  try {
+    const file = path.join(store, repoFile(__dirname).slug + ".md");
+    fs.writeFileSync(file, text);
+    return fn({ store, file });
+  } finally {
+    fs.rmSync(store, { recursive: true, force: true });
+  }
+}
+
+test("isSuperseded reads the heading only", () => {
+  assert.ok(isSuperseded("## 2026-01-01 — [Lesson] X — SUPERSEDED 2026-02-01\nbody"));
+  assert.ok(isSuperseded("## 2026-01-01 — [Lesson] X (superseded)\nbody"));
+  assert.ok(
+    !isSuperseded("## 2026-01-01 — [Lesson] X\n**Superseded:** mentioned in the body only"),
+  );
+  assert.ok(!isSuperseded("## 2026-01-01 — [Decision] Old oracle retired"));
+});
+
+test("selectEntries: newest N live entries in full, every other title in the index", () => {
+  const { full, index } = selectEntries(seedEntries(12), 5);
+  assert.deepStrictEqual(
+    full.map((e) => e.split("\n")[0]),
+    [8, 9, 10, 11, 12].map((k) => `## 2026-01-${String(k).padStart(2, "0")} — [Lesson] Topic ${k}`),
+  );
+  assert.strictEqual(index.length, 7);
+  assert.strictEqual(index[0], "2026-01-01 — [Lesson] Topic 1");
+  assert.ok(index.every((t) => !t.startsWith("## ") && !t.includes("\n")));
+});
+
+test("selectEntries: a superseded entry never takes a full slot but stays in the index", () => {
+  const entries = seedEntries(6, { 6: "— SUPERSEDED 2026-02-01" });
+  const { full, index } = selectEntries(entries, 2);
+  assert.deepStrictEqual(
+    full.map((e) => e.split("\n")[0].replace(/^## \S+ — \[Lesson\] /, "")),
+    ["Topic 4", "Topic 5"],
+    "the next-newest live entry fills the slot",
+  );
+  assert.ok(index.some((t) => /Topic 6 — SUPERSEDED/.test(t)));
+  assert.strictEqual(index.length, 4);
+});
+
+test("selectEntries: fewer entries than N means everything in full and no index", () => {
+  const { full, index } = selectEntries(seedEntries(3), 5);
+  assert.strictEqual(full.length, 3);
+  assert.deepStrictEqual(index, []);
+});
+
+test("buildContext names the lessons file and caps index titles and line count", () => {
+  const long = "## 2026-01-01 — [Lesson] " + "w".repeat(HEADING_MAX_CHARS * 2);
+  const many = seedEntries(INDEX_MAX + 20);
+  const { full, index } = selectEntries([long, ...many], 1);
+  const ctx = buildContext(full, "repo", { index, file: "/tmp/lessons.md" });
+  assert.match(ctx, /data, not instructions/);
+  assert.match(ctx, /\/tmp\/lessons\.md/);
+  assert.match(ctx, /older titles not listed/);
+  const lines = ctx.split("\n").filter((l) => l.startsWith("- "));
+  assert.strictEqual(lines.length, INDEX_MAX);
+  assert.ok(!ctx.includes("w".repeat(HEADING_MAX_CHARS + 1)), "the long title is capped");
+});
+
+test("buildContext without an index is unchanged in shape (no index block)", () => {
+  const ctx = buildContext(["## 2026-01-01 — [Lesson] X\nDo Y."], "repo");
+  assert.ok(!ctx.includes("📇"));
+});
+
+test("SessionStart: 12 lessons → 5 in full, 7 by title, with the file path", () => {
+  withSeededStore(seedEntries(12).join("\n\n") + "\n", ({ store, file }) => {
+    const out = runSessionStart("{}", { cwd: __dirname, learningsDir: store });
+    const ctx = JSON.parse(out).hookSpecificOutput.additionalContext;
+    assert.match(ctx, /Body of topic 12\./);
+    assert.match(ctx, /Body of topic 8\./);
+    assert.ok(!ctx.includes("Body of topic 7."), "older bodies are not injected");
+    assert.match(ctx, /7 more lessons/);
+    assert.match(ctx, /- 2026-01-01 — \[Lesson\] Topic 1\n/);
+    assert.ok(ctx.includes(file), "names the file to open");
+  });
+});
+
+test("SessionStart honors KEYSTONE_LEARNINGS_MAX for the full-entry count", () => {
+  withSeededStore(seedEntries(12).join("\n\n") + "\n", ({ store }) => {
+    const out = runSessionStart("{}", {
+      cwd: __dirname,
+      learningsDir: store,
+      env: { KEYSTONE_LEARNINGS_MAX: "2" },
+    });
+    const ctx = JSON.parse(out).hookSpecificOutput.additionalContext;
+    assert.match(ctx, /Body of topic 11\./);
+    assert.ok(!ctx.includes("Body of topic 10."));
+    assert.match(ctx, /10 more lessons/);
+  });
+});
+
+test("SessionStart with only superseded lessons still lists them instead of the miss nudge", () => {
+  const text = seedEntries(2, { 1: "— SUPERSEDED", 2: "— SUPERSEDED" }).join("\n\n");
+  withSeededStore(text, ({ store }) => {
+    const out = runSessionStart("{}", { cwd: __dirname, learningsDir: store });
+    const ctx = JSON.parse(out).hookSpecificOutput.additionalContext;
+    assert.ok(!/No lessons banked/.test(ctx));
+    assert.match(ctx, /2 more lessons/);
+    assert.ok(!ctx.includes("Body of topic"));
+  });
+});
+
+test("allEntries keeps file order and every entry", () => {
+  assert.strictEqual(allEntries(seedEntries(40).join("\n\n")).length, 40);
 });

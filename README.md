@@ -27,7 +27,7 @@ plugins/keystone/
 │                challenge/audit + git + wrap/pickup) and 12 user-only (spec, to-tickets, implement, setup, ship,
 │                qa, cso, investigate, debt, handoff, guard, onboard-codebase — no context cost until you run them)
 ├── agents/      the crew: Mason (implementer) · Riley (reviewer) · Sage (security)
-├── hooks/       instincts.js · guard.js (+ guard-state.js) · scan.js · notify.js · learnings.js + hooks.json
+├── hooks/       instincts.js · guard.js (+ guard-state.js, patch-paths.js) · scan.js · notify.js · learnings.js + hooks.json
 └── templates/   handoffs/README.md (the continuity index seed)
 templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
 ```
@@ -108,9 +108,13 @@ nothing into context until you type them; the model can't start them on its own.
   elsewhere). `docs/handoffs/README.md` is _this repo's_ task-state; `MEMORY.md` is your
   personal cross-project index.
 - **Per-repo memory** — _surfacing_ is automatic (SessionStart `learnings.js` prints a 📓
-  banner of this repo's banked lessons, or a one-line nudge to `/wrap` when none are banked
-  yet); _capture_ goes through `/wrap`, and you pick what is saved. Stored
-  outside the repo (`~/.claude/keystone/learnings/<slug>.md`), so client repos stay clean.
+  banner with this repo's newest lessons in full and every older one by title, with the file
+  path so the agent can open any that bear on the task; entries marked `SUPERSEDED` are listed
+  by title only. With none banked yet it prints a one-line nudge to `/wrap`). _Capture_ goes
+  through `/wrap`, and you pick what is saved. Stored per repo but never committed:
+  `.git/keystone/lessons.md` (inside the git dir, which git never commits, so client repos
+  stay clean), shared by every worktree. A clone can't put a file there, so a cloned repo can't
+  plant lessons. `KEYSTONE_LEARNINGS_DIR` keeps the old out-of-repo layout.
 - **Durable codebase map** — `onboard-codebase` (brownfield) writes a committed
   `docs/codebase/` map (stack, architecture, structure, conventions, integrations, testing,
   concerns) via parallel mappers (optionally backed by a code-graph index), so a repo's shape
@@ -214,8 +218,9 @@ claude plugin update keystone@keystone
 that swaps the installed version directory leaves already-open sessions pointing at a deleted
 path. The bundled hooks degrade to a visible one-line notice (instead of failing) when that
 happens — the fix is always to start a fresh session. On harnesses with per-hook trust (e.g.
-Codex), a release that changes hook _commands_ also requires re-approving the hooks; 1.0.0 is
-one. Coming from 0.x, read the 1.0.0 migration notes in [`CHANGELOG.md`](CHANGELOG.md).
+Codex, which fingerprints the whole plugin bundle), **every** release requires re-approving the
+hooks (`/hooks`, or the startup hook review), and until then the harness silently skips them,
+the guard included. Coming from 0.x, read the 1.0.0 migration notes in [`CHANGELOG.md`](CHANGELOG.md).
 
 **The glossary is now `GLOSSARY.md`** (formerly `CONTEXT.md`). In a repo that still has
 `CONTEXT.md`, keystone treats it as the glossary and offers the rename:

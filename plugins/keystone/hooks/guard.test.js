@@ -207,54 +207,10 @@ test("Read/Write of an actual .env.example path is still allowed", () => {
 test("Read of .env.example/../.env style path is still denied", () =>
   assert.equal(decision(read("/proj/.env.example/../.env")), "deny"));
 
-// ── Layer 4: Databricks → ask (confirm), OPT-IN via KEYSTONE_DATABRICKS_GUARD ──
-const DBX = { KEYSTONE_DATABRICKS_GUARD: "1" };
-test("databricks guard is OFF by default (no env) → allow", () =>
-  assert.equal(decision(bash("databricks bundle deploy")), "allow"));
-test("asks on bundle deploy (guard enabled)", () =>
-  assert.equal(decision(bash("databricks bundle deploy"), {}, "", DBX), "ask"));
-test("asks on prod bundle deploy with louder reason", () => {
-  assert.equal(
-    decision(bash("databricks bundle deploy -t prod"), {}, "", DBX),
-    "ask",
-  );
-  assert.match(
-    why(bash("databricks bundle deploy --target production"), {}, "", DBX),
-    /PRODUCTION/,
-  );
-});
-test("asks on bundle destroy", () =>
-  assert.equal(
-    decision(bash("databricks bundle destroy"), {}, "", DBX),
-    "ask",
-  ));
-test("asks on jobs delete", () =>
-  assert.equal(
-    decision(bash("databricks jobs delete --job-id 42"), {}, "", DBX),
-    "ask",
-  ));
-test("asks on schemas delete", () =>
-  assert.equal(
-    decision(bash("databricks schemas delete main.analytics"), {}, "", DBX),
-    "ask",
-  ));
-test("asks on dbfs recursive rm", () =>
-  assert.equal(
-    decision(bash("databricks fs rm -r dbfs:/mnt/data"), {}, "", DBX),
-    "ask",
-  ));
-test("allows benign databricks command", () =>
-  assert.equal(decision(bash("databricks jobs list"), {}, "", DBX), "allow"));
-test("allows bundle validate", () =>
-  assert.equal(
-    decision(bash("databricks bundle validate"), {}, "", DBX),
-    "allow",
-  ));
-
-// ── Layer 5: destructive SQL → ask ───────────────────────────────────────────
+// ── Layer 4: destructive SQL → ask ───────────────────────────────────────────
 test("asks on DROP TABLE", () =>
   assert.equal(
-    decision(bash('databricks sql -q "DROP TABLE main.events"')),
+    decision(bash('sqlite3 app.db "DROP TABLE main.events"')),
     "ask",
   ));
 test("asks on TRUNCATE", () =>

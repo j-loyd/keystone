@@ -309,7 +309,7 @@ Seed tasks · rubric · end-state assertions
 
 ## Integration
 
-- Before `/spec`: the design note feeds the spec.
+- Before `/spec` (user-run): the design note feeds the spec.
 - `long-running-agents` — loop modes, iteration contract, stuck detection, budget enforcement.
 - `llm-security` — the agent attack surface (prompt injection, tool trust, excessive agency).
 - `challenge` — stress-test the design note itself before building from it.

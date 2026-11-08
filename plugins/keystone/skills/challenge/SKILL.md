@@ -197,7 +197,7 @@ writes — the pass drafts, you approve.
 
 End with: the ranked `UNEXAMINED`/high-blast findings, the survivability score, the updated
 ledger, the doc edits made (or proposed), any explicit tensions, and a one-line verdict —
-**sound / patch-and-proceed / rethink** — plus the next step (`/spec` to revise the spec, `improve-codebase-architecture` for a
+**sound / patch-and-proceed / rethink** — plus the next step (suggest the user run `/spec` to revise the spec, `improve-codebase-architecture` for a
 structural rethink, or back to scoping).
 
 Honor the no-commit rule — the pass updates the doc, not the code.

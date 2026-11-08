@@ -2,6 +2,131 @@
 
 All notable changes to keystone are recorded here.
 
+## [1.0.1] — 2026-11-08
+
+### Changed
+
+- **Per-repo lessons no longer disappear after the newest 8.** The SessionStart `learnings.js`
+  hook now injects the newest 5 live lessons in full, plus a title-only index of every other
+  lesson and the lessons file path, so the agent can open any older entry that bears on the
+  task. Before, repos with 30+ lessons surfaced only the newest 8 and the rest were never seen.
+  `KEYSTONE_LEARNINGS_MAX` now sets the full-entry count (default 5, was 8). The index is capped
+  at 150 titles of 200 characters each.
+- **Per-repo lessons now live with the repo, uncommitted.** `/wrap` saves to
+  `.git/keystone/lessons.md`, inside the repo's git dir: git never commits it, `git clean` never
+  touches it, and every worktree shares it. A clone or checkout can't put a file there, so a
+  cloned repo can't plant "lessons" into your sessions; a symlinked store is refused. Existing
+  lessons in `~/.claude/keystone/learnings/<slug>.md` are still read until the first new save,
+  which copies them into the repo file (the old file is kept). Deleting or re-cloning the repo
+  loses them. Set `KEYSTONE_LEARNINGS_DIR` to keep the old out-of-repo layout.
+- **Superseded lessons.** A lesson whose heading carries `SUPERSEDED` never takes a full slot;
+  it stays in the index by title. `/wrap` now proposes superseding (instead of deleting) a lesson
+  that was replaced but still partly holds.
+### Fixed
+
+- **The "touches the guard state file" prompt only appears while protection is on.** The file
+  holds only the freeze and careful settings, so with both off (the default) deleting or editing
+  it lifts nothing, and the check is skipped. With freeze or careful on, or a corrupt file, it
+  still asks as before.
+- **Fewer false "touches the guard state file" prompts after a `cd`.** The guard used to ask on
+  any delete (`rm`, `git rm`, `mv`, …) that followed any `cd`, so the everyday
+  `cd ~/repo && git rm old.yaml` prompted every time. A command that **starts** with a plain
+  `cd <path> &&` (or `;`), where the path is absolute, `~` or `~/…` and uses only ordinary path
+  characters, now has that directory resolved, and later deletes are checked against it and the
+  starting directory. `cd ~/.claude && rm *.json`, `cd ~ && rm -rf .claude`, a second `cd`, and
+  any `cd` with a relative, quoted, variable, `-`, `~user`, redirect, glob or line-continued
+  target still ask. `popd` now also counts as a directory change.
+- **A `$(…)` elsewhere in a command no longer makes every delete in it ask.** Write-a-script-
+  then-run-it calls such as `x=$(curl …)` followed later by `rm -f /tmp/out.json` used to prompt
+  about the guard state file. Now only a delete whose own statement contains the `$(…)` (as in
+  `rm -rf $(echo ~/.claude)` or `find $(pwd) -delete`) asks. Backticks and `<(…)`/`>(…)` still
+  gate the whole command, and line continuations are joined first, as the shell does.
+
+### Security: the guard now covers Codex `apply_patch`
+
+Codex CLI runs keystone's PreToolUse guard for its `apply_patch` tool, because Codex treats
+`Write`/`Edit` as matcher aliases. But the hook payload carries `tool_name: "apply_patch"`,
+with the whole patch as a string in `tool_input.command`, and `guard.js` let any tool name it
+didn't know through. So on Codex a patch could write outside an active `/guard freeze`, write
+secret files (`.env`, keys) and edit the guard state file, all of which a `Write`/`Edit` to the
+same path is blocked from doing.
+
+- **Fixed (`guard.js`)**: every path in a patch (Add, Update, Delete, and both the source and
+  the destination of a `*** Move to:` rename) now gets the same secret-file, guard-state-file
+  and freeze checks a `Write`/`Edit` gets. Relative paths resolve against the hook's `cwd`. The
+  path Codex normalizes (`.env/.` writes `.env`) is checked as well as the raw one.
+- **Fixed (Codex only)**: Codex can also apply a patch from its shell tool, and that call
+  reaches the hook as `Bash`: the heredoc form Codex intercepts (`apply_patch <<'EOF' …`, or
+  `cd <dir> && apply_patch <<'EOF' …`), or the real `apply_patch` binary Codex puts on `PATH`.
+  On Codex, the file headers in a Bash command that names `apply_patch` now get the same
+  checks. A patch fed from a file, a variable or stdin is still invisible to the hook, the same
+  gap as any other Bash write (freeze has never fenced Bash). Claude Code has no such shell
+  command, so its Bash decisions are unchanged.
+- **Codex can't ask, so these deny there**: Codex 0.166 treats `permissionDecision: "ask"` as
+  unsupported and runs the call. guard.js recognizes a Codex payload by the `turn_id` and
+  `model` fields Codex always sends, which Claude Code's PreToolUse input does not carry.
+  An `apply_patch` call counts as Codex on its own (only Codex has that tool), so patch asks
+  deny even if a future Codex payload drops those fields.
+  On Codex these asks become a **deny**:
+  - every ask from a patch check: input guard can't parse, a patch with no files, a corrupt
+    state file, the guard state file itself, and a relative path under a freeze when the
+    patch names a different `*** Environment ID:`;
+  - the guard-integrity asks on Bash: a command that touches the guard state file, and a
+    `guard-state.js` call that could lift or widen the guardrails. (Codex has no Write/Edit
+    tools; its file edits arrive as `apply_patch`, so a patch to the state file is covered
+    by the patch checks above.)
+
+  Careful-mode and SQL-guard asks stay asks, which Codex ignores. On Claude Code every ask is
+  unchanged. Set `KEYSTONE_GUARD_OFF=1` to bypass, as before. This also means that on Codex
+  `/guard off`, `/guard careful off` and moving an active freeze are denied rather than
+  confirmed. Lift or widen the guard from your own terminal, outside Codex, by running the
+  plugin's `hooks/guard-state.js` yourself.
+- **Not changed: Codex patches are not formatted.** The PostToolUse formatter still reads a
+  Claude Code-shaped payload, so on Codex it formats nothing, as before. That is deliberate.
+  Formatting a patch would run the repo's `node_modules/.bin/prettier`, which loads prettier
+  config the same patch can add (`prettier.config.cjs` is code), and the formatter runs
+  outside Codex's sandbox.
+- New shared parser `hooks/patch-paths.js` reads the header grammar exactly as Codex's
+  `apply-patch` parser does, including its whitespace rules, which differ from JavaScript's
+  `trim()`. Parsing a patch takes linear time.
+- **Fixed: padding could time the guard out.** Codex treats a hook timeout as a failed hook
+  and runs the call. 33 Bash rules and 2 secret-file patterns used regexes that backtracked
+  quadratically or cubically on long input; a ~12 KB command made `guard.js` exceed its 5 s
+  timeout, which let padding push any Bash deny through on Codex (for example
+  `guard-state.js off`). Every one of those rules is now a linear-time matcher that makes
+  the same decision as the old regex (checked against the original regexes by fuzzing). A
+  200 KB command now takes well under a second.
+
+### Removed: the Databricks guard layer
+
+The opt-in Databricks confirm layer (`KEYSTONE_DATABRICKS_GUARD=1`) is gone, keeping keystone
+stack-agnostic. The SQL guard is unchanged. If you want those confirmations back, add a
+PreToolUse hook of your own to your personal settings.
+
+### Known gaps
+
+- If `guard.js` can't be found (a plugin updated mid-session), the guard hook falls back to an
+  `ask`. Codex ignores that `ask`, so on Codex the fallback runs the call unguarded.
+- Checking a command still takes time proportional to its length, about 0.3 s per MB. A
+  single Bash command of roughly 15 MB or more would exceed the hook's 5 s timeout, and Codex
+  would then run it unchecked. That is far beyond what a model emits in one tool call, but
+  nothing enforces it.
+- The Claude Code formatter runs the repo's own prettier (`node_modules/.bin/prettier`), which
+  can execute repo-supplied config. This predates this release and is out of scope here.
+
+### Upgrade steps
+
+- **Claude Code**: update the plugin (`claude plugin update keystone@keystone`), then restart
+  open sessions.
+- **Codex CLI**: Codex fingerprints the whole plugin bundle when it trusts a plugin hook, so
+  any changed file marks **every** keystone hook as modified, even though `hooks.json` itself
+  is unchanged. Codex **silently skips** modified hooks, guard included, until you approve them
+  again. Update with `codex plugin marketplace upgrade keystone`, then start `codex`
+  interactively. At the "Hooks need review" prompt, pick **Trust all and continue** (or
+  **Review hooks**), or run `/hooks` later. "Continue without trusting" leaves the hooks off,
+  and `codex exec` has no review prompt, so until you approve them it runs with no keystone
+  guard.
+
 ## [1.0.0] — 2026-11-07
 
 keystone lean. Claude Code now ships much of what this kit used to carry: built-in `/review`,
