@@ -7,7 +7,7 @@ All notable changes to keystone are recorded here.
 keystone lean. Claude Code now ships much of what this kit used to carry: built-in `/review`,
 `/simplify`, and `/security-review`, native worktree isolation, and `/goal` and `/loop`. Every
 model-invocable skill or command also costs always-loaded context for its description, whether
-or not it ever fires. In a 36-run A/B, the test-driven-development and systematic-debugging
+or not it ever fires. In a local 36-run A/B across three model tiers (synthetic tasks; results not shipped), the test-driven-development and systematic-debugging
 skills scored about the same as the no-skill baseline. So 1.0 keeps what is uniquely keystone,
 hands the rest to the harness, and makes the heavy workflows user-only, so they cost nothing
 until you type them.
@@ -62,7 +62,7 @@ until you type them.
 - **Model-invocable skills can no longer pre-approve broad tools.** The skill lint fails on
   unscoped `Bash`, `Write`/`Edit`, MCP tools, or anything not read-only in `allowed-tools` on a
   skill the model can start by itself. Only user-only skills carry broader grants.
-  `/pickup` pre-approves `Read`, `Glob`, `Grep`, and read-only `git status` / `git log`.
+  Bash grants on those skills must be exact read-only commands with no wildcards (`git log --output=<file>` writes a file, so `Bash(git log *)` is rejected). `/pickup` pre-approves `Read`, `Glob`, `Grep`, and `Bash(git status)`.
 - **`/qa`'s MCP pre-approvals are Claude in Chrome tools only.** The `chrome-devtools` entries
   are gone.
 - **`KEYSTONE_TASK_RISK` and `KEYSTONE_TASK_FACTS` are no longer used.** The guard ignores

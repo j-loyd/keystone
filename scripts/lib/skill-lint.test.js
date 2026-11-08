@@ -435,6 +435,12 @@ for (const tools of [
   "Bash(git status; rm -rf x)",
   "Bash(git log * | sh)",
   "Bash(git branch *)",
+  "Bash(git status *)",
+  "Bash(git log:*)",
+  "Bash(git log *)",
+  "Bash(git diff *)",
+  "Bash(git log --output=notes.txt)",
+  "Bash(ls *)",
   "Edit(src/**)",
   "mcp__claude-in-chrome__navigate",
   "WebFetch",
@@ -450,9 +456,9 @@ for (const tools of [
   "Read, Grep, Glob",
   "Read Grep Glob",
   "\n  - Read\n  - Glob",
-  "Bash(git status *)",
-  "Bash(git log:*)",
-  "Read Bash(git log *) Bash(git diff *) Bash(ls *)",
+  "Bash(git status)",
+  "Read Bash(git status) Bash(pwd) Bash(ls)",
+  "Bash(git rev-parse --show-toplevel)",
 ])
   test(`model-invocable skill may pre-approve ${JSON.stringify(tools)}`, () => {
     assert.deepStrictEqual(lintSkill("zoom-out", withTools(tools)).errors, []);

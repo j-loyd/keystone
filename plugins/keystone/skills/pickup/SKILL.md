@@ -6,8 +6,7 @@ allowed-tools:
   - Read
   - Glob
   - Grep
-  - Bash(git status *)
-  - Bash(git log *)
+  - Bash(git status)
 ---
 
 # Pickup — rehydrate interrupted work

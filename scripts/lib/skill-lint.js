@@ -251,14 +251,12 @@ const PLUGIN_ROOT_FIX = {
 const READ_ONLY_TOOLS = new Set(["Read", "Grep", "Glob"]);
 
 /**
- * Commands a scoped Bash(...) pattern may start with on a model-invocable skill. Read-only
- * git subcommands only: `git branch` and `git remote` are excluded because their arguments
- * can delete or rewire. Residual: a wildcard scope can't stop `git diff --output=<file>`.
+ * Exact Bash(...) scopes a model-invocable skill may pre-approve. Exact commands only, no
+ * wildcards: git's read commands accept write flags (`git log --output=<file>` and
+ * `git diff --output=<file>` both write a file), so `Bash(git log *)` is a prompt-free
+ * file write. `git branch` / `git remote` are excluded: their arguments delete or rewire.
  */
-const READ_ONLY_BASH = [
-  /^git (?:status|log|diff|show|rev-parse)\b/,
-  /^(?:ls|pwd)\b/,
-];
+const READ_ONLY_BASH = [/^git status$/, /^git rev-parse --show-toplevel$/, /^ls$/, /^pwd$/];
 
 /** Split an allowed-tools value (YAML list folded by parseFrontmatter, or a space/comma
  *  string) into tools, keeping `Bash(git log *)` together. Exported for tests. */
@@ -287,6 +285,7 @@ function unsafeModelTool(tool) {
   if (bash) {
     const scope = bash[1].trim();
     if (/[;&|`$<>\n]/.test(scope)) return "a Bash scope with shell operators";
+    if (/[*?]/.test(scope)) return "a wildcard Bash scope (read commands like git log/diff take --output=<file>)";
     if (READ_ONLY_BASH.some((re) => re.test(scope))) return null;
     return "a Bash scope that isn't a read-only command";
   }
