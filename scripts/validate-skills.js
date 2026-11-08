@@ -7,11 +7,14 @@
  *   node scripts/validate-skills.js --verbose     # also lists the exemptions
  *
  * Rules (see scripts/lib/skill-lint.js for the reasoning):
- *   - frontmatter carries `name` and `description` only
+ *   - frontmatter carries `name` and `description`, plus optional
+ *     `disable-model-invocation: true`, `argument-hint`, and `allowed-tools`
+ *   - a user-only skill (disable-model-invocation) has a matching Codex
+ *     agents/openai.yaml policy (allow_implicit_invocation: false), and vice versa
  *   - `name` matches the directory, and both are kebab-case
  *   - `description` says WHEN to use the skill, not only what it does
  *   - warn (never error) on a description past the length ratchet
- *   - error on a backticked skill/command reference that resolves to nothing
+ *   - error on a backticked skill/agent reference that resolves to nothing
  *   - error on an unbraced $CLAUDE_PLUGIN_ROOT or a ${CLAUDE_PLUGIN_ROOT:-...} default
  *     form in any shipped .md (only the literal braced form is known to be substituted;
  *     use the two-step R="${CLAUDE_PLUGIN_ROOT}"; [ -f ... ] || R="${PLUGIN_ROOT}" fallback)
@@ -40,7 +43,6 @@ function body(options) {
   const pluginDir = path.join(options.root, "plugins", "keystone");
   const result = lintCatalog({
     skillsDir: path.join(pluginDir, "skills"),
-    commandsDir: path.join(pluginDir, "commands"),
     agentsDir: path.join(pluginDir, "agents"),
   });
 

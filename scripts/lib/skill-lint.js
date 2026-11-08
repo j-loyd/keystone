@@ -3,12 +3,20 @@
  * skill-lint.js — keystone's own frontmatter and cross-reference rules.
  *
  * These are HOUSE rules, not a vendored upstream lint. keystone skills carry
- * `name` and `description` and nothing else, and there is no required-section
- * list: the body shape is the author's call.
+ * `name` and `description`, plus `disable-model-invocation: true` on user-only
+ * skills, and optionally the two documented invocation fields `argument-hint` and
+ * `allowed-tools` (the former commands carry them). Nothing else. A model-invocable
+ * skill may pre-approve only read-only tools (see unsafeModelTool). There is no
+ * required-section list: the body shape is the author's call.
+ *
+ * User-only skills must be user-only on BOTH harnesses: Claude Code reads
+ * `disable-model-invocation: true` from the frontmatter, Codex reads
+ * `policy.allow_implicit_invocation: false` from the skill's `agents/openai.yaml`.
+ * lintCatalog fails when one flag is set without the other.
  *
  * Integrity property, taken from upstream deliberately: exemptions live HERE, in
  * the validator, never in the artifact being validated. A skill cannot exempt
- * itself — and the name+description-only rule is what makes that airtight, since
+ * itself — and the closed frontmatter key list is what makes that airtight, since
  * any `validator-skip:`-style key is itself an error. Every exemption carries a
  * written reason.
  *
@@ -20,8 +28,25 @@ const path = require("node:path");
 
 const { parseFrontmatter, stripFencedCode, lineOf, walkMarkdown } = require("./markdown.js");
 
-/** The only two frontmatter keys a keystone skill may carry. */
-const ALLOWED_KEYS = ["name", "description"];
+/**
+ * The only frontmatter keys a keystone skill may carry. `disable-model-invocation`
+ * marks a user-only skill (its description is not loaded into context, and the model
+ * cannot load it); it is optional and, when present, must be `true`. `argument-hint`
+ * (autocomplete text) and `allowed-tools` (per-turn pre-approval) are Claude Code
+ * skill fields the converted commands keep.
+ */
+const ALLOWED_KEYS = [
+  "name",
+  "description",
+  "disable-model-invocation",
+  "argument-hint",
+  "allowed-tools",
+];
+const REQUIRED_KEYS = ["name", "description"];
+const USER_ONLY_KEY = "disable-model-invocation";
+
+/** Codex's per-skill policy: `allow_implicit_invocation: false` under `policy:`. */
+const CODEX_NO_IMPLICIT = /^policy:[ \t]*\r?\n(?:[ \t]+.*\r?\n)*?[ \t]+allow_implicit_invocation:[ \t]*false\b/m;
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -37,6 +62,13 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DESCRIPTION_WARN_CHARS = 550;
 
 /**
+ * SKILL.md body budget (repo CLAUDE.md: "SKILL.md files stay under ~500 lines; push depth
+ * into sibling reference files"). Warn-only, like the description ratchet: the "~" is real,
+ * and the fix is a judgment call about what to move out.
+ */
+const SKILL_LINES_WARN = 500;
+
+/**
  * Backticked names that are NOT keystone skills or commands but are legitimate
  * references. Each entry states why. Adding an entry is a deliberate act recorded
  * in this file's history; it cannot be done from inside a skill.
@@ -47,22 +79,21 @@ const REFERENCE_EXEMPTIONS = [
     reason:
       "External design/UI plugin. keystone deliberately excludes the design layer " +
       "(README: 'Design is intentionally out of scope — the impeccable suite stays a " +
-      "separate plugin'), and coding-standards routes React/UI work to it by name.",
+      "separate plugin'), so a skill that routes UI work elsewhere names it.",
   },
   {
     name: "clear",
     reason:
-      "Claude Code's built-in /clear command, not a keystone command. " +
-      "commands/handoff.md documents the /handoff -> /clear -> /pickup flow, which " +
+      "Claude Code's built-in /clear command, not a keystone skill. " +
+      "skills/handoff/SKILL.md documents the /handoff -> /clear -> /pickup flow, which " +
       "only makes sense naming the built-in.",
   },
   {
-    name: "deep-research",
+    name: "security-audit",
     reason:
-      "Harness-provided research capability, referenced in commands/research-notes.md " +
-      "alongside find-docs as the thing that DOES the investigation while /research-notes " +
-      "persists the conclusions. Not shipped by keystone. Flagged for a human: unlike " +
-      "impeccable it is documented nowhere in this repo, so it is the weakest of the three.",
+      "Cloudflare's security-audit skill, an optional companion listed as a separate " +
+      "entry in keystone's marketplace.json (not part of the keystone plugin). /cso and " +
+      "the security skills hand full-audit methodology off to it by name.",
   },
 ];
 
@@ -180,25 +211,11 @@ const PLUGIN_ROOT_MISUSE = [
 ];
 
 /**
- * Files allowed to keep a rejected form, by path relative to the plugin root. Each entry
- * states why; as with REFERENCE_EXEMPTIONS, a file cannot exempt itself.
+ * Files allowed to keep a rejected form, by path relative to the plugin root, as
+ * { file, form, reason }. Each entry states why; as with REFERENCE_EXEMPTIONS, a file
+ * cannot exempt itself. Empty since 1.0 deleted the two files the 0.9.1 patch exempted.
  */
-const PLUGIN_ROOT_EXEMPTIONS = [
-  {
-    file: "skills/writing-plans/SKILL.md",
-    form: "default",
-    reason:
-      "Deleted in 1.0; the 0.9.1 security patch leaves it untouched rather than rewriting " +
-      "a file that is about to be removed.",
-  },
-  {
-    file: "skills/subagent-driven-development/SKILL.md",
-    form: "default",
-    reason:
-      "Deleted in 1.0; the 0.9.1 security patch leaves its template-path reference " +
-      "untouched rather than rewriting a file that is about to be removed.",
-  },
-];
+const PLUGIN_ROOT_EXEMPTIONS = [];
 
 /** Every rejected plugin-root reference in `text`, as { line, form }, in source order. */
 function findPluginRootMisuse(text) {
@@ -219,6 +236,68 @@ const PLUGIN_ROOT_FIX = {
   default: "${CLAUDE_PLUGIN_ROOT:-...} substitution is unverified",
 };
 
+// ---------- allowed-tools on model-invocable skills ----------
+
+/**
+ * `allowed-tools` pre-approves tools for the turn that invokes a skill. On a skill the
+ * model can invoke by itself, that grant is reachable without a human: the model (or a
+ * prompt injection steering it) invokes the skill and gets the tools unprompted. So a
+ * model-invocable skill may pre-approve only read-only tools and narrowly scoped,
+ * read-only Bash patterns. User-only skills (disable-model-invocation: true) may keep
+ * broader grants, because a human typed the command. Fails closed: any tool not on the
+ * read-only list (Write, Edit, NotebookEdit, unscoped Bash, every MCP tool, WebFetch, ...)
+ * is an error.
+ */
+const READ_ONLY_TOOLS = new Set(["Read", "Grep", "Glob"]);
+
+/**
+ * Exact Bash(...) scopes a model-invocable skill may pre-approve. Exact commands only, no
+ * wildcards: git's read commands accept write flags (`git log --output=<file>` and
+ * `git diff --output=<file>` both write a file), so `Bash(git log *)` is a prompt-free
+ * file write. `git branch` / `git remote` are excluded: their arguments delete or rewire.
+ */
+const READ_ONLY_BASH = [/^git status$/, /^git rev-parse --show-toplevel$/, /^ls$/, /^pwd$/];
+
+/** Split an allowed-tools value (YAML list folded by parseFrontmatter, a `[a, b]` flow
+ *  sequence, or a space/comma string) into tools, keeping `Bash(git log *)` together and
+ *  judging a quoted item by its unquoted name. Exported for tests. */
+function parseAllowedTools(value) {
+  const tools = [];
+  let cur = "";
+  let depth = 0;
+  let text = String(value || "").trim();
+  const flow = text.match(/^\[([\s\S]*)\]$/);
+  if (flow) text = flow[1];
+  for (const ch of text) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth = Math.max(0, depth - 1);
+    if (depth === 0 && /[\s,]/.test(ch)) {
+      if (cur) tools.push(cur);
+      cur = "";
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur) tools.push(cur);
+  return tools.filter((t) => t !== "-").map((t) => t.replace(/^(["'])(.*)\1$/s, "$2"));
+}
+
+/** Why `tool` is too broad to pre-approve on a model-invocable skill, or null. */
+function unsafeModelTool(tool) {
+  if (READ_ONLY_TOOLS.has(tool)) return null;
+  const bash = tool.match(/^Bash\((.*)\)$/s);
+  if (bash) {
+    const scope = bash[1].trim();
+    if (/[;&|`$<>\n]/.test(scope)) return "a Bash scope with shell operators";
+    if (/[*?]/.test(scope)) return "a wildcard Bash scope (read commands like git log/diff take --output=<file>)";
+    if (READ_ONLY_BASH.some((re) => re.test(scope))) return null;
+    return "a Bash scope that isn't a read-only command";
+  }
+  if (tool === "Bash") return "unscoped Bash";
+  if (/^mcp__/.test(tool)) return "an MCP tool";
+  return "a tool that isn't read-only";
+}
+
 // ---------- per-skill rules ----------
 
 /**
@@ -235,22 +314,48 @@ function lintSkill(dir, source) {
     return { dir, name: null, description: null, descriptionLength: 0, errors, warnings };
   }
 
-  const { keys, values } = parsed;
+  const { keys, values, raw } = parsed;
+  for (const e of parsed.errors) errors.push(`${dir}/SKILL.md: ${e}`);
   const extras = keys.filter((k) => !ALLOWED_KEYS.includes(k));
   if (extras.length) {
     errors.push(
       `${dir}/SKILL.md: frontmatter carries ${extras.map((k) => `"${k}"`).join(", ")} — ` +
-        "keystone skills declare name and description only",
+        "keystone skills declare only name, description, disable-model-invocation, " +
+        "argument-hint, and allowed-tools",
     );
   }
-  for (const key of ALLOWED_KEYS) {
+  for (const key of REQUIRED_KEYS) {
     if (!keys.includes(key) || !values[key]) {
       errors.push(`${dir}/SKILL.md: frontmatter is missing "${key}"`);
     }
   }
+  // The RAW token must be the bare literal `true`: a quoted "true" is a string to YAML, and
+  // `True`, `!!bool true`, or a trailing comment are forms the harness may read differently.
+  // Anything else counts as model-invocable here, so the allowed-tools rule still runs.
+  const userOnly = keys.includes(USER_ONLY_KEY);
+  const isUserOnly = userOnly && raw[USER_ONLY_KEY] === "true";
+  if (userOnly && !isUserOnly) {
+    errors.push(
+      `${dir}/SKILL.md: "${USER_ONLY_KEY}" must be the bare literal true when present ` +
+        "(unquoted, no comment; omit it for a model-invocable skill)",
+    );
+  }
 
   const name = values.name || null;
   const description = values.description || null;
+
+  if (!isUserOnly && keys.includes("allowed-tools")) {
+    for (const tool of parseAllowedTools(values["allowed-tools"])) {
+      const why = unsafeModelTool(tool);
+      if (why) {
+        errors.push(
+          `${dir}/SKILL.md: allowed-tools pre-approves "${tool}" (${why}) on a model-invocable ` +
+            "skill, so the model could grant it to itself — keep read-only tools and scoped " +
+            "read-only Bash, or make the skill user-only",
+        );
+      }
+    }
+  }
 
   if (!KEBAB.test(dir)) {
     errors.push(`${dir}/SKILL.md: directory name "${dir}" is not kebab-case`);
@@ -274,14 +379,44 @@ function lintSkill(dir, source) {
     }
   }
 
+  const lines = String(source).split("\n").length;
+  if (lines > SKILL_LINES_WARN) {
+    warnings.push(
+      `${dir}/SKILL.md: ${lines} lines (over the ~${SKILL_LINES_WARN}-line budget) — ` +
+        "push depth into sibling reference files",
+    );
+  }
+
   return {
     dir,
     name,
     description,
     descriptionLength: description ? description.length : 0,
+    userOnly: isUserOnly,
     errors,
     warnings,
   };
+}
+
+/**
+ * Both harnesses must agree on whether a skill is user-only. `yamlSource` is the
+ * skill's agents/openai.yaml text, or null when the file is absent.
+ */
+function lintHarnessParity(dir, userOnly, yamlSource) {
+  const codexUserOnly = yamlSource !== null && CODEX_NO_IMPLICIT.test(yamlSource);
+  if (userOnly && !codexUserOnly) {
+    return [
+      `${dir}/: user-only skill (disable-model-invocation: true) needs agents/openai.yaml ` +
+        "with policy.allow_implicit_invocation: false, or Codex will still auto-invoke it",
+    ];
+  }
+  if (!userOnly && codexUserOnly) {
+    return [
+      `${dir}/: agents/openai.yaml disables implicit invocation but SKILL.md lacks ` +
+        "disable-model-invocation: true, so Claude Code will still auto-invoke it",
+    ];
+  }
+  return [];
 }
 
 // ---------- catalog ----------
@@ -316,7 +451,12 @@ function listBasenames(dir) {
  * point at skills constantly) but are not held to the skill frontmatter rules —
  * they legitimately carry argument-hint and allowed-tools.
  */
-function lintCatalog({ skillsDir, commandsDir = null, agentsDir = null } = {}) {
+function lintCatalog({
+  skillsDir,
+  commandsDir = null,
+  agentsDir = null,
+  pluginRootExemptions = PLUGIN_ROOT_EXEMPTIONS,
+} = {}) {
   const errors = [];
   const warnings = [];
   const skills = [];
@@ -331,6 +471,9 @@ function lintCatalog({ skillsDir, commandsDir = null, agentsDir = null } = {}) {
     const result = lintSkill(dir, fs.readFileSync(file, "utf8"));
     skills.push(result);
     errors.push(...result.errors);
+    const yamlFile = path.join(skillsDir, dir, "agents", "openai.yaml");
+    const yamlSource = fs.existsSync(yamlFile) ? fs.readFileSync(yamlFile, "utf8") : null;
+    errors.push(...lintHarnessParity(dir, result.userOnly, yamlSource));
     warnings.push(...result.warnings);
   }
 
@@ -367,7 +510,7 @@ function lintCatalog({ skillsDir, commandsDir = null, agentsDir = null } = {}) {
     }
     const rel = path.relative(scanRoot, file).split(path.sep).join("/");
     for (const hit of findPluginRootMisuse(source)) {
-      if (PLUGIN_ROOT_EXEMPTIONS.some((e) => e.file === rel && e.form === hit.form)) continue;
+      if (pluginRootExemptions.some((e) => e.file === rel && e.form === hit.form)) continue;
       errors.push(
         `${rel}:${hit.line}: ${PLUGIN_ROOT_FIX[hit.form]} — use ` +
           'R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/<file>" ] || R="${PLUGIN_ROOT}"',
@@ -382,6 +525,7 @@ module.exports = {
   ALLOWED_KEYS,
   DESCRIPTION_WARN_CHARS,
   KEBAB,
+  SKILL_LINES_WARN,
   REFERENCE_EXEMPTIONS,
   findSkillReferences,
   PLUGIN_ROOT_EXEMPTIONS,
@@ -389,4 +533,5 @@ module.exports = {
   hasTriggerClause,
   lintCatalog,
   lintSkill,
+  parseAllowedTools,
 };

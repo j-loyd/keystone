@@ -1,0 +1,5 @@
+interface:
+  display_name: "Ship"
+  short_description: "Tests, review, version, changelog, PR draft; stops before commit"
+policy:
+  allow_implicit_invocation: false

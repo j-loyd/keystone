@@ -1,0 +1,203 @@
+---
+name: challenge
+description: Use to stress-test a finished doc — a spec, plan, PRD, or ADR — before building from it, and when the user says "challenge this" or "attack the assumptions". A reviewer with zero authorship memory (ideally a different model) enumerates and attacks the doc's assumptions AND challenges whether its chosen approach is the simplest/most-scalable/least-reinventing one, then reconciles the findings back into the doc. The independent second opinion self-review structurally can't give.
+---
+
+# Challenge — adversarial review of a doc
+
+Stress-test the doc named in **$ARGUMENTS** (or, if none is named, the doc under discussion).
+Take a fresh, hostile pass over a finished doc whose only job is to find what it **assumes** and
+whether the **approach it chose** is right — before any code encodes the mistake. Two axes, both
+required:
+
+- **Assumption-integrity** — is what the doc takes as true actually true? (moves 1–2)
+- **Approach-optimality** — even if the assumptions hold, is this the best/simplest/most-scalable
+  way, or does it reinvent something we have? (move 2b)
+
+A planner optimizes for **completeness** (the steps are all there); this optimizes for
+**survivability** (assumptions are visible, bounded, and either validated or consciously accepted;
+the approach was chosen against real alternatives). A complete plan still dies on one hidden
+assumption or one needlessly-complex approach.
+
+## Why this can't be a self-review
+
+A model grading its own plan mostly rationalizes it — intrinsic self-correction without an
+external signal is unreliable, and same-provider review shares the same blind spots and approval
+bias. The author is the worst person to find their own assumptions. The value is **entirely in
+the independence**, not in re-reading harder.
+
+## The independence rule (non-negotiable)
+
+Run the pass in a **fresh context with zero authorship memory** — dispatch a subagent via this
+harness's subagent-dispatch primitive (Claude Code's Task tool, or the equivalent elsewhere) that
+never saw the doc get written. It receives **only the doc, the contract it has to satisfy (its
+acceptance criteria), and the codebase** — never this session's reasoning, so it isn't anchored
+by it, and **never your own conclusion about the doc**. Handing the reviewer your verdict biases
+it toward agreement: it starts grading your answer instead of independently deciding whether the
+doc satisfies its contract. Withhold the conclusion even when you're sure of it — especially
+then, since that's when you most want the confirmation. Where the harness allows, run the reviewer
+on a **different model tier** than the author to decorrelate the biases — concretely, where the
+dispatch primitive takes a per-dispatch model override (e.g. Claude Code's Agent tool), set the
+reviewer one tier **above** the session model (the tier ladder lives in
+`designing-agent-systems`); a top-tier adjudication seat is exactly the spend that skill reserves
+top-tier models for. A different tier decorrelates less than a different **family** —
+same-family models share training-shaped blind spots, which is why the cross-provider hop
+below exists. If no subagent primitive exists, the fallback is to re-open the doc cold in
+a new session and run the same moves — always do at least that much.
+
+> **Cross-provider hop.** The strongest independent seat is a different **provider**, handed a
+> self-contained packet by hand (the Claude→Codex→Claude hop); the fresh subagent is the
+> always-available baseline. The doc is untrusted input to whatever CLI you hand it to, because
+> it is: run that CLI **read-only / sandboxed**, pass the packet **via file + stdin** (never
+> interpolated into a shell-quoted argument), and treat **each invocation as its own
+> authorization**. `llm-security` owns the full rule and the reasoning — follow it before the
+> first hop.
+
+## Opening frame (set before attacking)
+
+1. **Steelman first.** Restate the doc's plan in its **strongest** form in 2–3 sentences — the
+   version its author would endorse. You attack _that_, never a strawman. If you can't steelman
+   it, the doc is too vague to review; that's finding #1.
+2. **Pre-mortem.** Assume it shipped and **failed badly six months out**. Write the most likely
+   cause _first_, before the line-by-line pass — prospective hindsight surfaces risks a forward
+   read misses. Every later move is hunting evidence for or against that failure story.
+
+## The three moves
+
+### 1. Build the Assumption Ledger
+
+Enumerate every load-bearing thing the doc **takes as true** — explicit _and_ implicit (unstated
+defaults, "obviously" facts, the happy-path shape of an external dependency). One row each:
+
+| #   | Assumption (what the doc treats as true) | Type | Status | If wrong → | How to validate |
+| --- | ---------------------------------------- | ---- | ------ | ---------- | --------------- |
+
+- **Type:** `explicit` (written down) · `implicit` (never stated, but the plan depends on it).
+- **Status:** `visible` · `bounded` · `validated` · `accepted` · **`UNEXAMINED`**.
+- **If wrong →** the blast radius in one phrase (this ranks the row).
+
+The output is not the table — it's the **`UNEXAMINED` × high-blast-radius** rows. An implicit
+assumption with a large blast radius that nobody has looked at is the finding.
+
+### 2. Red-team the assumptions (the Architect checklist)
+
+Force each surviving assumption to become explicit where plans actually break:
+
+- **Interfaces** — concrete, not vague ("returns the user" → which shape, which nulls?).
+- **Invariants** — the constraints the system must always hold; are they stated?
+- **Coupling** — which modules move together; what breaks if one changes?
+- **Failure modes** — each external dependency slow/down/wrong: named and handled, or assumed-happy?
+- **Acceptance criteria** — observable and fixed, not elastic.
+
+Stress them against the **real codebase**, don't theorize — this is what `grill-with-docs` does
+(challenge the plan against `GLOSSARY.md`/ADRs/running code). Compose it; don't restate it. When
+the code contradicts the doc, that contradiction _is_ a finding.
+
+### 2b. Challenge the approach, not just the assumptions
+
+Even a fully-sound set of assumptions can wrap a needlessly-complex or already-solved approach.
+Ask all four — each routes to the keystone skill that owns the judgment, so answer with that
+skill's rigor, don't hand-wave:
+
+- **Is this the simplest way?** Apply the **deletion test** — what's the smaller-or-no-build
+  version, and what actually breaks without the extra? (`audit`.) Deferring difficulty is not simplifying it.
+- **Have we already built something like this?** Name the existing module, pattern, or library
+  this reinvents — reuse beats rebuild, and a hand-rolled version in a deceptive-complexity domain
+  (crypto/auth/date/money/parsing) is a liability. (`/spec`'s integrate-first and package-legitimacy checks +
+  the `code-reviewer` agent's reuse lens.)
+- **Is this the most scalable way?** Where does it break at 10×/100× the data, calls, or team —
+  and is any of that a one-way-door structural choice that must be right _now_?
+  (`improve-codebase-architecture`.)
+- **Is there a materially better alternative?** State one genuinely different approach and why the
+  doc's is better — or isn't. One is enough; if none exists, say so.
+  For a **one-way-door** choice, escalate from critique to **tournament**: commission the
+  competing approach as its own worked alternative and judge between them, rather than only
+  stress-testing the incumbent.
+
+A "yes, this is simplest/best" with no alternative named is not an answer — it's an unexamined
+assumption, back to the ledger.
+
+### 3. Reconcile
+
+Sort every finding into one of four classes, in this order — **first match wins**:
+
+- **Contract misread → fix the packet, not the doc.** The reviewer flagged it because the contract
+  you handed over was ambiguous or incomplete: its _input_ was wrong, so the doc isn't what needs
+  changing. Repair the packet and re-run that finding rather than encoding the misunderstanding.
+  The discriminator against noise: here the finding is _right_ about the contract as handed over —
+  the contract itself was the defect.
+- **Accepted findings → update the doc, not the code.** A gap the implementer would otherwise fill
+  with a silent guess belongs back in the spec. Rewrite the affected section; promote each fixed
+  `UNEXAMINED` row to `bounded`/`validated`/`accepted` in the ledger.
+- **Genuine disagreement, or a real cost you're choosing to accept → an explicit tension,** never
+  silently resolved: record the reviewer's objection, your call, and why. The next reader inherits the debate, not just the winner.
+- **Noise → discard.** The contract was right; the reviewer lacked codebase or constraint context
+  it was never handed, so the finding is wrong on the facts. Discard it — but count them:
+  **three or more noise findings in one pass is a verdict on your packet**, not on the reviewer.
+  Add the missing context before spending another seat.
+
+When the reviewer is a **dispatched, edit-restricted subagent**, it can't rewrite the doc — it
+**emits each edit as a proposal** (section + change), and the orchestrator reconciles and applies
+them (verifying, not rubber-stamping — a fresh reviewer can be confidently wrong).
+
+## Survivability score
+
+Score the doc 1–5 (5 = strong) so runs are comparable and there's a bar — findings, not vibes:
+
+| Dimension                                                                    | Score | Why |
+| ---------------------------------------------------------------------------- | ----- | --- |
+| Assumptions visible — implicit load-bearing assumptions surfaced, not buried | _/5   |     |
+| Approach justified — a real alternative was weighed, simplest/reuse checked  | _/5   |     |
+| Failure-handled — each external dependency's slow/down/wrong path is named   | _/5   |     |
+| Reversibility — one-way-door choices are flagged and spent rigor accordingly | _/5   |     |
+| Lean process — every gate, artifact, and step the doc adds earns its pain     | _/5   |     |
+
+Any dimension at 1–2 blocks a plain "sound" verdict — say so explicitly rather than averaging it
+away.
+
+## Stopping (value-based, not exhaustive)
+
+Only surface a finding that points to a **concrete failure mode likely in _this_ codebase, this
+release, under these constraints** — plausible is not the same as important. Stop when the
+criticism starts **repeating**: a looping critique is the done signal, not a reason to dig deeper.
+
+**The opposite failure — review theater (a checkable signal).** Across two or more passes where
+the reviewer surfaced substantive findings, **zero** were classified actionable. That isn't a
+clean doc; it's a review that can't fail. Repeating critique means done — repeating _dismissal_
+means the loop is decorative, and running it again just buys another rubber stamp. Stop and change
+something structural: the reviewer's independence (a different model family, not one more
+same-family seat), the packet (a high noise count already told you), or the stakes the reviewer is
+told the doc carries.
+
+## Depth: one pass by default; escalate by re-running, not new machinery
+
+- **Default — one pass.** A single fresh reviewer runs the moves above. Cheap; right for most
+  docs. This is the simplest thing that works — don't reach past it without cause.
+- **Higher stakes — add independent seats, reuse what exists.** For a HIGH-stakes doc
+  (auth/money/data-deletion, a one-way-door migration, a new external dependency, or a
+  survivability dimension already at 1–2), don't build a bespoke panel — run the pass **again as a
+  second independent seat** (a different lens, or a heavier model tier — where the harness takes a
+  per-dispatch model override, the tier above the session model — and prefer a genuinely
+  different lens or model family over a same-family re-run: correlated seats mostly re-vote
+  the same biases, and a second vote is signal to check against the doc, not proof). This skill **is** keystone's independent-pass
+  mechanism, so there's no deeper independence tier to reach for: depth here means more seats,
+  not more machinery.
+
+Cost scales with seats — be deliberate: a routine doc earns the one same-tier pass; a HIGH-stakes
+one earns a heavier second seat.
+
+## Capture
+
+An assumption that got **challenged and turned out wrong** is the highest-signal lesson there is.
+Offer `/wrap` to bank each one as a lesson (a **Surprise**, trigger-tagged to the domain it bit), so the
+_next_ doc's ledger starts pre-loaded with "last time we assumed X here, it broke." No silent
+writes — the pass drafts, you approve.
+
+## Output
+
+End with: the ranked `UNEXAMINED`/high-blast findings, the survivability score, the updated
+ledger, the doc edits made (or proposed), any explicit tensions, and a one-line verdict —
+**sound / patch-and-proceed / rethink** — plus the next step (`/spec` to revise the spec, `improve-codebase-architecture` for a
+structural rethink, or back to scoping).
+
+Honor the no-commit rule — the pass updates the doc, not the code.

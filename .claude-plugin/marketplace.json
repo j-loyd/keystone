@@ -4,15 +4,30 @@
     "name": "Jordan Loyd"
   },
   "metadata": {
-    "description": "A repo-agnostic Claude Code kit: harness (instincts + security hooks), process-discipline skills, a domain-language layer, and heavy explicit workflows.",
-    "version": "0.9.1"
+    "description": "A repo-agnostic Claude Code kit: harness (instincts + security hooks), discipline skills, a domain-language layer, and explicit user-only workflows — plus an optional, pinned security-audit companion.",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "keystone",
-      "description": "The keystone plugin: skills (auto-invoked discipline + domain-language) + commands (explicit workflows like /review, /qa, /ship, /office-hours) + the migrated instincts/guard/scan/notify harness hooks.",
+      "description": "The keystone plugin: skills (auto-invoked discipline and domain-language, plus user-only workflows like /spec, /implement, /qa, /ship, /cso, /guard) and the instincts/guard/scan/notify/learnings harness hooks.",
       "source": "./plugins/keystone",
       "strict": false
+    },
+    {
+      "name": "security-audit",
+      "description": "Optional companion, not part of keystone: Cloudflare's security-audit skill (MIT), pinned to a fixed commit. Adds a source-first full-audit mode with coverage ledgers and schema-validated findings; keystone's /cso can hand off to it. Install separately; never auto-enabled.",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/cloudflare/security-audit-skill.git",
+        "path": "skills/security-audit",
+        "sha": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
+      },
+      "author": {
+        "name": "Cloudflare, Inc."
+      },
+      "homepage": "https://github.com/cloudflare/security-audit-skill",
+      "license": "MIT"
     }
   ]
 }

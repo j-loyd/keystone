@@ -1,0 +1,5 @@
+interface:
+  display_name: "Handoff"
+  short_description: "Write a resume note before pausing mid-task"
+policy:
+  allow_implicit_invocation: false

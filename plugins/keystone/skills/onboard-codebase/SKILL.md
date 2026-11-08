@@ -1,6 +1,7 @@
 ---
 name: onboard-codebase
-description: Orient in a codebase on first contact and leave a durable map behind. Use when starting work in an unfamiliar repo and when the user says "what is this codebase" or "map this repo". Detects greenfield vs. brownfield and writes a committed docs/codebase/ map plus seeded domain docs — more than a one-file summary.
+description: Orient in a codebase on first contact and leave a durable map behind — detects greenfield vs. brownfield and writes a docs/codebase/ map plus seeded domain docs. Use when the user runs /onboard-codebase in an unfamiliar repo.
+disable-model-invocation: true
 ---
 
 # Onboard to a codebase
@@ -43,8 +44,8 @@ Write the seven docs defined in [`codebase-map-format.md`](./codebase-map-format
 no secrets. Choose the mode by capability:
 
 - **Parallel (Agent tool available — preferred):** dispatch one mapper subagent per doc using
-  the template in [`codebase-mapper-prompt.md`](./codebase-mapper-prompt.md), following the
-  `dispatching-parallel-agents` skill. Each runs in fresh context and writes its own doc
+  the template in [`codebase-mapper-prompt.md`](./codebase-mapper-prompt.md), issued in one batch
+  so they run concurrently. Each runs in fresh context and writes its own doc
   directly; collect only confirmations (path + line count) to keep your context clean.
 - **Sequential (no Agent tool):** make the passes yourself, inline, with file tools only —
   one doc at a time, same format contract.
@@ -63,13 +64,14 @@ the user's call.
 
 The map is _structure_; these are _language_ and _decisions_, and they build on it:
 
-- If no `CONTEXT.md` exists, create one capturing the domain terms you discovered while mapping
-  (glossary only — use the `grill-with-docs` format).
+- If no `GLOSSARY.md` exists, create one capturing the domain terms you discovered while mapping
+  (glossary only — use the `domain-modeling` skill's format). If only a legacy `CONTEXT.md`
+  exists, treat it as the glossary and offer `git mv CONTEXT.md GLOSSARY.md`.
 - If consequential decisions are baked into the code without explanation, propose ADRs for them.
 
 ### 6. Surface risks
 
-`CONCERNS.md` is your risk register. Its entries are the first candidates for `/learn` and for
+`CONCERNS.md` is your risk register. Its entries are the first candidates for `/wrap` and for
 `improve-codebase-architecture`; route serious security findings through `security-review`.
 
 **Keep `CONCERNS.md` out of a public repo — it is local-by-default.** A risk register enumerates
@@ -81,14 +83,15 @@ to commit; the risk register is not.
 
 ## Greenfield → set the floor
 
-1. Confirm the stack and target with the user — don't assume a default. Use `/office-hours` if
+1. Confirm the stack and target with the user — don't assume a default. Use `/spec` if
    the product itself is still fuzzy.
-2. Scaffold conventions: `coding-standards` baseline, `git-workflow` branch/commit rules,
-   a starter `CONTEXT.md` glossary, and `docs/adr/` for the first real decisions.
-3. Establish the test approach early (`test-driven-development`).
+2. Scaffold conventions: a short conventions section in `CLAUDE.md`/`AGENTS.md` (only what
+   the agent can't infer — branch/commit rules included), a starter `GLOSSARY.md`, and
+   `docs/adr/` for the first real decisions.
+3. Establish the test approach early: a runner, one passing test, and the command to run it.
 
 ## Hand off
 
 End with a short orientation summary: what this repo is, its shape, where to start, and the
-open questions. Point at the map (`docs/codebase/`) as the durable reference, and offer to
-capture durable findings with `/learn`.
+open questions. Point at the map (`docs/codebase/`) as the durable reference, and offer `/wrap`
+to bank durable findings.

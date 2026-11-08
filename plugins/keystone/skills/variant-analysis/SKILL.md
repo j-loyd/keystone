@@ -41,8 +41,8 @@ it resolved.
 If the pattern is recurring and grep-detectable, propose a **Semgrep rule** (or a lint
 rule / a test) so the variant can't reappear — turn the one-off hunt into a standing guard.
 The Trail of Bits **`semgrep-rule-creator`** skill (install separately — see the keystone
-README) is the tool for authoring the rule. For a security pattern, also capture it as a
-`/learn` entry for this repo.
+README) is the tool for authoring the rule. For a security pattern, also offer `/wrap` to
+bank it as a lesson for this repo.
 
 ## Pitfalls
 

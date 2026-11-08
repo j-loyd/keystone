@@ -2,6 +2,101 @@
 
 All notable changes to keystone are recorded here.
 
+## [1.0.0] — 2026-11-07
+
+keystone lean. Claude Code now ships much of what this kit used to carry: built-in `/review`,
+`/simplify`, and `/security-review`, native worktree isolation, and `/goal` and `/loop`. Every
+model-invocable skill or command also costs always-loaded context for its description, whether
+or not it ever fires. In a local 36-run A/B across three model tiers (synthetic tasks; results not shipped), the test-driven-development and systematic-debugging
+skills scored about the same as the no-skill baseline. So 1.0 keeps what is uniquely keystone,
+hands the rest to the harness, and makes the heavy workflows user-only, so they cost nothing
+until you type them.
+
+**Breaking.** Many commands and skills are gone or renamed (see the table below). There is no
+`commands/` directory any more: every workflow is a skill.
+
+| Measured on the shipped plugin | 0.9.0 | 1.0.0 |
+| --- | --- | --- |
+| Model-invocable descriptions (always loaded) | 56 (30 skills + 26 commands) | 20 skills |
+| Characters in those descriptions | 15,365 | 6,396 |
+| Lines of shipped `.md` under `plugins/keystone/` | 12,447 (100 files) | 5,660 (53 files) |
+
+### What changed
+
+| Change | 0.9 | 1.0 |
+| --- | --- | --- |
+| Moved to built-in | `/review`, `/simplify` (and the `simplifying-code` skill) | Claude Code's built-in `/review` and `/simplify`. keystone's own reviewer is the `code-reviewer` agent, which `/ship` and `/implement` dispatch. |
+| Replaced | `brainstorming`, `writing-plans`, `subagent-driven-development`, `/office-hours`, the old `/spec` command, `/to-prd`, `/to-issues`, `/pause` | One pipeline, adapted from Matt Pocock's skills: **`/spec`** (idea → spec) → **`/to-tickets`** → **`/implement`**, plus **`/setup`** once per repo |
+| Replaced | `/learn`, `/retro` | **`/wrap`** |
+| Replaced | `/freeze`, `/careful`, `/unfreeze`, `/guard` | **`/guard on\|freeze\|careful\|off\|status`** (`/unfreeze` is now `/guard off`) |
+| Removed | `test-driven-development`, `systematic-debugging` | The keystone-only rules moved into the `implementer` agent (failing test first) and **`/investigate`** (state what you expect to see before each check; question the architecture after three failed fixes) |
+| Renamed | `adversarial-review` skill + `/challenge` command | **`challenge`** (`/challenge`) |
+| Renamed | `auditing-for-overengineering` skill + `/audit` command | **`audit`** (`/audit`) |
+| Renamed | `CONTEXT.md` / `CONTEXT-MAP.md` glossary | **`GLOSSARY.md`** / **`GLOSSARY-MAP.md`** |
+| Removed | `/context-budget` | — |
+| Removed | `planner` and `qa` agents | The crew is now `implementer`, `code-reviewer`, and `security-reviewer`. |
+| Removed | `coding-standards`, `performance-optimization`, `observability`, `deprecation-and-migration`, `zoom-out`, `git-workflow`, `dispatching-parallel-agents`, `/plan-ceo-review`, `/plan-eng-review`, `/research-notes` | Generic advice current models already follow. The few keystone-specific rules moved to the `implementer` agent, `/ship`, `/debt`, and `challenge`. |
+| Moved out of the plugin | `writing-skills` | The repo's own `.claude/skills/` (it is for maintaining keystone, not for using it) |
+| Now user-only | `/ship`, `/qa`, `/cso`, `/investigate`, `/debt`, `/handoff`, `/guard`, `onboard-codebase` | Same workflows. Only you can start them, on Claude Code and Codex alike. |
+
+### Added
+
+- **`/spec`**, the one entry point for a feature: a grilling interview when the idea is fuzzy,
+  a spec with an **"Integrate and be creative where possible; build where necessary"** section
+  (per capability: the package or service to integrate, how existing pieces combine, or why it
+  has to be built), security questions, and an **over-engineering gut check** before tickets.
+- **`/to-tickets`** (tracer-bullet tickets with blocking edges, local `.scratch/<feature>/issues/`
+  files by default) and **`/implement`** (an integration branch, one implementer per unblocked
+  ticket, one final review; never pushes or merges to main unasked). **`/setup`** picks the
+  tracker (local, GitHub, GitLab, or Linear) and the domain docs.
+- **`grilling`**, **`domain-modeling`**, and **`codebase-design`**, copied from Matt Pocock's
+  skills (MIT). `grill-with-docs` and `improve-codebase-architecture` now build on them.
+- **`/wrap`**: at the end of a session it asks one question, lists candidates, and saves only
+  what you pick (repo lessons, decisions, corrections, drops, open items).
+- **Optional Cloudflare `security-audit` companion** in keystone's marketplace, pinned to a fixed
+  commit and never installed with keystone: `/plugin install security-audit@keystone`. `/cso`
+  offers to hand off to it when it is installed.
+
+### Security
+- The guard's "can this reach the state file" check also fails closed on command substitution (`` `…` ``, `$(…)`, `<(…)`, `>(…)`), any flagged `env`/`sudo` wrapper (they can change directory), `xargs -a`, and every rsync delete flag (`--del`, `--remove-sent-files`). It remains a tripwire, not a sandbox: a symlink to `~/.claude`, or `cp`/`tar`/`ln` overwriting the state file, is not caught.
+
+- **Model-invocable skills can no longer pre-approve broad tools.** The skill lint fails on
+  unscoped `Bash`, `Write`/`Edit`, MCP tools, or anything not read-only in `allowed-tools` on a
+  skill the model can start by itself. Only user-only skills carry broader grants.
+  Bash grants on those skills must be exact read-only commands with no wildcards (`git log --output=<file>` writes a file, so `Bash(git log *)` is rejected). `/pickup` pre-approves `Read`, `Glob`, `Grep`, and `Bash(git status)`.
+- **`/qa`'s MCP pre-approvals are Claude in Chrome tools only.** The `chrome-devtools` entries
+  are gone.
+- **`KEYSTONE_TASK_RISK` and `KEYSTONE_TASK_FACTS` are no longer used.** The guard ignores
+  them; that gate belonged to the removed pipeline.
+- **Tracker comments from outsiders no longer count as state.** The GitHub/GitLab tracker docs keep only repo-member comments (`authorAssociation` OWNER/MEMBER/COLLABORATOR; GitLab project members); `/implement` and `/pickup` count a ticket done only when git confirms its cited sha (`git merge-base --is-ancestor`), and `/implement`, `/pickup`, `/to-tickets`, and the implementer agent treat ticket/comment/handoff text as data, not instructions.
+- **The frontmatter lint fails closed.** Unindented YAML lists are parsed; quoted keys, `? key` / `: value`, `key : value`, flow mappings, comments, lone CR line breaks, and duplicate keys are errors; `disable-model-invocation` must be the bare literal `true` — forms js-yaml read as `allowed-tools` grants the lint never saw.
+- **`/wrap` saves lessons through `learnings.js --append [--meta]`, not `cat >>`.** The entry comes from stdin, goes only to the computed repo-lessons file or meta inbox, and must be one `## ` entry with `**Triggers:**` under 2,000 chars; heredocs use a per-session random terminator, so a saved line can't end one and run as shell. Injected lessons are capped per entry and framed as data to verify; injected instincts are capped per rule.
+- **Removing or moving a directory that holds the guard state file asks.** `rm -rf ~/.claude` under freeze used to delete the state file and silently lift the freeze. The check fails closed: an `rm`/`rmdir`/`mv`/`unlink`, `find -delete`, `rsync --delete`, or `xargs rm` asks whenever an argument names `.claude`, the home directory in any form (`~`, `~user`, `$HOME`), a brace expansion, or an unresolved `$`, or an earlier `cd`/`pushd` changed directory; careful mode now also asks on `gh pr merge` and on a checkout of main/master followed by `git merge`.
+
+### Migration
+
+1. **Update and restart.** Update from `/plugin` (or run `claude plugin update keystone@keystone`), then
+   start a fresh session. Open sessions keep pointing at the old version's directory until they
+   restart.
+2. **Codex users: re-approve the hooks.** The SessionStart hook's command text in `hooks.json`
+   changed: it no longer mentions run-state.
+3. **Renamed commands.** `/learn` and `/retro` → `/wrap`. `/freeze` → `/guard freeze`.
+   `/careful` → `/guard careful`. `/unfreeze` → `/guard off`. `/office-hours`, `/to-prd`,
+   `/to-issues` → `/spec`, then `/to-tickets`. `/pause` (a run-state checkpoint for the old
+   pipeline) → `/handoff`. `/review` and `/simplify`
+   → the Claude Code built-ins.
+4. **Glossary.** In a repo that still has `CONTEXT.md`, keystone treats it as the glossary and
+   offers the rename: `git mv CONTEXT.md GLOSSARY.md` (and `CONTEXT-MAP.md` → `GLOSSARY-MAP.md`).
+5. **Refresh the tracker doc.** A `docs/agents/issue-tracker.md` written by an earlier `/setup`
+   for GitHub or GitLab reads every comment unfiltered: re-run `/setup`, or replace its **Read an
+   issue** / **List issues** lines with the new ones (they keep only repo members' comments).
+6. **Uninstall the duplicates.** If you have `mattpocock-skills` or `superpowers` installed,
+   uninstall them, since keystone carries the parts it uses and both copies would load. Anthropic's
+   `security-guidance` plugin is not a duplicate: it adds edit-time warnings and a review when the
+   session stops, alongside keystone's on-demand security skills. Keep it if you want both.
+6. **Plans and run-state.** keystone no longer reads `docs/plans/` or run-state files. Work in
+   flight under the old pipeline is plain markdown: hand it to `/to-tickets`, or finish it by hand.
+
 ## [0.9.1] — 2026-11-07
 
 A security patch for the guard hook. Upgrade recommended; no breaking changes. `hooks.json` is

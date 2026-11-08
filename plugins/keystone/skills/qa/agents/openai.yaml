@@ -1,0 +1,5 @@
+interface:
+  display_name: "QA"
+  short_description: "Exercise a running web app in a real browser and grade it"
+policy:
+  allow_implicit_invocation: false

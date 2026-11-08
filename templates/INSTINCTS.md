@@ -46,5 +46,4 @@ change instead of editing production directly.
 Dispatch a fresh subagent with a self-contained packet and use its verified result — keep
 your own context for coordination. The trigger is read volume, not mere boundedness: anything
 you can finish in a handful of tool calls is cheaper inline than briefing someone to do it,
-and a claim one command settles is a command, not a seat. (Follow the
-`dispatching-parallel-agents` skill.)
+and a claim one command settles is a command, not a seat.

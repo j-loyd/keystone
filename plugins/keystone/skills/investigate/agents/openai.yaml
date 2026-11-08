@@ -1,0 +1,5 @@
+interface:
+  display_name: "Investigate"
+  short_description: "Root-cause a bug before fixing it, with a regression test"
+policy:
+  allow_implicit_invocation: false

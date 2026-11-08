@@ -1,0 +1,5 @@
+interface:
+  display_name: "Spec"
+  short_description: "Idea to spec to tickets, with an integrate-first gut check"
+policy:
+  allow_implicit_invocation: false

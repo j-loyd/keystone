@@ -8,7 +8,7 @@
  *     reference files). Commands and repo-root docs are out of scope.
  *   - Only markdown link syntax `](target)`. Bare paths in prose are NOT checked:
  *     skills legitimately name paths that do not exist in this repo (tasks/todo.md,
- *     docs/adr/, CONTEXT.md), because they describe what to create in the *user's*
+ *     docs/adr/, GLOSSARY.md), because they describe what to create in the *user's*
  *     repo, not what exists here.
  *   - Only targets whose path component ends in `.md`. Scripts, TypeScript
  *     examples, and images are linked too but are not this check's business.
@@ -17,7 +17,7 @@
  *   - http(s)/mailto targets and pure `#anchor` links are skipped.
  *
  * `../` forms are supported and load-bearing: improve-codebase-architecture links
- * to ../grill-with-docs/ADR-FORMAT.md.
+ * to ../domain-modeling/ADR-FORMAT.md.
  *
  * Node stdlib only.
  */
