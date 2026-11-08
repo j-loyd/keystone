@@ -90,6 +90,7 @@ record it with an identifier and date: "pushed a1b2c3, checked 2026-11-07", neve
 Show one multi-select list of the candidates, each with its destination. Save only what the
 user picks, and update an existing note rather than adding a duplicate. Never save secrets:
 write `<REDACTED>` in place of any token, key, password, or credentialed URL, in the scratch
-file too. Then delete the scratch file and say what was saved where.
+file too. Then delete the scratch file (the guard asks first, since it sits under `~/.claude`)
+and say what was saved where.
 
 If nothing qualifies, say so in one line and stop.

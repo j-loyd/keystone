@@ -296,15 +296,50 @@ for (const cmd of [
 test("state file: a relative ancestor resolved against cwd asks", () =>
   assert.equal(decide(bash(`${RM} -rf .claude`), FROZEN, HOME), "ask"));
 
+// Fail closed (follow-up review): a destructive segment asks whenever an argument names
+// .claude, the home directory in any form, a brace expansion, or an unresolved `$`, or the
+// command changed directory first — none of those can be resolved reliably from the text.
 for (const cmd of [
+  `${RM} -rf $X/.claude`,
+  `${RM} -rf \${HOME}x`,
+  `${RM} -rf $TARGET`,
+  `${RM} -rf $(echo dir)`,
+  `${RM} -rf ~someone/.config`,
+  `${RM} -rf ~/projects/old`,
+  `cd ~ && ${RM} -rf .claude`,
+  `cd /tmp; ${RM} -rf x`,
+  `pushd ~ >/dev/null && ${RM} -rf stuff`,
+  `${RM} -rf ~/.{claude,x}`,
+  `${RM} -rf /tmp/{a,b}`,
+  `rmdir ~/.claude`,
+  `unlink ~/.claude/keystone-state-copy`,
+  `find ~ -name '*.json' -delete`,
+  `find . -path '*/.claude/*' -delete`,
+  `rsync -a --delete empty/ ~/.claude/`,
+  `rsync -a --delete-after src/ $DEST`,
+  `echo ~/.claude | xargs ${RM} -rf`,
   `${RM} -rf ~/.claude-backup`,
   `${RM} ~/.claude/keystone/learnings/x.wrap-scratch.md`,
-  `${RM} -f ~/.claude/keystone/learnings/*.wrap-scratch.md`,
-  `${RM} -rf build/`,
-  `mv notes.md docs/`,
 ])
-  test(`state file: ${JSON.stringify(cmd)} (not an ancestor) is not gated`, () =>
-    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow"));
+  test(`state file (fail closed): ${JSON.stringify(cmd)} asks`, () =>
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "ask"));
+
+for (const cmd of [
+  `${RM} -rf build/`,
+  `${RM} -rf node_modules`,
+  `${RM} -f dist/app.js coverage/lcov.info`,
+  `mv notes.md docs/`,
+  `find build -name '*.o' -exec ${RM} {} +`,
+  `find build -name '*.o' -delete`,
+  `rsync -a --delete src/ out/`,
+  `npm run build && ${RM} -rf tmp`,
+  `echo $HOME`, // not destructive
+  `ls ~/.claude`, // not destructive
+])
+  test(`state file: ordinary ${JSON.stringify(cmd)} is not gated outside careful mode`, () => {
+    assert.equal(decide(bash(cmd), {}, "/tmp/safe"), "allow");
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow");
+  });
 
 test("state file: deleting home itself still hard-denies", () =>
   assert.equal(decide(bash(`${RM} -rf ~`), FROZEN), "deny"));
