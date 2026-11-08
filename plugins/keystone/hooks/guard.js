@@ -526,53 +526,80 @@ function dequoted(cmd) {
     .replace(/['"\\`]/g, "");
 }
 
-/**
- * Absolute targets of every rm/rmdir/mv in a (dequoted) command, with `~`, `$HOME`, and
- * `${HOME}` expanded and relative paths resolved against cwd. A glob is cut at its first
- * wildcard segment (`~/.cl*` → home), so it is judged by the directory it can reach.
- * keystone: word splitting only — other variables, command substitution, and interpreter
- * one-liners are not resolved; upgrade trigger: an ancestor-delete bypass seen in practice.
- */
-function removalTargets(cmd, env, cwd) {
-  const homes = [os.homedir(), env && env.HOME].filter(Boolean);
-  const base = cwd || process.cwd();
-  const targets = [];
-  for (const segment of dequoted(cmd).split(/[;&|\n()]/)) {
-    const words = segment.trim().split(/\s+/);
-    const at = words.findIndex((w) => /^(?:\S*\/)?(?:rm|rmdir|mv)$/.test(w));
-    if (at < 0) continue;
-    for (const word of words.slice(at + 1)) {
-      if (!word || word.startsWith("-")) continue;
-      for (const home of homes) {
-        let p = word.replace(/^(?:~|\$\{HOME\}|\$HOME)(?=\/|$)/, home);
-        if (/\$/.test(p)) continue; // an unresolved variable: unknowable here
-        const parts = p.split("/");
-        const glob = parts.findIndex((seg) => /[*?[]/.test(seg));
-        if (glob >= 0) p = parts.slice(0, glob).join("/") || "/";
-        targets.push(path.resolve(base, p));
-      }
+// ── Destructive commands that could reach the state file without naming it ────
+// `rm -rf ~/.claude` deletes the state file and silently lifts an active freeze. Shell
+// expansion (variables, `~user`, braces, a prior `cd`) can't be resolved reliably from the
+// command text, so this FAILS CLOSED: a destructive segment asks whenever an argument names
+// `.claude`, the home directory in any form, a brace expansion, or an unresolved `$`, or an
+// earlier segment changed directory. Resolving literal paths is only an extra on top.
+const DESTRUCTIVE_CMD = /^(?:\S*\/)?(?:rm|rmdir|mv|unlink)$/;
+const FIND_CMD = /^(?:\S*\/)?find$/;
+const RSYNC_CMD = /^(?:\S*\/)?rsync$/;
+const DIR_CHANGE = /^(?:cd|pushd)$/;
+
+function isDestructive(words) {
+  if (words.some((w) => DESTRUCTIVE_CMD.test(w))) return true;
+  if (words.some((w) => FIND_CMD.test(w)) && words.includes("-delete")) return true;
+  return (
+    words.some((w) => RSYNC_CMD.test(w)) &&
+    words.some((w) => /^--(?:delete|remove-source-files)/.test(w))
+  );
+}
+
+/** An argument whose real target can't be known from the text, or that names ~/.claude. */
+function unresolvableArg(word) {
+  return (
+    /\.claude/i.test(word) ||
+    (word.includes("{") && word !== "{}") || // brace expansion; find's bare {} placeholder is literal
+    /(?:^|[=:])~/.test(word) || // ~, ~/, ~user (also after --opt= or a : list separator)
+    word.includes("$") // $HOME, ${HOME}, $X, $(...): anything still to be expanded
+  );
+}
+
+/** Literal-path extra: does `word`, resolved against cwd, contain a state file? */
+function literalReachesState(word, candidates, cwd) {
+  if (!word || word.startsWith("-")) return false;
+  const parts = word.split("/");
+  const glob = parts.findIndex((seg) => /[*?[]/.test(seg));
+  const p = glob < 0 ? word : parts.slice(0, glob).join("/") || (word.startsWith("/") ? "/" : ".");
+  const target = path.resolve(cwd || process.cwd(), p).toLowerCase();
+  // Case-insensitive: macOS's default filesystem treats ~/.CLAUDE as ~/.claude.
+  return candidates.some((c) => isInside(target, c.toLowerCase()));
+}
+
+/** True when a destructive segment of `cmd` could remove or move the guard state file. */
+function destructiveReachesState(cmd, env, cwd) {
+  const candidates = stateFileCandidates(env);
+  const segments = dequoted(cmd)
+    .split(/[;&|\n()]/)
+    .map((seg) => seg.trim().split(/\s+/).filter(Boolean));
+  const allWords = segments.flat();
+  let changedDir = false;
+  for (const words of segments) {
+    if (isDestructive(words)) {
+      if (changedDir) return true;
+      // xargs takes its arguments from the pipe, so judge every word in the command.
+      const args = words.includes("xargs") ? allWords : words;
+      if (args.some(unresolvableArg)) return true;
+      if (words.some((w) => literalReachesState(w, candidates, cwd))) return true;
     }
+    if (words.some((w) => DIR_CHANGE.test(w))) changedDir = true;
   }
-  return targets;
+  return false;
 }
 
 /**
- * Does this Bash command reference the guard state file directly, or rm/mv a directory
- * that contains it (`rm -rf ~/.claude` deletes the file and silently lifts a freeze)?
+ * Does this Bash command reference the guard state file directly, or run a destructive
+ * command that could reach it (see destructiveReachesState)?
  */
 function bashTouchesStateFile(cmd, env, cwd) {
   const forms = [String(cmd), dequoted(cmd)];
   if (forms.some((c) => STATE_MENTION.test(c))) return true;
-  const candidates = stateFileCandidates(env);
-  const hit = candidates.some((p) => {
+  const hit = stateFileCandidates(env).some((p) => {
     if (path.basename(p).toLowerCase() === STATE_BASENAME) return false; // covered above
     return forms.some((c) => c.toLowerCase().includes(p.toLowerCase()));
   });
-  if (hit) return true;
-  // Case-insensitive: macOS's default filesystem treats ~/.CLAUDE as ~/.claude.
-  return removalTargets(cmd, env, cwd).some((t) =>
-    candidates.some((p) => isInside(t.toLowerCase(), p.toLowerCase())),
-  );
+  return hit || destructiveReachesState(cmd, env, cwd);
 }
 
 /** Is this Read/Write target the guard state file? (case-insensitive: macOS default FS) */
