@@ -327,6 +327,11 @@ for (const cmd of [
   `env -C /Users ${RM} -rf x`,
   `env --chdir=/Users ${RM} -rf x`,
   `sudo -D /Users ${RM} -rf x`,
+  `sudo -nD /Users ${RM} -rf x`,
+  `env -iC /Users ${RM} -rf x`,
+  `${RM} -rf <(echo x)`,
+  `/usr/bin/xargs ${RM} -rf < list.txt`.replace("< list.txt", "-a list.txt"),
+  `xargs --arg-file=list.txt ${RM} -rf`,
 ])
   test(`state file (fail closed): ${JSON.stringify(cmd)} asks`, () =>
     assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "ask"));
