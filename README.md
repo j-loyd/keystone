@@ -111,11 +111,10 @@ nothing into context until you type them; the model can't start them on its own.
   banner with this repo's newest lessons in full and every older one by title, with the file
   path so the agent can open any that bear on the task; entries marked `SUPERSEDED` are listed
   by title only. With none banked yet it prints a one-line nudge to `/wrap`). _Capture_ goes
-  through `/wrap`, and you pick what is saved. Stored in the repo but never committed:
-  `.keystone/lessons.md` in the main checkout, listed in the repo's private
-  `.git/info/exclude` (not its `.gitignore`, so client repos stay clean) and shared by every
-  worktree. A `.keystone/` that git tracks, or that is a symlink, is ignored, so a cloned repo
-  can't plant lessons. `KEYSTONE_LEARNINGS_DIR` keeps the old out-of-repo layout.
+  through `/wrap`, and you pick what is saved. Stored per repo but never committed:
+  `.git/keystone/lessons.md` (inside the git dir, which git never commits, so client repos
+  stay clean), shared by every worktree. A clone can't put a file there, so a cloned repo can't
+  plant lessons. `KEYSTONE_LEARNINGS_DIR` keeps the old out-of-repo layout.
 - **Durable codebase map** — `onboard-codebase` (brownfield) writes a committed
   `docs/codebase/` map (stack, architecture, structure, conventions, integrations, testing,
   concerns) via parallel mappers (optionally backed by a code-graph index), so a repo's shape
