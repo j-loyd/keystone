@@ -379,7 +379,7 @@ for (const cmd of [
   `cd ~/.claude && git ${RM} -r .`,
   `cd ~ && ${RM} -rf *`,
   `cd && ${RM} -rf *`, // bare cd goes home
-  `cd / && ${RM} -rf Users`, // an ancestor of home, named literally
+  `cd / && ${RM} -rf ${os.homedir().split("/")[1]}`, // an ancestor of home (/Users, /home), named literally
   `cd "~/x" && ${RM} -rf y`, // quoted ~ does not expand: unknown
   `cd '/tmp/x' && ${RM} -rf y`, // quoted: unknown (stay conservative)
   `cd $X && ${RM} -rf y`,
