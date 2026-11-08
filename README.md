@@ -27,7 +27,8 @@ plugins/keystone/
 │                challenge/audit + git + wrap/pickup) and 12 user-only (spec, to-tickets, implement, setup, ship,
 │                qa, cso, investigate, debt, handoff, guard, onboard-codebase — no context cost until you run them)
 ├── agents/      the crew: Mason (implementer) · Riley (reviewer) · Sage (security)
-└── hooks/       instincts.js · guard.js · scan.js · notify.js · learnings.js + hooks.json
+├── hooks/       instincts.js · guard.js (+ guard-state.js) · scan.js · notify.js · learnings.js + hooks.json
+└── templates/   handoffs/README.md (the continuity index seed)
 templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
 ```
 
@@ -77,7 +78,9 @@ nothing into context until you type them; the model can't start them on its own.
 
 ### Workflow defaults baked in
 
-- **No auto-commits** — `/ship` prepares everything and stops for an explicit go-ahead.
+- **No surprise commits** — `/ship` prepares everything and stops for an explicit go-ahead;
+  `/implement` commits only to ticket and integration branches and never pushes or merges to
+  main unasked.
 - **Cost tiers** — reviewer and challenge seats scale cheap → mid → high tiers, with the top
   tier reserved for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
   how to resolve current IDs/prices at build time live in `designing-agent-systems`.
@@ -113,7 +116,7 @@ nothing into context until you type them; the model can't start them on its own.
   concerns) via parallel mappers (optionally backed by a code-graph index), so a repo's shape
   is captured once instead of re-derived every session.
 - **Named rigor techniques** — verification has a test-quality audit + wired/stub ladder (a
-  green suite that proves nothing won't pass); `/investigate` forces a falsifiable prediction
+  green suite that proves nothing won't pass); `/investigate` states what it expects to see
   before each check and escalates to an architecture question after three failed fixes; `/spec`
   runs a package-legitimacy check and an over-engineering gut check; `challenge` applies a
   pre-mortem, an assumption ledger, and a survivability score.
@@ -136,7 +139,9 @@ keystone carries its own skills and harness hooks. After installing, to avoid du
 skills and double-firing hooks:
 
 1. **Uninstall any standalone plugin whose skills keystone now carries** — in particular
-   `mattpocock-skills` and `superpowers` — so the same skill isn't loaded twice.
+   `mattpocock-skills` and `superpowers` — so the same skill isn't loaded twice. Anthropic's
+   `security-guidance` plugin is not a duplicate: it adds edit-time warnings and a review when the
+   session stops, alongside keystone's on-demand security skills. Keep it if you want both.
 2. **Remove the hook entries from `~/.claude/settings.json`** that point at
    `~/.claude/hooks/{instincts,guard,scan,notify}.js` — keystone's `hooks.json` now
    provides them via `${CLAUDE_PLUGIN_ROOT}`. Leaving both wired makes the hooks fire twice.
@@ -200,19 +205,24 @@ off-domain (smart contracts, C/C++, firmware, crypto) — skip them.
 
 ## Updating
 
-Edit skills in place and bump `VERSION` + `CHANGELOG.md`. The skills here are
-intentionally curated — change them directly rather than re-syncing from anywhere.
+```bash
+/plugin                                   # update keystone from the plugin manager, or:
+claude plugin update keystone@keystone
+```
+
+**Then restart open sessions.** Harnesses resolve the plugin root at session start; an update
+that swaps the installed version directory leaves already-open sessions pointing at a deleted
+path. The bundled hooks degrade to a visible one-line notice (instead of failing) when that
+happens — the fix is always to start a fresh session. On harnesses with per-hook trust (e.g.
+Codex), a release that changes hook _commands_ also requires re-approving the hooks; 1.0.0 is
+one. Coming from 0.x, read the 1.0.0 migration notes in [`CHANGELOG.md`](CHANGELOG.md).
 
 **The glossary is now `GLOSSARY.md`** (formerly `CONTEXT.md`). In a repo that still has
 `CONTEXT.md`, keystone treats it as the glossary and offers the rename:
 `git mv CONTEXT.md GLOSSARY.md` (and `CONTEXT-MAP.md` → `GLOSSARY-MAP.md`).
 
-**Restart open sessions after a plugin update.** Harnesses resolve the plugin root at session
-start; an update that swaps the installed version directory leaves already-open sessions
-pointing at a deleted path. The bundled hooks degrade to a visible one-line notice (instead of
-failing) when that happens — the fix is always to start a fresh session. On harnesses with
-per-hook trust (e.g. Codex), a release that changes hook _commands_ also requires re-approving
-the hooks before they run again.
+Maintaining keystone itself: edit skills in place and bump the version as a unit (see
+`CLAUDE.md`). The skills are curated, so change them directly rather than re-syncing upstream.
 
 ## Credits
 

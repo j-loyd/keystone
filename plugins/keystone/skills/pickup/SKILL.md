@@ -1,6 +1,6 @@
 ---
 name: pickup
-description: Resume interrupted work — read the newest open /handoff note and the open tickets, reconcile them with git, and continue from where it stopped, without restarting. Use after a compaction, crash, or a deliberate /handoff. (Named pickup, not resume, to avoid colliding with the harness's built-in conversation /resume.)
+description: Resume interrupted work — pick up where you left off by reading the newest open /handoff note and the open tickets, reconciling them with git, and continuing without restarting. Use after the context is compacted, after a crash, or after a deliberate /handoff. (Named pickup, not resume, to avoid colliding with the harness's built-in conversation /resume.)
 argument-hint: "[optional: path to a handoff note or a feature's tickets; defaults to the newest open note]"
 allowed-tools:
   - Read
