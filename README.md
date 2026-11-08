@@ -27,7 +27,7 @@ plugins/keystone/
 │                challenge/audit + git + wrap/pickup) and 12 user-only (spec, to-tickets, implement, setup, ship,
 │                qa, cso, investigate, debt, handoff, guard, onboard-codebase — no context cost until you run them)
 ├── agents/      the crew: Mason (implementer) · Riley (reviewer) · Sage (security)
-├── hooks/       instincts.js · guard.js (+ guard-state.js) · scan.js · notify.js · learnings.js + hooks.json
+├── hooks/       instincts.js · guard.js (+ guard-state.js, patch-paths.js) · scan.js · notify.js · learnings.js + hooks.json
 └── templates/   handoffs/README.md (the continuity index seed)
 templates/       INSTINCTS.md · MEMORY.md · GLOSSARY.md · adr/
 ```
@@ -219,8 +219,9 @@ claude plugin update keystone@keystone
 that swaps the installed version directory leaves already-open sessions pointing at a deleted
 path. The bundled hooks degrade to a visible one-line notice (instead of failing) when that
 happens — the fix is always to start a fresh session. On harnesses with per-hook trust (e.g.
-Codex), a release that changes hook _commands_ also requires re-approving the hooks; 1.0.0 is
-one. Coming from 0.x, read the 1.0.0 migration notes in [`CHANGELOG.md`](CHANGELOG.md).
+Codex, which fingerprints the whole plugin bundle), **every** release requires re-approving the
+hooks (`/hooks`, or the startup hook review), and until then the harness silently skips them,
+the guard included. Coming from 0.x, read the 1.0.0 migration notes in [`CHANGELOG.md`](CHANGELOG.md).
 
 **The glossary is now `GLOSSARY.md`** (formerly `CONTEXT.md`). In a repo that still has
 `CONTEXT.md`, keystone treats it as the glossary and offers the rename:
