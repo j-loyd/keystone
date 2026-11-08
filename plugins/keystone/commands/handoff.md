@@ -53,7 +53,8 @@ Write only what you actually know — don't pad. If a field is empty, say so.
    offer a one-tap `/learn` for each (evidence = what happened this session), so it survives
    beyond the handoff note.
 3. **Update the continuity index** `docs/handoffs/README.md` — the file `/pickup` reads first.
-   Seed it from `${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/templates/handoffs/README.md` if it does not exist yet, then
+   If it does not exist yet, seed it from the plugin template:
+   `R="${CLAUDE_PLUGIN_ROOT}"; [ -f "$R/templates/handoffs/README.md" ] || R="${PLUGIN_ROOT}"; mkdir -p docs/handoffs && cp "$R/templates/handoffs/README.md" docs/handoffs/README.md`. Then
    append (or update) this note's row in the **Handoff notes** table, newest first:
 
    `| <YYYY-MM-DD> | docs/handoffs/<YYYY-MM-DD>.md | open | <one-line Next action> |`

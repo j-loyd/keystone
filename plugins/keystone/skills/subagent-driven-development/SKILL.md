@@ -115,7 +115,7 @@ never have to go hunting (this is the single biggest quality lever): **acceptanc
 **files to touch**, **dev notes** (patterns/utilities to reuse), the **verified-behavior** of
 load-bearing touchpoints (with `[Source: file:line]` citations from the plan), the **testing
 standard**, **references**, and the **matching repo lessons**. For that last slot: at run
-start, read this repo's banked lessons once (`node "$CLAUDE_PLUGIN_ROOT/hooks/learnings.js"
+start, read this repo's banked lessons once (`node "${CLAUDE_PLUGIN_ROOT}/hooks/learnings.js"
 --path` prints the file; harness-neutral fallback: `~/.claude/keystone/learnings/<repo-slug>.md`)
 and give each packet only the few entries whose subject or `**Triggers:**` line matches that
 task's files/domain. This is how banked lessons actually reach the crew — session-start

@@ -97,4 +97,6 @@ test("validate-skills.js prints every exemption with its reason", () => {
   const { stdout } = run("validate-skills.js", ["--verbose"]);
   assert.match(stdout, /impeccable/);
   assert.match(stdout, /deep-research/);
+  assert.match(stdout, /Plugin-root exemptions/);
+  assert.match(stdout, /writing-plans\/SKILL\.md \(default form\) — Deleted in 1\.0/);
 });

