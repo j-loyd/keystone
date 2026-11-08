@@ -58,6 +58,7 @@ until you type them.
   offers to hand off to it when it is installed.
 
 ### Security
+- The guard's "can this reach the state file" check also fails closed on command substitution (`` `…` ``/`$(…)`), `env -C`/`sudo -D` directory changes, and every rsync delete flag (`--del`, `--remove-sent-files`). It remains a tripwire, not a sandbox: a symlink to `~/.claude`, or `cp`/`tar`/`ln` overwriting the state file, is not caught.
 
 - **Model-invocable skills can no longer pre-approve broad tools.** The skill lint fails on
   unscoped `Bash`, `Write`/`Edit`, MCP tools, or anything not read-only in `allowed-tools` on a

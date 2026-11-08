@@ -532,17 +532,30 @@ function dequoted(cmd) {
 // command text, so this FAILS CLOSED: a destructive segment asks whenever an argument names
 // `.claude`, the home directory in any form, a brace expansion, or an unresolved `$`, or an
 // earlier segment changed directory. Resolving literal paths is only an extra on top.
+// keystone: string matching, not a sandbox — a symlink pointing at ~/.claude, or cp/tar/ln
+// overwriting the state file, is not caught; upgrade trigger: a real realpath-based resolver
+// or an OS-level sandbox if the freeze ever needs to hold against a hostile model.
 const DESTRUCTIVE_CMD = /^(?:\S*\/)?(?:rm|rmdir|mv|unlink)$/;
 const FIND_CMD = /^(?:\S*\/)?find$/;
 const RSYNC_CMD = /^(?:\S*\/)?rsync$/;
 const DIR_CHANGE = /^(?:cd|pushd)$/;
+// `env -C dir` / `env --chdir=dir` / `sudo -D dir` change directory inside the same segment.
+const CHDIR_WRAPPER = /^(?:\S*\/)?(?:env|sudo)$/;
+const CHDIR_FLAG = /^(?:-C|-D|--chdir)(?:=.*)?$/;
+
+function changesDir(words) {
+  return (
+    words.some((w) => DIR_CHANGE.test(w)) ||
+    (words.some((w) => CHDIR_WRAPPER.test(w)) && words.some((w) => CHDIR_FLAG.test(w)))
+  );
+}
 
 function isDestructive(words) {
   if (words.some((w) => DESTRUCTIVE_CMD.test(w))) return true;
   if (words.some((w) => FIND_CMD.test(w)) && words.includes("-delete")) return true;
   return (
     words.some((w) => RSYNC_CMD.test(w)) &&
-    words.some((w) => /^--(?:delete|remove-source-files)/.test(w))
+    words.some((w) => /^--(?:del$|delete|remove-(?:source|sent)-files)/.test(w))
   );
 }
 
@@ -574,16 +587,19 @@ function destructiveReachesState(cmd, env, cwd) {
     .split(/[;&|\n()]/)
     .map((seg) => seg.trim().split(/\s+/).filter(Boolean));
   const allWords = segments.flat();
+  // dequoted() strips backticks, so check the raw text: a command substitution anywhere
+  // means a destructive segment's real arguments can't be known from the text.
+  const hasSubstitution = /`|\$\(/.test(String(cmd));
   let changedDir = false;
   for (const words of segments) {
     if (isDestructive(words)) {
-      if (changedDir) return true;
+      if (changedDir || changesDir(words) || hasSubstitution) return true;
       // xargs takes its arguments from the pipe, so judge every word in the command.
       const args = words.includes("xargs") ? allWords : words;
       if (args.some(unresolvableArg)) return true;
       if (words.some((w) => literalReachesState(w, candidates, cwd))) return true;
     }
-    if (words.some((w) => DIR_CHANGE.test(w))) changedDir = true;
+    if (changesDir(words)) changedDir = true;
   }
   return false;
 }

@@ -320,6 +320,13 @@ for (const cmd of [
   `echo ~/.claude | xargs ${RM} -rf`,
   `${RM} -rf ~/.claude-backup`,
   `${RM} ~/.claude/keystone/learnings/x.wrap-scratch.md`,
+  `rsync -a --del empty/ out/`.replace("out/", "~/.claude/"),
+  `rsync -a --remove-sent-files ~/.claude/ host:dst/`,
+  `${RM} -rf \`echo dir\``,
+  `echo x | ${RM} -rf \`cat list\``,
+  `env -C /Users ${RM} -rf x`,
+  `env --chdir=/Users ${RM} -rf x`,
+  `sudo -D /Users ${RM} -rf x`,
 ])
   test(`state file (fail closed): ${JSON.stringify(cmd)} asks`, () =>
     assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "ask"));
