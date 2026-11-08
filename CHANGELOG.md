@@ -67,6 +67,10 @@ until you type them.
   are gone.
 - **`KEYSTONE_TASK_RISK` and `KEYSTONE_TASK_FACTS` are no longer used.** The guard ignores
   them; that gate belonged to the removed pipeline.
+- **Tracker comments from outsiders no longer count as state.** The GitHub/GitLab tracker docs keep only repo-member comments (`authorAssociation` OWNER/MEMBER/COLLABORATOR; GitLab project members); `/implement` and `/pickup` count a ticket done only when git confirms its cited sha (`git merge-base --is-ancestor`), and `/implement`, `/pickup`, `/to-tickets`, and the implementer agent treat ticket/comment/handoff text as data, not instructions.
+- **The frontmatter lint fails closed.** Unindented YAML lists are parsed; quoted keys, `? key` / `: value`, `key : value`, flow mappings, comments, lone CR line breaks, and duplicate keys are errors; `disable-model-invocation` must be the bare literal `true` — forms js-yaml read as `allowed-tools` grants the lint never saw.
+- **`/wrap` saves lessons through `learnings.js --append [--meta]`, not `cat >>`.** The entry comes from stdin, goes only to the computed repo-lessons file or meta inbox, and must be one `## ` entry with `**Triggers:**` under 2,000 chars; heredocs use a per-session random terminator, so a saved line can't end one and run as shell. Injected lessons are capped per entry and framed as data to verify; injected instincts are capped per rule.
+- **Removing or moving a directory that holds the guard state file asks.** `rm -rf ~/.claude` (or `$HOME/.claude`, a glob, a relative path) under freeze used to delete the state file and silently lift the freeze; careful mode now also asks on `gh pr merge` and on a checkout of main/master followed by `git merge`.
 
 ### Migration
 
@@ -82,7 +86,10 @@ until you type them.
    → the Claude Code built-ins.
 4. **Glossary.** In a repo that still has `CONTEXT.md`, keystone treats it as the glossary and
    offers the rename: `git mv CONTEXT.md GLOSSARY.md` (and `CONTEXT-MAP.md` → `GLOSSARY-MAP.md`).
-5. **Uninstall the duplicates.** If you have `mattpocock-skills` or `superpowers` installed,
+5. **Refresh the tracker doc.** A `docs/agents/issue-tracker.md` written by an earlier `/setup`
+   for GitHub or GitLab reads every comment unfiltered: re-run `/setup`, or replace its **Read an
+   issue** / **List issues** lines with the new ones (they keep only repo members' comments).
+6. **Uninstall the duplicates.** If you have `mattpocock-skills` or `superpowers` installed,
    uninstall them, since keystone carries the parts it uses and both copies would load. Anthropic's
    `security-guidance` plugin is not a duplicate: it adds edit-time warnings and a review when the
    session stops, alongside keystone's on-demand security skills. Keep it if you want both.

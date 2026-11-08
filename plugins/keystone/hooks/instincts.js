@@ -94,9 +94,19 @@ function select(instincts) {
     .slice(0, MAX_RULES);
 }
 
+// Per-rule ceiling on injected text. Instincts are user-confirmed preferences, so they keep
+// their imperative framing, but a runaway or tampered block shouldn't flood the context.
+const RULE_MAX_CHARS = 600;
+
+function capRule(text) {
+  return text.length <= RULE_MAX_CHARS
+    ? text
+    : `${text.slice(0, RULE_MAX_CHARS)} … [truncated: rule over ${RULE_MAX_CHARS} chars]`;
+}
+
 function buildContext(ranked) {
   const bullets = ranked
-    .map((i) => `- [${i.confidence}%] ${i.trigger} → ${i.action}`)
+    .map((i) => capRule(`- [${i.confidence}%] ${i.trigger} → ${i.action}`))
     .join("\n");
   return (
     `⚡ Active rules this session (from INSTINCTS.md — confirmed preferences; apply each ` +
@@ -128,5 +138,5 @@ function main() {
 if (require.main === module) {
   main();
 } else {
-  module.exports = { parse, select, buildContext };
+  module.exports = { RULE_MAX_CHARS, parse, select, buildContext };
 }

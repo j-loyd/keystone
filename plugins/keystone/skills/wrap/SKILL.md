@@ -22,19 +22,24 @@ LF="$(node "$R/hooks/learnings.js" --path)"   # this repo's lessons file; empty 
 S="${LF%.md}.wrap-scratch.md"; [ -n "$LF" ] || S="${TMPDIR:-/tmp}/keystone-wrap-scratch.md"
 META="${KEYSTONE_LEARNINGS_DIR:-$HOME/.claude/keystone/learnings}/_keystone-meta.md"
 mkdir -p "$(dirname "$S")" "$(dirname "$META")"
-echo "LF=$LF"; echo "S=$S"; echo "META=$META"
+EOT="KS_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"   # heredoc terminator no saved text can contain
+echo "R=$R"; echo "LF=$LF"; echo "S=$S"; echo "META=$META"; echo "EOT=$EOT"
 ```
 
-Use the printed paths from here on; shell variables don't carry over to the next command.
-These files live outside the repo, so an active `/guard` freeze denies Edit/Write to them.
-Write them with a shell append instead (freeze fences Edit/Write, not Bash), using a quoted
-heredoc so nothing in the text expands:
+Use the printed values from here on; shell variables don't carry over to the next command.
+These files live outside the repo, so an active `/guard` freeze denies Edit/Write to them;
+write through Bash instead (freeze fences Edit/Write, not Bash). Every heredoc uses the printed
+`EOT` as its quoted terminator, so no line of saved text can end it and run as shell. Scratch
+notes: `cat >> "<S>" <<'<EOT>'`. Save a picked entry only with `--append`, one entry per call
+(`--meta` for the `META` inbox). It reads stdin, writes only to the computed `LF` or `META`
+file, and refuses anything that isn't one entry in the shape below (heading first, a
+`**Triggers:**` line, at most 2,000 chars):
 
 ```bash
-cat >> "<path printed above>" <<'ENTRY'
-
-<the text to save>
-ENTRY
+node "<R>/hooks/learnings.js" --append <<'<EOT>'
+## <YYYY-MM-DD> — [<type>] <short title>
+...
+<EOT>
 ```
 
 Rewriting an existing entry under a freeze needs the freeze lifted (`/guard off`); say so
@@ -56,9 +61,9 @@ instead of working around it.
   **Triggers:** <1–3 of: auth · migrations · money · llm-prompt · api · db · caching · testing · build-deploy · config · security · perf · ui · deps · process, plus optional path globs>
   ```
 
-  Facts that apply across projects go to memory instead. Facts about **keystone itself** go to the `META` file: a skill that
-  should have fired, guidance that was wrong, a gate that was just noise. Write those
-  generalized, with no client, repo, or project names, because that inbox feeds a public repo.
+  Facts that apply across projects go to memory instead. Facts about **keystone itself** go to the `META` file, in the same entry shape
+  (`--append --meta`): a skill that should have fired, guidance that was wrong, a gate that was
+  just noise. Write those generalized, with no client, repo, or project names, because that inbox feeds a public repo.
 - **Corrections** to a stale note: quote the old text, give the new text, and say what proved
   it (a command or file, with the date). Mark it `unchecked` if nothing in this session backs
   it.

@@ -474,6 +474,92 @@ test("a user-only skill may keep broad allowed-tools grants", () => {
   assert.deepStrictEqual(result.errors, []);
 });
 
+// ---------- frontmatter forms a real YAML parser reads as grants (1.0.0 review) ----------
+// Each of these is read by js-yaml as allowed-tools: [Bash, Write] (or as a model-invocable
+// skill with a quoted "true"). The lint must either PARSE the grant so the allowed-tools
+// rule sees it, or reject the form outright. Built with raw strings, not the frontmatter()
+// helper, because the helper always emits well-formed `key: value` lines.
+
+const HEAD = "name: zoom-out\ndescription: Step back. Use when the user says are we off track.\n";
+const rawSkill = (fm) => `---\n${HEAD}${fm}---\n\n# Body\n`;
+
+test("an unindented YAML list is parsed as the key's list, so Bash and Write are caught", () => {
+  const errors = lintSkill("zoom-out", rawSkill("allowed-tools:\n- Bash\n- Write\n")).errors.join("\n");
+  assert.match(errors, /pre-approves "Bash"/);
+  assert.match(errors, /pre-approves "Write"/);
+});
+
+test("an unindented list of read-only tools still passes", () => {
+  assert.deepStrictEqual(lintSkill("zoom-out", rawSkill("allowed-tools:\n- Read\n- Glob\n")).errors, []);
+});
+
+test("a list item that blank lines separate from the rest of the list is still parsed", () => {
+  const errors = lintSkill("zoom-out", rawSkill("allowed-tools:\n  - Read\n\n  - Bash\n  - Write\n")).errors;
+  assert.match(errors.join("\n"), /pre-approves "Bash"/);
+});
+
+for (const [label, fm] of [
+  ["double-quoted key", '"allowed-tools": [Bash, Write]\n'],
+  ["single-quoted key", "'allowed-tools': [Bash, Write]\n"],
+  ["explicit ? key", "? allowed-tools\n: [Bash, Write]\n"],
+  ["space before the colon", "allowed-tools : [Bash, Write]\n"],
+  ["a flow mapping line", "{allowed-tools: [Bash, Write]}\n"],
+  ["a column-0 list item after a scalar key", "argument-hint: x\n- Bash\n"],
+  ["a top-level comment line", "# allowed-tools: [Bash]\n"],
+  ["a key with no space after the colon", "allowed-tools:Bash\n"],
+])
+  test(`frontmatter with ${label} is an error, not silently skipped`, () => {
+    const errors = lintSkill("zoom-out", rawSkill(fm)).errors;
+    assert.ok(errors.length > 0, `expected an error for ${label}`);
+    assert.match(errors.join("\n"), /frontmatter line \d+/);
+  });
+
+test("an indented first line (YAML would read an indented mapping) is an error", () => {
+  const errors = lintSkill("zoom-out", "---\n  allowed-tools: Bash\n  name: zoom-out\n---\n").errors;
+  assert.match(errors.join("\n"), /frontmatter line 2\b/);
+});
+
+test("a duplicate frontmatter key is an error, whichever value comes last", () => {
+  for (const fm of ["allowed-tools: Bash, Write\nallowed-tools: Read\n", "name: other\n"]) {
+    assert.match(lintSkill("zoom-out", rawSkill(fm)).errors.join("\n"), /duplicate frontmatter key/);
+  }
+});
+
+test("a lone carriage return (a YAML line break) in frontmatter is an error", () => {
+  const source = `---\n${HEAD.replace(/\n$/, "")}\rallowed-tools: Bash, Write\n---\n\n# Body\n`;
+  assert.match(lintSkill("zoom-out", source).errors.join("\n"), /carriage return/);
+});
+
+test("CRLF frontmatter still parses cleanly", () => {
+  const source = `---\r\n${HEAD.replace(/\n/g, "\r\n")}---\r\n\r\n# Body\r\n`;
+  assert.deepStrictEqual(lintSkill("zoom-out", source).errors, []);
+});
+
+for (const value of ['"true"', "'true'", "True", "yes", "true # user-only", "!!bool true"])
+  test(`disable-model-invocation: ${value} is an error (only the bare literal true counts)`, () => {
+    const result = lintSkill("zoom-out", rawSkill(`disable-model-invocation: ${value}\nallowed-tools: Bash, Write\n`));
+    const errors = result.errors.join("\n");
+    assert.match(errors, /disable-model-invocation/);
+    assert.match(errors, /pre-approves "Bash"/, "the allowed-tools rule must still run");
+    assert.strictEqual(result.userOnly, false);
+  });
+
+test("a flow-sequence allowed-tools value is split into its tools", () => {
+  assert.deepStrictEqual(parseAllowedTools("[Read, Glob]"), ["Read", "Glob"]);
+  assert.deepStrictEqual(lintSkill("zoom-out", rawSkill("allowed-tools: [Read, Glob]\n")).errors, []);
+  assert.match(lintSkill("zoom-out", rawSkill("allowed-tools: [Read, Bash]\n")).errors.join("\n"), /"Bash"/);
+});
+
+test("a quoted tool name is judged by its unquoted name", () => {
+  assert.deepStrictEqual(parseAllowedTools('- "Read" - \'Glob\''), ["Read", "Glob"]);
+});
+
+test("a block-scalar description with a blank line inside still passes", () => {
+  const source =
+    "---\nname: zoom-out\ndescription: |\n  Step back.\n\n  Use when the user says are we off track.\n---\n\n# Body\n";
+  assert.deepStrictEqual(lintSkill("zoom-out", source).errors, []);
+});
+
 test("parseAllowedTools keeps scoped Bash patterns with spaces as one tool", () => {
   assert.deepStrictEqual(parseAllowedTools("- Read - Bash(git log *) - Glob"), [
     "Read",

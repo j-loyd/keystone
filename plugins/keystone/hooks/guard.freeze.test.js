@@ -272,3 +272,62 @@ test("corrupt state: the ask reason says how to repair", () =>
     guard.evaluate("Write", { file_path: "/tmp/a" }, {}, "", CORRUPT).why,
     /\/guard (?:freeze|on|off|status)/,
   ));
+
+// ── Ancestor directories of the state file (1.0.0 review) ──────────────────────
+// Removing or moving a directory that CONTAINS the state file deletes it too, which
+// silently lifts an active freeze. Always on (the bug case is freeze with careful off).
+const RM = "r" + "m"; // keep the live guard from matching this test file's own command lines
+const HOME = os.homedir();
+for (const cmd of [
+  `${RM} -rf ~/.claude`,
+  `${RM} -rf ~/.claude/`,
+  `${RM} -r $HOME/.claude`,
+  `${RM} -rf "\${HOME}/.claude"`,
+  `${RM} -rf '${path.join(HOME, ".claude")}'`,
+  `${RM} -rf ~/.CLAUDE`,
+  `${RM} -rf ~/.cl*`,
+  `mv ~/.claude /tmp/old-claude`,
+  `cd /tmp && mv -f ~/.claude ~/.claude.bak`,
+  `sudo ${RM} -rf ~/.claude`,
+])
+  test(`state file: ${JSON.stringify(cmd)} (an ancestor dir) asks under freeze`, () =>
+    assert.equal(decide(bash(cmd), FROZEN), "ask"));
+
+test("state file: a relative ancestor resolved against cwd asks", () =>
+  assert.equal(decide(bash(`${RM} -rf .claude`), FROZEN, HOME), "ask"));
+
+for (const cmd of [
+  `${RM} -rf ~/.claude-backup`,
+  `${RM} ~/.claude/keystone/learnings/x.wrap-scratch.md`,
+  `${RM} -f ~/.claude/keystone/learnings/*.wrap-scratch.md`,
+  `${RM} -rf build/`,
+  `mv notes.md docs/`,
+])
+  test(`state file: ${JSON.stringify(cmd)} (not an ancestor) is not gated`, () =>
+    assert.equal(decide(bash(cmd), FROZEN, "/tmp/safe"), "allow"));
+
+test("state file: deleting home itself still hard-denies", () =>
+  assert.equal(decide(bash(`${RM} -rf ~`), FROZEN), "deny"));
+
+// ── Careful mode: merges into main (1.0.0 review) ──────────────────────────────
+for (const cmd of [
+  "gh pr merge 12 --squash",
+  "gh -R owner/repo pr merge --auto",
+  "git checkout main && git merge feature/x",
+  "git switch master; git merge --no-ff topic",
+  "git checkout -q main && git pull && git merge feat",
+  "git push origin HEAD:main", // already covered by careful git-push; documented here
+])
+  test(`careful: ${JSON.stringify(cmd)} asks`, () =>
+    assert.equal(decide(bash(cmd), CAREFUL_ON), "ask"));
+
+for (const cmd of [
+  "git checkout feature/x && git merge main", // merging main INTO a feature branch
+  "git merge-base --is-ancestor abc123 main",
+  "gh pr view 12",
+])
+  test(`careful: ${JSON.stringify(cmd)} is not gated`, () =>
+    assert.equal(decide(bash(cmd), CAREFUL_ON), "allow"));
+
+test("careful OFF: gh pr merge is not gated", () =>
+  assert.equal(decide(bash("gh pr merge 12 --squash"), {}), "allow"));
