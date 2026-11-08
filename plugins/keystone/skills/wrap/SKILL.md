@@ -1,6 +1,6 @@
 ---
 name: wrap
-description: End a work session by saving what would otherwise be lost — one question, a candidate list, and the user picks what to keep (repo lessons, decisions, corrections, drops, open questions). Use when a work session is wrapping up, at a natural stopping point after a fix or feature lands, or when the user runs /wrap.
+description: End a work session by saving what would otherwise be lost — one question, a candidate list, and the user picks what to keep (repo lessons, decisions, corrections, drops, open items). Use when the user is calling it a day, at a natural stopping point after a fix or feature lands, or to note what is worth remembering.
 argument-hint: "[optional: a specific lesson or focus]"
 ---
 

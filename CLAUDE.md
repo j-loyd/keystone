@@ -19,7 +19,7 @@ concrete file list for this repo.
 
 ## Conventions
 
-- **No auto-commits** — stage freely; commit/push only when explicitly asked.
+- Commits on feature branches are fine; never push or merge to main without an explicit ask.
 - **Releases ship via squashed PRs** to `main` (the `gh pr create … && gh pr merge --squash`
   flow), not direct pushes.
 - **Attribution** — upstream provenance for copied/adapted work is recorded in `ATTRIBUTION.md`
