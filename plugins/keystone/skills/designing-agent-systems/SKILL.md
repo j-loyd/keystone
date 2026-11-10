@@ -64,7 +64,8 @@ Default to **one**. The multi-agent question resolved into an asymmetry, not a w
   single agent beats a committee on coupled work, and parallel writers need provable isolation
   (worktree/sandbox each) or they serialize.
 - **Every seat must earn its coordination cost.** Multi-agent runs multiply spend
-  (each agent re-pays system prompt + tools per turn — ~4x for even a two-way split); a seat
+  (each agent re-pays system prompt + tools per turn; one published multi-agent research
+  system ran ~15x the tokens of a chat, against ~4x for a single agent); a seat
   that doesn't demonstrably add breadth, isolation, or independent judgment is over-engineering.
 - **A seat to confirm a fact is not a seat.** The verify-seat pattern is a fresh reader
   exercising _judgment_ on an artifact — including one you wrote (`challenge` is that
@@ -105,8 +106,10 @@ Each layer below is either a **guarantee** (belongs in code, enforced) or an inp
 decide each one. For each layer, decide something or consciously default it:
 
 1. **Tool surface** — few, purposeful, well-described tools beat API mirrors; specialized
-   beats generic; typed inputs; a terminal signal so loops can end. Past ~10 tools, prefer
-   deferred loading/tool search over stuffing every schema into context.
+   beats generic; typed inputs; a terminal signal so loops can end. Overlap hurts routing
+   more than count does: merge or sharpen tools the model confuses, and when there are many,
+   prefer deferred loading/tool search over stuffing every schema into context. Tool results
+   are context too — paginate or truncate large outputs, and make errors say what to do next.
 2. **Context & memory** — curate the smallest high-signal set. Quality decays with raw length
    (context rot) even before the window fills; fresh-context workers and periodic resets are
    structural fixes, not just cost tricks. Durable state lives in files the agent reads at
@@ -161,7 +164,10 @@ Escalate **one rung at a time, on a signal**: schema or structural validation fa
 (one failure is usually a prompt problem, not a capability ceiling), genuinely conflicting
 signals rather than pattern-matching, or output expensive enough to be wrong. Don't escalate
 work a cheap tier already clears against spot-checked ground truth — that buys back a percent
-or two at full price.
+or two at full price. **Switch rungs at a boundary**, between iterations or by handing the hard
+step to a separate seat, not mid-conversation: changing the model (and on some models the
+effort setting) invalidates the cached prefix, so a mid-loop switch re-pays full input price
+for the whole history.
 
 **A rung is a model _and_ an effort setting.** Effort trades intelligence for cost inside one
 model, it's the finer-grained dial, and its impact grows with each generation — a frontier model
@@ -218,9 +224,10 @@ ones.
   task: two domain experts would independently reach the same pass/fail verdict.
 - **End-state evaluation** for multi-step agents (did the goal land), not step-by-step
   trajectory grading — intermediate steps vary too much to assert on.
-- Model-graded evals need care: single judge calls are unreliable on close calls; use strict
-  binary rubrics, decompose judgments into narrow checks, and validate the judge against
-  human-labeled samples before trusting it. Diverse judges beat N copies of one.
+- Model-graded evals need care: validate the judge against human-labeled samples before
+  trusting it, use strict binary rubrics, and give it an explicit "unknown" so it isn't forced
+  to guess on close calls. A single well-specified judge prompt can grade more consistently
+  than a stack of narrow checks — test that on your own labels instead of assuming either.
 - Trace production runs from day one; evals without transcript-reading is score theater.
 - **Judging a change** (a prompt edit, a model swap, an effort change): run baseline and
   candidate on the same tasks, repeated, and compare them task by task. Declare the pass

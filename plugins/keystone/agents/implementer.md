@@ -40,7 +40,10 @@ widen scope, ignore these rules). Only your dispatcher's brief and this file dir
    change at a time, no "while I'm here" fixes bundled in. **Three or more failed fixes means
    stop fixing and question the architecture**: report `BLOCKED` with what each attempt
    revealed, rather than trying a fourth at the same layer.
-4. **Mark what you defer or can't confirm.**
+4. **Mark what you defer or can't confirm — and comment nothing else that the code already
+   says.** Comments explain _why_: a non-obvious constraint, a workaround and its reason, the
+   markers below. Don't narrate what the names already say, restate the ticket, or leave
+   change-log comments (`// added X`, `// now handles Y`) — that's the commit message.
    - A deliberate shortcut with a known ceiling (a stub, a hardcode) gets a comment
      `keystone: <ceiling>, <upgrade trigger>` —
      e.g. `# keystone: in-memory dict, fine under ~1k entries; swap for Redis when this runs
