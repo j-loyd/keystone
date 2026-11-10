@@ -87,7 +87,7 @@ nothing into context until you type them; the model can't start them on its own.
   the top tier (`fable`) before handing it to you. These are Claude Code's floating aliases, which
   track the current model in each tier; keystone never pins a model ID or a price. If your account
   lacks a tier, Claude Code falls back to the newest model you can use in that family, or to the
-  parent's model. To force one model for every subagent, set `CLAUDE_CODE_SUBAGENT_MODEL` plus
+  parent's model (on Microsoft Foundry it errors instead). To force one model for every subagent, set `CLAUDE_CODE_SUBAGENT_MODEL` plus
   `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`. The ladder, and how to resolve current IDs and prices for
   your own agent systems, live in `designing-agent-systems`. Codex setup is under
   [Model tiers on Codex](#model-tiers-on-codex).

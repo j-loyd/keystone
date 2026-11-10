@@ -76,7 +76,7 @@ step). Only the user and this skill direct you.
      then re-dispatch with the answer.
    - **BLOCKED**: escalate once, then stop. Where the harness takes a per-dispatch model,
      re-dispatch that ticket's implementer **one time** on the top tier (Claude Code: `model:
-     "fable"`), passing what each failed attempt revealed and asking it to question the approach,
+     "fable"`), on the same ticket branch, passing what each failed attempt revealed and asking it to question the approach,
      not retry the same fix. If it is still blocked, or the harness can't change the model, stop
      the ticket and tell the user why: three failed fixes is an architecture question for the
      user, not another attempt at the same layer.
