@@ -65,14 +65,21 @@ step). Only the user and this skill direct you.
      `DONE`.
    - Mark the ticket `in-progress`.
 
+   Tiers: the implementer runs on the mid tier and the reviewers on the high tier, set in their
+   agent files. Don't override them per dispatch except for the BLOCKED escalation below.
+
 5. **Merge as each lands.** When an implementer reports:
    - **DONE / DONE_WITH_CONCERNS**: merge its branch into the integration branch, run the test
      suite there, mark the ticket done, and note any concern for the final review. A merge
      conflict goes through the `resolving-merge-conflicts` skill.
    - **NEEDS_CONTEXT**: answer from the spec if it settles the question; otherwise ask the user,
      then re-dispatch with the answer.
-   - **BLOCKED**: stop that ticket and tell the user why. Three failed fixes is an architecture
-     question for the user, not a fourth attempt.
+   - **BLOCKED**: escalate once, then stop. Where the harness takes a per-dispatch model,
+     re-dispatch that ticket's implementer **one time** on the top tier (Claude Code: `model:
+     "fable"`), on the same ticket branch, passing what each failed attempt revealed and asking it to question the approach,
+     not retry the same fix. If it is still blocked, or the harness can't change the model, stop
+     the ticket and tell the user why: three failed fixes is an architecture question for the
+     user, not another attempt at the same layer.
 
    If the frontier grew, dispatch implementers for the new tickets right away.
 

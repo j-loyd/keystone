@@ -23,9 +23,9 @@ Design is intentionally **out of scope** — the `impeccable` suite stays a sepa
 
 ```
 plugins/keystone/
-├── skills/      32 skills: 20 model-invocable (verification + agent/loop design + domain language + security +
-│                challenge/audit + git + wrap/pickup) and 12 user-only (spec, to-tickets, implement, setup, ship,
-│                qa, cso, investigate, debt, handoff, guard, onboard-codebase — no context cost until you run them)
+├── skills/      33 skills: 20 model-invocable (verification + agent/loop design + domain language + security +
+│                challenge/audit + git + wrap/pickup) and 13 user-only (spec, to-tickets, implement, setup, ship,
+│                qa, cso, investigate, debt, handoff, guard, onboard-codebase, brief — no context cost until you run them)
 ├── agents/      the crew: Mason (implementer) · Riley (reviewer) · Sage (security)
 ├── hooks/       instincts.js · guard.js (+ guard-state.js, patch-paths.js) · scan.js · notify.js · learnings.js + hooks.json
 └── templates/   handoffs/README.md (the continuity index seed)
@@ -42,6 +42,7 @@ nothing into context until you type them; the model can't start them on its own.
 | Build       | `/spec` (idea → spec → tickets) · `/to-tickets` · `/implement` (tickets → integration branch) · `/setup` (tracker + domain docs, once per repo) · `/challenge` (fresh-eyes assumption red-team) |
 | Review & QA | `/qa` · `/cso` · `/investigate` · `/debt` (deferred-shortcut ledger) · `/audit` (whole-repo over-engineering scan) · `/onboard-codebase` |
 | Ship        | `/ship` (never auto-commits; dispatches the `code-reviewer` agent as its review gate)                                                           |
+| Communicate | `/brief` — turn a spec, PR, or the session's work into a one-page plain-English brief for a business reader, leading with what you need from them (approve, choose, or FYI) |
 | Continuity  | `/handoff` (resume note, mid-task) · `/pickup` (resume) — the blessed `/handoff` → `/clear` → `/pickup` flow                                   |
 | Wrap-up     | `/wrap` — end of a session: one question, a candidate list, you pick what to save (repo lessons, decisions, corrections, drops). The model may offer it at natural stopping points. |
 | Safety      | `/guard` — see below                                                                                                                            |
@@ -81,9 +82,15 @@ nothing into context until you type them; the model can't start them on its own.
 - **No surprise commits** — `/ship` prepares everything and stops for an explicit go-ahead;
   `/implement` commits only to ticket and integration branches and never pushes or merges to
   main unasked.
-- **Cost tiers** — reviewer and challenge seats scale cheap → mid → high tiers, with the top
-  tier reserved for adjudication seats. No model names are hardcoded anywhere in keystone — the ladder and
-  how to resolve current IDs/prices at build time live in `designing-agent-systems`.
+- **Cost tiers** — the implementer runs on the mid tier (`model: sonnet`), the code and security
+  reviewers on the high tier (`model: opus`), and `/implement` escalates a BLOCKED ticket once to
+  the top tier (`fable`) before handing it to you. These are Claude Code's floating aliases, which
+  track the current model in each tier; keystone never pins a model ID or a price. If your account
+  lacks a tier, Claude Code falls back to the newest model you can use in that family, or to the
+  parent's model (on Microsoft Foundry it errors instead). To force one model for every subagent, set `CLAUDE_CODE_SUBAGENT_MODEL` plus
+  `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`. The ladder, and how to resolve current IDs and prices for
+  your own agent systems, live in `designing-agent-systems`. Codex setup is under
+  [Model tiers on Codex](#model-tiers-on-codex).
 - **Agent & loop design (first-class)** — `designing-agent-systems` (the design rubric +
   note before any agent code), and `long-running-agents` (iteration contract, stuck
   detection, budget enforcement on top of the harness's `/goal` / `/loop` / `/schedule`) —
@@ -206,6 +213,34 @@ Why the split: security rewards currency, and Trail of Bits maintains these agai
 CVEs/techniques — better than keystone maintaining thin copies. keystone keeps what's
 uniquely yours (your stack + LLM patterns + integration). The other ~30 ToB skills are
 off-domain (smart contracts, C/C++, firmware, crypto) — skip them.
+
+## Model tiers on Codex
+
+The `model:` lines in keystone's agent files are Claude Code settings; Codex ignores them. On
+Codex, define the crew as your own custom agents (TOML files in `~/.codex/agents/`), so each role
+gets its own model. Fill in the models you use; keystone doesn't name them:
+
+```toml
+# ~/.codex/agents/implementer.toml
+name = "implementer"
+description = "Implements one ticket: failing test first, existing patterns, minimal diff."
+developer_instructions = """<paste the body of keystone's agents/implementer.md>"""
+model = "<your mid-tier model>"
+model_reasoning_effort = "medium"
+```
+
+```toml
+# ~/.codex/agents/code-reviewer.toml
+name = "code-reviewer"
+description = "Reviews a diff for production-readiness and returns PASS/CONCERNS/FAIL."
+developer_instructions = """<paste the body of keystone's agents/code-reviewer.md>"""
+model = "<your high-tier model>"
+model_reasoning_effort = "high"
+```
+
+Or set one default for every subagent under `[agents]` in `~/.codex/config.toml`
+(`default_subagent_model`, `default_subagent_reasoning_effort`). On Codex, escalating a blocked
+ticket is up to you: re-run it with your top model.
 
 ## Updating
 

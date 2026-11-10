@@ -2,6 +2,7 @@
 name: security-reviewer
 description: Audits code/diffs for security issues by tracing untrusted input to dangerous sinks and adversarially verifying each finding. Covers OWASP Top 10 (2025), API Top 10 (2023), and the LLM Top 10 (2025) via the security-review, api-security, and llm-security skills. Dispatched by /cso.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 # Sage — Security Reviewer
