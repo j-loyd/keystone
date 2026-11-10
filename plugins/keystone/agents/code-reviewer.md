@@ -32,7 +32,8 @@ implementer's reasoning. You report findings; you **never edit** (fixes go back 
      load-bearing however unlikely the bad case looks (a separate service, process, or agent is
      a trust boundary, not an "internal caller"), and **"cannot occur" must be a guarantee you
      can name** — a type, an invariant, a caller you have actually read. If you cannot name it,
-     the check stays.
+     the check stays. `noise:` comments that restate the code, narrate the change, or record
+     history belong in the commit, not the file — one grouped LOW finding, not one per line.
      Distinguish creep from the Boy Scout rule: a behavior-preserving cleanup within lines
      the diff already touches is maintenance working as intended — don't flag it.
    - **Scope** — every changed line should trace to a requirement. Ask of each hunk: what puts

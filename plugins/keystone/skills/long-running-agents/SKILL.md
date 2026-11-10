@@ -22,8 +22,9 @@ working toward a stated condition, `/loop` re-runs a prompt on an interval or se
 `/schedule` runs a scheduled cloud agent; other harnesses have resume/continue plus external
 cron. A shell loop re-invoking the agent against a spec file is the degraded fallback. What
 they don't give you is the part this skill owns: `/goal`'s evaluator judges only the
-transcript (so "done" still needs the verification below), and it has no hard spend ceiling —
-budgets and stuck detection are yours to add.
+transcript (so "done" still needs the verification below), a turn limit written into the goal
+is judged by the model (a wish, not a control), and it has no hard spend ceiling — budgets and
+stuck detection are yours to add.
 
 **Cold-start rule (applies to every loop):** a scheduled or restarted run wakes with zero
 conversational memory. Never wake context-blind — every iteration starts by reading persisted
@@ -64,7 +65,9 @@ likely to pause on a genuinely ambiguous step. (The "Running unattended" section
   blockers. The continuity primitive is a **structured handoff file, not a conversation
   summary** — summaries decay and bloat; a state file stays exact. (keystone's
   `/handoff` → `/pickup` flow and `/implement`'s ticket files are this pattern; reuse them,
-  don't invent a third format.)
+  don't invent a third format.) Write only what the next iteration can't re-read from the
+  repo or environment, and mark each fact checked or unconfirmed — a wrong note is trusted by
+  every iteration after it.
 - **Failure log** — a persistent "what didn't work and why" file every iteration reads before
   acting. Without it, iteration N cheerfully retries what iteration N-3 already proved
   broken. Highest-value lines: the exact command/approach that failed and the observed error.
@@ -81,6 +84,10 @@ A loop needs three independent exits, or it has none:
 - **Done** — a machine-verifiable completion condition (all checklist items pass their
   checks). If success can't be checked mechanically, the task is a poor fit for an
   autonomous loop — keep a human in the loop instead of laundering judgment through one.
+  **The done criteria belong to the host, not the agent:** the agent flips an item's status;
+  it never edits, deletes, or weakens an item or its test to get there. Keep the checklist
+  where a rewrite shows (a structured file diffed at iteration end) and run the checks from
+  the harness, not on the agent's word.
 - **Stuck ("gutter") detection** — the signature is _motion without progress_: the same
   command failing repeatedly, files edited back and forth, token burn with no state change.
   On detection: write the failure log, stop or re-plan; never just keep spinning. Cap
@@ -98,8 +105,10 @@ needed. Give each run a spend/token ceiling, and each task within it a share, so
 retry storm can't consume the whole night. On breach, the loop halts and writes state like
 any other exit; a ceiling that only logs is an alert wearing a budget's name. Where the
 harness or API exposes a task-level budget the model can _see_ mid-run — a remaining-work
-allowance it can wind down against — prefer it over a bare output-token cap, so the agent
-finishes and hands off cleanly instead of truncating mid-thought.
+allowance it can wind down against — use it **alongside** the hard ceiling, never instead of
+it: a visible budget is a pacing hint the model can overrun. It buys a clean wind-down and
+handoff; the ceiling is still what stops the run. Size it from measured usage with headroom —
+one set too tight makes the agent quit or refuse work it could have finished.
 
 **Trip on the rate, not the total.** A cumulative ceiling generous enough for an overnight run
 is generous enough for a runaway loop to exhaust before anyone reads the alert, and no single
@@ -123,12 +132,15 @@ agent degrades one run rather than the whole budget.
 
 ## Context across a long run
 
-- **Prefer reset over degradation.** Quality decays as a window fills — and models can rush
-  or cut corners near the perceived end of a window. For long runs, a deliberate context
-  reset from the handoff file beats pushing a tired window further. Resets are cheap when
-  (and only when) the state files are good — which is the real reason to keep them good.
-- **Compact at semantic boundaries, not byte thresholds.** A finished item is a safe
-  compaction point; mid-derivation is not. Threshold-triggered auto-compaction that fires
+- **Prefer handoff-and-reset over compaction.** At a natural boundary (an item finished),
+  write the handoff file, clear the context, and resume from the file. The fresh window
+  carries only exact state — no dead ends, stale tool output, or lossy summary — and every
+  later turn re-sends a small context instead of a full one. Compaction keeps a run going but
+  never gives it a clean slate. This holds even on models that degrade less over a long
+  window; re-check the trade on migration rather than assuming it either way. Resets are
+  cheap when (and only when) the state files are good — the real reason to keep them good.
+- **If the harness compacts anyway, compact at semantic boundaries, not byte thresholds.** A
+  finished item is a safe compaction point; mid-derivation is not. Threshold-triggered auto-compaction that fires
   mid-task is how runs lose the thread.
 - **Don't re-absorb verbosity.** Carry results (status, files, findings) forward, not
   transcripts — the same rule `/implement` applies to implementer returns.

@@ -2,6 +2,38 @@
 
 All notable changes to keystone are recorded here.
 
+## [1.0.2] — 2026-11-10
+
+### Changed
+
+- **The implementer comments only what the code doesn't already say.** Comments explain why: a
+  non-obvious constraint, a workaround and its reason, or a `keystone:` marker. Narration,
+  restated tickets and change-log comments (`// added X`) go in the commit message instead.
+  The code reviewer now reports leftover comment noise as one grouped low-severity `noise:`
+  finding.
+- **`long-running-agents` matches current agent-harness guidance:**
+  - **Handoff-and-reset is still the default over compaction**, but it is now justified by a
+    clean slate, exact state and a smaller re-sent context, not the claim that models rush near
+    the end of a window. Compaction, if the harness does it anyway, stays at semantic
+    boundaries.
+  - **A model-visible task budget now goes alongside the hard ceiling, not instead of it.** It
+    is a pacing hint the model can overrun. Size it with headroom, because one that is too
+    tight makes the agent quit early.
+  - **New: the done criteria belong to the host.** The agent marks an item done but never edits
+    or weakens the item or its test. The harness runs the checks.
+  - **New: state notes hold only what can't be re-read** from the repo, and mark each fact as
+    checked or unconfirmed.
+  - **`/goal` turn limits are now noted as model-judged**, not enforced.
+- **`designing-agent-systems` corrections:**
+  - The multi-agent cost figure now cites what was measured: about 15× chat tokens, against
+    about 4× for a single agent.
+  - Tool routing now flags overlapping tools instead of a raw tool count, and adds that large
+    tool outputs should be paginated and errors made actionable.
+  - Switching model tiers now happens at iteration boundaries, because a mid-loop switch
+    invalidates the cache.
+  - Judge guidance now calls for an explicit "unknown" option and calibration against human
+    labels, and drops the blanket advice to split judgments into narrow checks.
+
 ## [1.0.1] — 2026-11-08
 
 ### Changed

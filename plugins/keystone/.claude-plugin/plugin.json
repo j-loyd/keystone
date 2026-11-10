@@ -2,7 +2,7 @@
   "name": "keystone",
   "displayName": "Keystone",
   "description": "Repo-agnostic Claude Code kit: instincts + security hooks, a /spec → tickets → /implement pipeline, a domain-language layer (GLOSSARY.md + ADRs), security review, and explicit user-only workflows (/ship, /qa, /cso, /guard, ...).",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": {
     "name": "Jordan Loyd"
   },
