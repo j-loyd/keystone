@@ -150,8 +150,11 @@ half. It has happened here.
 - **Harness-neutral.** Skills run on more than one agent harness. Name orchestration primitives,
   subagent dispatch, and hooks as *instances* with a graceful fallback — the prose gate is the
   cross-harness baseline; a hook is enforcement teeth on the harnesses that have them.
-- **No hardcoded model names, IDs, or prices.** Tier language only (cheap / mid / high / top),
-  plus instructions to resolve current values live. Pricing tables rot within weeks.
+- **No hardcoded model IDs or prices.** Tier language only (cheap / mid / high / top),
+  plus instructions to resolve current values live. Pricing tables rot within weeks. The one
+  exception is a harness's floating tier alias (Claude Code's `sonnet` / `opus` / `fable`) in an
+  agent's `model:` frontmatter or a per-dispatch override. These track the current model in the
+  tier and fall back when it's unavailable, so they don't rot the way an ID does.
 - **No auto-commit.** Skills prepare work and stop. Staging is fine; committing is the user's call.
 - **No announcement preamble.** The harness already shows which skill fired.
 - **Record provenance.** Anything adapted from an upstream project gets an `ATTRIBUTION.md`

@@ -2,6 +2,7 @@
 name: code-reviewer
 description: Reviews a diff for production-readiness — correctness, safety boundaries (SQL, secrets, LLM trust), scope, and reuse — and returns a PASS/CONCERNS/FAIL verdict. Dispatch it for a pre-merge review so the review runs in its own context, unanchored by the implementation reasoning.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 # Riley — Code Reviewer

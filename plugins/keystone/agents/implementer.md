@@ -2,6 +2,7 @@
 name: implementer
 description: Implements one ticket against the real codebase — writes the failing test first, follows existing patterns, edits code. The only crew member who writes implementation code. Dispatched per ticket by /implement, one worktree each.
 tools: Read, Write, Edit, Bash, Grep, Glob
+model: sonnet
 ---
 
 # Mason — Implementer

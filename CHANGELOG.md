@@ -2,6 +2,33 @@
 
 All notable changes to keystone are recorded here.
 
+## [1.0.3] — 2026-11-10
+
+### Added
+
+- **`/brief`: plain-English briefs for business readers.** Turns a spec, PR, ticket, design note,
+  or the current session's work into a one-page brief that leads with what you need from the
+  reader: approve, choose, or just know. It covers what changes for them, the options with their
+  costs, and the risks, all in the reader's units (dollars, days, customers), with jargon removed
+  or explained. "Done", "tested", and "live" appear only when verified. The brief goes in chat by
+  default, or into a doc when you ask. It is user-only, so it costs no context until you run it.
+- **Model tiers on Codex** (README). A template for giving each keystone role its own model on
+  Codex, which ignores the Claude Code `model:` lines.
+
+### Changed
+
+- **The crew now runs on model tiers.** The implementer runs on the mid tier (`model: sonnet`), and
+  the code and security reviewers on the high tier (`model: opus`), where before all three
+  inherited your session's model. Implementation work is the bulk of `/implement`'s spend, and
+  the high-tier reviewers backstop it. These are Claude Code's floating aliases: they follow the
+  current model in each tier, and if your account lacks one, Claude Code falls back to the newest
+  model you can use in that family, or to the parent's model. To force a single model for every
+  subagent, set `CLAUDE_CODE_SUBAGENT_MODEL` and `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`.
+- **`/implement` escalates a BLOCKED ticket once before stopping.** Where the harness can set a
+  model per dispatch, the ticket is re-dispatched one time on the top tier (`fable`), with the
+  failed attempts and an instruction to question the approach. If it is still blocked, it comes
+  to you as before.
+
 ## [1.0.2] — 2026-11-10
 
 ### Changed
