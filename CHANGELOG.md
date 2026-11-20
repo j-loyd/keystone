@@ -2,6 +2,22 @@
 
 All notable changes to keystone are recorded here.
 
+## [1.0.4] — 2026-11-20
+
+### Fixed
+
+- **`/brief` is user-only on Codex too.** It was missing the `agents/openai.yaml` that sets
+  `policy.allow_implicit_invocation: false`, so Codex could invoke it on its own. This also turns
+  CI green again: the skill validator had been failing on `main` since 1.0.3.
+
+### Changed
+
+- **README: Codex update behavior is now described correctly.** Codex upgrades keystone on its own
+  at startup. After an update, unapproved hooks don't get skipped silently. They fail with "Hook
+  failed", and the tool call goes ahead, so the guard does not block until you re-approve. The
+  README now also lists the Codex limits: `ask` does not block, `Notification` hooks don't run,
+  and the formatter and injection scan skip `apply_patch` edits.
+
 ## [1.0.3] — 2026-11-10
 
 ### Added

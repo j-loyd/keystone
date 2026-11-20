@@ -1,0 +1,5 @@
+interface:
+  display_name: "Brief"
+  short_description: "One-page plain-English brief for a business reader"
+policy:
+  allow_implicit_invocation: false
