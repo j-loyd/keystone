@@ -252,10 +252,19 @@ claude plugin update keystone@keystone
 **Then restart open sessions.** Harnesses resolve the plugin root at session start; an update
 that swaps the installed version directory leaves already-open sessions pointing at a deleted
 path. The bundled hooks degrade to a visible one-line notice (instead of failing) when that
-happens — the fix is always to start a fresh session. On harnesses with per-hook trust (e.g.
-Codex, which fingerprints the whole plugin bundle), **every** release requires re-approving the
-hooks (`/hooks`, or the startup hook review), and until then the harness silently skips them,
-the guard included. Coming from 0.x, read the 1.0.0 migration notes in [`CHANGELOG.md`](CHANGELOG.md).
+happens — the fix is always to start a fresh session. Coming from 0.x, read the 1.0.0 migration
+notes in [`CHANGELOG.md`](CHANGELOG.md).
+
+**On Codex, re-approve the hooks after every release.** Codex upgrades git marketplaces on its
+own at startup, so a new keystone release lands without you running anything. Codex also
+fingerprints the whole plugin bundle, so any changed file revokes approval for every keystone hook.
+Until you re-approve, each hook run fails its trust check and shows as "Hook failed", and the tool
+call goes ahead anyway. The guard does not block anything in that state. To fix it, start a fresh
+`codex` session and approve at the "Hooks need review" prompt, or run `/hooks`. If the upgrade
+happened during that startup, the prompt may only appear on the next launch. `codex exec` has no
+review step, so approve in the TUI first. Other Codex limits: a guard `ask` does not block, and
+only `deny` does. `Notification` hooks don't run. The formatter and the injection scan don't fire
+on `apply_patch` edits.
 
 **The glossary is now `GLOSSARY.md`** (formerly `CONTEXT.md`). In a repo that still has
 `CONTEXT.md`, keystone treats it as the glossary and offers the rename:
